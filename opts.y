@@ -8,7 +8,16 @@
 #include "lisp.h"
 #include "X86_register.h"
 
-BP* rt;
+obj* breakpoints=NULL;
+char* load_filename=NULL;
+
+static void add_new_BP (BP* bp)
+{
+    if (breakpoints==NULL)
+        breakpoints=cons (create_obj_opaque(bp, (void(*)(void*))dump_BP, (void(*)(void*))BP_free), NULL);
+    else
+        breakpoints=nconc(breakpoints, create_obj_opaque(bp, (void(*)(void*))dump_BP, (void(*)(void*))BP_free));
+};
 
 %}
 
@@ -34,7 +43,7 @@ BP* rt;
 %token <num> BPM_width CSTRING_BYTE
 %token <x86reg> REGISTER
 %token <dbl> FLOAT_NUMBER
-%token <str> FILENAME_EXCLAMATION SYMBOL_NAME SYMBOL_NAME_PLUS
+%token <str> FILENAME_EXCLAMATION SYMBOL_NAME SYMBOL_NAME_PLUS LOAD_FILENAME
 
 %type <a> address
 %type <o> bytemask bytemask_element BPX_options cstring
@@ -48,9 +57,10 @@ BP* rt;
 %%
 
 test
- : bpm { rt=$1; }
- | bpx { rt=$1; }
- | bpf { rt=create_BP(BP_type_BPF, current_BPF); current_BPF=NULL; }
+ : bpm { add_new_BP ($1); }
+ | bpx { add_new_BP ($1); }
+ | bpf { add_new_BP (create_BP(BP_type_BPF, current_BPF)); current_BPF=NULL; }
+ | LOAD_FILENAME { load_filename=$1; };
  ;
 
 bpm
@@ -130,11 +140,11 @@ address
  : abs_address 
      { $$=create_address_abs ($1); }
  | FILENAME_EXCLAMATION SYMBOL_NAME_PLUS DEC_OR_HEX
-     { $$=create_address_filename_symbol ($1, $2, $3); }
+     { $$=create_address_filename_symbol ($1, $2, $3); DFREE ($1); DFREE ($2); }
  | FILENAME_EXCLAMATION SYMBOL_NAME
-     { $$=create_address_filename_symbol ($1, $2, 0); }
+     { $$=create_address_filename_symbol ($1, $2, 0); DFREE ($1); DFREE ($2); }
  | FILENAME_EXCLAMATION HEX_NUMBER
-     { $$=create_address_filename_address ($1, $2); }
+     { $$=create_address_filename_address ($1, $2); DFREE ($1); }
  | BYTEMASK bytemask BYTEMASK_END 
      { $$=create_address_bytemask ($2); }
  ;
@@ -174,8 +184,10 @@ BP* parse_option(char *s)
     flex_cleanup();
     if (r==0)
     {
-        assert(rt);
-        return rt;
+        obj *tmp=car(breakpoints);
+        assert (breakpoints);
+        assert (tmp);
+        return obj_unpack_opaque(tmp);
     }
     else
         return NULL;
@@ -191,7 +203,9 @@ void do_test(char *s)
     {
         dump_BP(b);
         printf ("\n");     
-        BP_free(b);
+        //BP_free(b);
+        obj_free (breakpoints);
+        breakpoints=NULL;
     }
     else
     {

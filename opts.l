@@ -15,7 +15,7 @@ void print_current_state();
 
 DEC         (0|[1-9][[:digit:]]*)
 HEX         0[Xx][[:xdigit:]]+
-FILENAME    [[:alnum:]]+\.[[:alpha:]]+
+FILENAME    [[:alnum:]]+\.[[:alnum:]]+
 SYMBOL_NAME [[:alpha:]][[:alnum:]_@]*
 
 %x STATE_BPM STATE_BPX STATE_BPF
@@ -29,6 +29,7 @@ SYMBOL_NAME [[:alpha:]][[:alnum:]_@]*
 <INITIAL>bpmw=  { yylval.num=2; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
 <INITIAL>bpmd=  { yylval.num=4; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
 <INITIAL>bpmq=  { yylval.num=8; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
+<INITIAL>-l:{FILENAME} { yylval.str=DSTRDUP(yytext, "yytext"); return LOAD_FILENAME; };
 
 <STATE_ADDRESS_OR_REG>eax   { yylval.x86reg=R_EAX; yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>ebx   { yylval.x86reg=R_EBX; yy_pop_state(); return REGISTER; }
@@ -75,15 +76,15 @@ SYMBOL_NAME [[:alpha:]][[:alnum:]_@]*
     yylval.dbl = atof(yytext); 
     return FLOAT_NUMBER; 
 }
-<STATE_ADDRESS,STATE_ADDRESS_OR_REG>{FILENAME}!               { yylval.str = strdup(yytext); str_trim_one_char_right(yylval.str); return FILENAME_EXCLAMATION; }
+<STATE_ADDRESS,STATE_ADDRESS_OR_REG>{FILENAME}!               { yylval.str = DSTRDUP(yytext, "yytext"); str_trim_one_char_right(yylval.str); return FILENAME_EXCLAMATION; }
 <STATE_ADDRESS,STATE_ADDRESS_OR_REG>{SYMBOL_NAME}\+           { 
     BEGIN (STATE_READ_ADR_OFS);
-    yylval.str = strdup(yytext);
+    yylval.str = DSTRDUP(yytext, "yytext");
     str_trim_one_char_right(yylval.str);
     return SYMBOL_NAME_PLUS; }
 <STATE_ADDRESS,STATE_ADDRESS_OR_REG>{SYMBOL_NAME}           { 
     yy_pop_state(); /* switch back to what was before STATE_ADDRESS */
-    yylval.str = strdup(yytext); 
+    yylval.str = DSTRDUP(yytext, "yytext"); 
     return SYMBOL_NAME; }
 
 <STATE_BPM,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BPX,STATE_BPF>","                 { return COMMA; }

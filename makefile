@@ -14,7 +14,8 @@ clean:
 	rm opts.exe
 
 opts.tab.h opts.tab.c: opts.y
-	bison -d opts.y -t
+	#bison -d opts.y -t
+	bison -d opts.y
 
 opts.lex.c: opts.l opts.tab.h opts.h
 	flex -oopts.lex.c opts.l
