@@ -1,10 +1,11 @@
 %{
 #include <assert.h>
 
+#include "stuff.h"
 #include "dmalloc.h"
 #include "X86_register.h"
 
-#include "opts.tab.h"
+#include "y.tab.h"
 #include "opts.h"
 
 void print_current_state();
@@ -29,7 +30,12 @@ SYMBOL_NAME [[:alpha:]][[:alnum:]_@]*
 <INITIAL>bpmw=  { yylval.num=2; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
 <INITIAL>bpmd=  { yylval.num=4; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
 <INITIAL>bpmq=  { yylval.num=8; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
-<INITIAL>-l:{FILENAME} { yylval.str=DSTRDUP(yytext, "yytext"); return LOAD_FILENAME; };
+<INITIAL>-l:{FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return LOAD_FILENAME; };
+<INITIAL>-a:{DEC}      { yylval.num=strtol(yytext+3, NULL, 10); return ATTACH_PID; };
+<INITIAL>-a:{HEX}      { yylval.num=strtol(yytext+3, NULL, 16); return ATTACH_PID; };
+<INITIAL>-a:{FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return ATTACH_FILENAME; };
+<INITIAL>-c:.*         { yylval.str=DSTRDUP(yytext+3, "yytext"); return CMDLINE; };
+<INITIAL>--child       { return CHILD; }
 
 <STATE_ADDRESS_OR_REG>eax   { yylval.x86reg=R_EAX; yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>ebx   { yylval.x86reg=R_EBX; yy_pop_state(); return REGISTER; }

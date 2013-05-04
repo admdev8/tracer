@@ -77,7 +77,7 @@ typedef struct _BPX_option
     enum BPX_option_type t;
     bp_address *a; // if NULL, see reg
     X86_register reg;
-    octabyte size_or_value;
+    size_t size_or_value;
     // in case of COPY
     obj *copy_string;
 } BPX_option;
@@ -134,3 +134,13 @@ void dump_BP (BP* b);
 void BP_free(BP*);
 
 extern BPF* current_BPF; // filled while parsing
+
+BP* parse_option(char *s);
+
+// from opts.y
+extern obj* breakpoints;
+extern char* load_filename;
+extern char* attach_filename;
+extern char *load_command_line;
+extern int attach_PID;
+extern bool debug_children;

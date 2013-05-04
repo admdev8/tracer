@@ -2,22 +2,34 @@ OCTOTHORPE=../octothorpe/
 OCTOTHORPE_LIBRARY=$(OCTOTHORPE)octothorped.a
 X86_DISASM=../x86_disasm/
 X86_DISASM_LIBRARY=$(X86_DISASM)x86_disasmd.a
+PORG=../porg/
+PORG_LIBRARY=$(PORG)porgd.a
+# -DYYDEBUG=1
+CPPFLAGS=-I$(OCTOTHORPE) -I$(X86_DISASM) -I$(PORG) -D_DEBUG
+CFLAGS=-Wall -g
+LEX=flex
+SOURCES=y.tab.c opts.lex.c opts_func.c tracer.c cycle.c
+OBJECTS=$(SOURCES:.c=.o)
+DEP_FILES=$(SOURCES:.c=.d)
 
-all:    opts.l opts.y opts.tab.c opts.lex.c
-	$(CC) -g opts.tab.c opts.lex.c opts_func.c -I$(OCTOTHORPE) -I$(X86_DISASM) -D_DEBUG -o opts.exe $(OCTOTHORPE_LIBRARY) $(X86_DISASM_LIBRARY) -L/lib -lfl
-#	-DYYDEBUG=1
+all:    tracer.exe $(DEP_FILES)
+
+%.d: %.c
+	$(CC) -MM $(CFLAGS) $(CPPFLAGS) $*.c -c > $*.d
+
+tracer.exe: $(OBJECTS)
+	$(CC) $(OBJECTS) $(OCTOTHORPE_LIBRARY) $(X86_DISASM_LIBRARY) $(PORG_LIBRARY) -o tracer.exe -L/lib -lfl
 
 clean:
-	rm opts.tab.h
-	rm opts.tab.c
-	rm opts.lex.c
-	rm opts.exe
+	$(RM) opts.tab.h opts.tab.c opts.lex.c tracer.exe
+	$(RM) $(DEP_FILES)
+	$(RM) $(OBJECTS)
 
-opts.tab.h opts.tab.c: opts.y
-	#bison -d opts.y -t
-	bison -d opts.y
+y.tab.h y.tab.c: opts.y
+	#$(YACC) -d opts.y -t
+	$(YACC) -d opts.y
 
-opts.lex.c: opts.l opts.tab.h opts.h
-	flex -oopts.lex.c opts.l
-	#flex -d -oopts.lex.c opts.l
+opts.lex.c: opts.l y.tab.h opts.h
+	$(LEX) -oopts.lex.c opts.l
+	#$(LEX) -d -oopts.lex.c opts.l
 

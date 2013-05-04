@@ -1,6 +1,7 @@
 %{
 #include <assert.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include "opts.h"
@@ -10,6 +11,10 @@
 
 obj* breakpoints=NULL;
 char* load_filename=NULL;
+char* attach_filename=NULL;
+char *load_command_line=NULL;
+int attach_PID=-1;
+bool debug_children=false;
 
 static void add_new_BP (BP* bp)
 {
@@ -35,15 +40,15 @@ static void add_new_BP (BP* bp)
 }
 
 %token COMMA PLUS TWO_POINTS R_SQUARE_BRACKET SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
-%token W RW _EOF DUMP_OP SET_OP COPY_OP CP QUOTE PERCENT BPF_CC BPF_PAUSE BPF_RT_PROBABILITY
+%token W RW _EOF DUMP_OP SET_OP COPY_OP CP QUOTE PERCENT BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
 %token BPF_TRACE BPF_TRACE_COLON
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC
 %token <num> DEC_NUMBER HEX_NUMBER HEX_BYTE
-%token <num> BPM_width CSTRING_BYTE
+%token <num> BPM_width CSTRING_BYTE ATTACH_PID
 %token <x86reg> REGISTER
 %token <dbl> FLOAT_NUMBER
-%token <str> FILENAME_EXCLAMATION SYMBOL_NAME SYMBOL_NAME_PLUS LOAD_FILENAME
+%token <str> FILENAME_EXCLAMATION SYMBOL_NAME SYMBOL_NAME_PLUS LOAD_FILENAME ATTACH_FILENAME CMDLINE
 
 %type <a> address
 %type <o> bytemask bytemask_element BPX_options cstring
@@ -56,11 +61,15 @@ static void add_new_BP (BP* bp)
 
 %%
 
-test
- : bpm { add_new_BP ($1); }
- | bpx { add_new_BP ($1); }
- | bpf { add_new_BP (create_BP(BP_type_BPF, current_BPF)); current_BPF=NULL; }
- | LOAD_FILENAME { load_filename=$1; };
+tracer_option
+ : bpm             { add_new_BP ($1); }
+ | bpx             { add_new_BP ($1); }
+ | bpf             { add_new_BP (create_BP(BP_type_BPF, current_BPF)); current_BPF=NULL; }
+ | LOAD_FILENAME   { load_filename=$1; }
+ | ATTACH_FILENAME { attach_filename=$1; }
+ | ATTACH_PID      { attach_PID=$1; }
+ | CHILD           { debug_children=true; }
+ | CMDLINE         { load_command_line=$1; }
  ;
 
 bpm
@@ -182,18 +191,24 @@ BP* parse_option(char *s)
     flex_set_str(s);
     r=yyparse();
     flex_cleanup();
-    if (r==0)
+    if (r)
+    {
+        printf ("[%s] option wasn't parsed, exiting\n", s);
+        exit(0);
+    };
+
+    if (r==0 && breakpoints)
     {
         obj *tmp=car(breakpoints);
         assert (breakpoints);
         assert (tmp);
-        return obj_unpack_opaque(tmp);
+        return obj_unpack_opaque(tmp); // for testing
     }
     else
         return NULL;
 };
 
-void do_test(char *s)
+static void do_test(char *s)
 {
     BP *b;
     printf ("do_test(%s)\n", s);
@@ -213,9 +228,20 @@ void do_test(char *s)
     };
 };
 
+#if 0
 void main()
 {
     //yydebug=1;
+    parse_option ("-l:haha.exe");
+    if (load_filename)
+        printf ("load_filename=%s\n", load_filename);
+    parse_option ("-a:haha.exe");
+    if (attach_filename)
+        printf ("attach_filename=%s\n", attach_filename);
+    parse_option ("-a:1234");
+    printf ("attach_PID=%d\n", attach_PID);
+    parse_option ("-a:0x29a");
+    printf ("attach_PID=%d\n", attach_PID);
     do_test("bpmq=file.dll!symbol,rw\0");
     do_test("bpmq=file.dll!symbol+0x123,w\0");
     do_test("bpmb=0x123123,w\0");
@@ -243,8 +269,10 @@ void main()
     do_test("bpx=filename.dll!0x12345678,dump(eax,123)\0");
     dump_unfreed_blocks();
 }
+#endif
 
-yyerror(char *s)
+int yyerror(char *s)
 {
   fprintf(stderr, "bison error: %s\n", s);
+  return 0;
 }
