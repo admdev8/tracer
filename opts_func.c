@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "dmalloc.h"
 #include "X86_register.h"
 #include "opts.h"
@@ -41,8 +42,8 @@ bp_address *create_address_filename_symbol(const char *filename, const char *sym
     bp_address *rt=DCALLOC (bp_address, 1, "bp_address");
 
     rt->t=OPTS_ADR_TYPE_FILENAME_SYMBOL;
-    rt->filename=strdup (filename);
-    rt->symbol=strdup (symbol);
+    rt->filename=DSTRDUP (filename, "");
+    rt->symbol=DSTRDUP (symbol, "");
     rt->ofs=ofs;
 
     return rt;
@@ -53,7 +54,7 @@ bp_address *create_address_filename_address(const char *filename, address adr)
     bp_address *rt=DCALLOC (bp_address, 1, "bp_address");
 
     rt->t=OPTS_ADR_TYPE_FILENAME_ADR;
-    rt->filename=strdup (filename);
+    rt->filename=DSTRDUP (filename, "");
     rt->adr=adr;
 
     return rt;
@@ -83,9 +84,9 @@ bp_address *create_address_bytemask(obj *bytemask)
 void bp_address_free(bp_address *a)
 {
     if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL || a->t==OPTS_ADR_TYPE_FILENAME_ADR)
-        free(a->filename);
+        DFREE(a->filename);
     if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL)
-        free (a->symbol);
+        DFREE(a->symbol);
     if (a->t==OPTS_ADR_TYPE_BYTEMASK)
         obj_free(a->bytemask);
     DFREE(a);
@@ -176,6 +177,7 @@ BPX* create_BPX(bp_address *a, obj *options)
     BPX* rt=DCALLOC (BPX, 1, "bp_address");
     rt->a=a;
     rt->options=options;
+    return rt;
 };
 
 BP* create_BP (enum BP_type t, void* p)
@@ -183,6 +185,7 @@ BP* create_BP (enum BP_type t, void* p)
     BP* rt=DCALLOC(BP, 1, "bp_address");
     rt->t=t;
     rt->u.p=p;
+    return rt;
 };
 
 void dump_BPX(BPX *b)

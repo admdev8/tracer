@@ -16,7 +16,7 @@ void print_current_state();
 
 DEC         (0|[1-9][[:digit:]]*)
 HEX         0[Xx][[:xdigit:]]+
-FILENAME    [[:alnum:]]+\.[[:alnum:]]+
+FILENAME    [[:alnum:]_]+\.[[:alnum:]_]+
 SYMBOL_NAME [[:alpha:]][[:alnum:]_@]*
 
 %x STATE_BPM STATE_BPX STATE_BPF

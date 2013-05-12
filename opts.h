@@ -5,10 +5,11 @@
 #include "X86_register.h"
 #include "lisp.h"
 
+#include "address.h" // bolt
+
 #define BYTEMASK_WILDCARD_BYTE 257
 
-typedef tetrabyte address;
-//typedef octabyte address;
+typedef tetrabyte REG;
 
 enum adr_type
 {
@@ -77,7 +78,7 @@ typedef struct _BPX_option
     enum BPX_option_type t;
     bp_address *a; // if NULL, see reg
     X86_register reg;
-    size_t size_or_value;
+    REG size_or_value;
     // in case of COPY
     obj *copy_string;
 } BPX_option;
@@ -144,3 +145,4 @@ extern char* attach_filename;
 extern char *load_command_line;
 extern int attach_PID;
 extern bool debug_children;
+void yyerror(char *s);

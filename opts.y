@@ -127,7 +127,7 @@ BPF_option
  | BPF_SKIP                         { current_BPF->skip=1; } 
  | BPF_SKIP_STDCALL                 { current_BPF->skip_stdcall=1; }
  | BPF_PAUSE DEC_OR_HEX             { current_BPF->pause=$2; }
- | BPF_RT DEC_OR_HEX                { current_BPF->rt=obj_int($2); }
+ | BPF_RT DEC_OR_HEX                { current_BPF->rt=obj_REG($2); }
  | BPF_RT_PROBABILITY float_or_perc { current_BPF->rt_probability=$2; }
  | BPF_ARGS DEC_OR_HEX              { current_BPF->args=$2; }
  | BPF_DUMP_ARGS DEC_OR_HEX         { current_BPF->dump_args=$2; }
@@ -141,8 +141,8 @@ float_or_perc
  ;
 
 cstring
- : CSTRING_BYTE cstring  { $$=nconc (cons(obj_int($1), NULL), $2); }
- | CSTRING_BYTE          { $$=cons (obj_int($1), NULL); }
+ : CSTRING_BYTE cstring  { $$=nconc (cons(obj_byte($1), NULL), $2); }
+ | CSTRING_BYTE          { $$=cons (obj_byte($1), NULL); }
  ;
 
 address
@@ -173,9 +173,9 @@ bytemask
  ;
 
 bytemask_element
- : HEX_BYTE     { $$=cons (obj_int($1), NULL); }
- | TWO_POINTS   { $$=cons (obj_int(BYTEMASK_WILDCARD_BYTE), NULL); }
- | skip_n       { $$=obj_int_n_times (BYTEMASK_WILDCARD_BYTE, $1); }
+ : HEX_BYTE     { $$=cons (obj_wyde($1), NULL); }
+ | TWO_POINTS   { $$=cons (obj_wyde(BYTEMASK_WILDCARD_BYTE), NULL); }
+ | skip_n       { $$=obj_wyde_n_times (BYTEMASK_WILDCARD_BYTE, $1); }
  ;
 
 skip_n
@@ -208,71 +208,7 @@ BP* parse_option(char *s)
         return NULL;
 };
 
-static void do_test(char *s)
+void yyerror(char *s)
 {
-    BP *b;
-    printf ("do_test(%s)\n", s);
-    
-    b=parse_option(s);
-    if (b)
-    {
-        dump_BP(b);
-        printf ("\n");     
-        //BP_free(b);
-        obj_free (breakpoints);
-        breakpoints=NULL;
-    }
-    else
-    {
-        exit(0);
-    };
-};
-
-#if 0
-void main()
-{
-    //yydebug=1;
-    parse_option ("-l:haha.exe");
-    if (load_filename)
-        printf ("load_filename=%s\n", load_filename);
-    parse_option ("-a:haha.exe");
-    if (attach_filename)
-        printf ("attach_filename=%s\n", attach_filename);
-    parse_option ("-a:1234");
-    printf ("attach_PID=%d\n", attach_PID);
-    parse_option ("-a:0x29a");
-    printf ("attach_PID=%d\n", attach_PID);
-    do_test("bpmq=file.dll!symbol,rw\0");
-    do_test("bpmq=file.dll!symbol+0x123,w\0");
-    do_test("bpmb=0x123123,w\0");
-    do_test("bpmq=file.dll!symbol+123,rw\0");
-    do_test("bpmd=0x12345678,w\0");
-    do_test("bpmw=bytemask:\"001122\",w\0");
-    do_test("bpmd=bytemask:\"0011..22\",rw\0");
-    do_test("bpmq=bytemask:\"0011[skip:2]22\",w\0");
-    do_test("bpmb=bytemask:\"001122..3355[skip:2]1166..77\",rw\0");
-    do_test("bpx=0x123123\0");
-    do_test("bpx=0x123123,dump(eax,1234)\0");
-    do_test("bpx=0x123123,dump(filename.dll!symbol,0x29a)\0");
-    do_test("bpx=filename.dll!symbol1,dump(filename.dll!symbol2,0x29a)\0");
-    do_test("bpx=filename.dll!symbol1,dump(filename.dll!symbol3),dump(eax,123)\0");
-    do_test("bpx=filename.dll!symbol1,copy(eax,\"hahaha\\x00\\x11hoho\")\0");
-    do_test("bpx=bytemask:\"001122..3355[skip:2]1166..77\",copy(eax,\"hahaha\\x00\\x11hoho\")\0");
-    do_test("bpx=filename.dll!symbol1,copy(filename.dll!symbol2,\"hahaha\\x00\\x11hoho\")\0");
-    do_test("bpx=filename.dll!symbol1,set(eax,111),set(ebx,222),dump(filename.dll!symbol3,333)\0");
-    do_test("bpf=filename.dll!symbol1,args:6,skip,unicode,when_called_from_func:filename.dll!func,rt:123\0");
-    do_test("bpf=filename.dll!symbol1,dump_args:6,skip_stdcall,when_called_from_address:filename.dll!func+0x1234,rt_probability:0.17,pause:700\0");
-    do_test("bpf=filename.dll!symbol1,rt_probability:50%,rt:123\0");
-    do_test("bpf=filename.dll!symbol1,rt_probability:0%,rt:123\0");
-    do_test("bpf=filename.dll!symbol1,rt_probability:1%,rt:123\0");
-    do_test("bpf=filename.dll!symbol1,rt_probability:100%,rt:123\0");
-    do_test("bpx=filename.dll!0x12345678,dump(eax,123)\0");
-    dump_unfreed_blocks();
-}
-#endif
-
-int yyerror(char *s)
-{
-  fprintf(stderr, "bison error: %s\n", s);
-  return 0;
+    fprintf(stderr, "bison error: %s\n", s);
 }
