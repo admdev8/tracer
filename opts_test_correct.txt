@@ -1,0 +1,96 @@
+load_filename=haha.exe
+attach_filename=haha.exe
+attach_PID=1234
+attach_PID=666
+do_test(bpmq=file.dll!symbol,rw)
+BPM. width=8, type=RW, bp_address=(symbol) file.dll!symbol
+
+do_test(bpmq=file.dll!symbol+0x123,w)
+BPM. width=8, type=W, bp_address=(symbol) file.dll!symbol+0x123
+
+do_test(bpmb=0x123123,w)
+BPM. width=1, type=W, bp_address=0x123123
+
+do_test(bpmq=file.dll!symbol+123,rw)
+BPM. width=8, type=RW, bp_address=(symbol) file.dll!symbol+0x7b
+
+do_test(bpmd=0x12345678,w)
+BPM. width=4, type=W, bp_address=0x12345678
+
+do_test(bpmw=bytemask:"001122",w)
+BPM. width=2, type=W, bp_address=bytemask:"(0x0 0x11 0x22)"
+
+do_test(bpmd=bytemask:"0011..22",rw)
+BPM. width=4, type=RW, bp_address=bytemask:"(0x0 0x11 0x101 0x22)"
+
+do_test(bpmq=bytemask:"0011[skip:2]22",w)
+BPM. width=8, type=W, bp_address=bytemask:"(0x0 0x11 0x101 0x101 0x22)"
+
+do_test(bpmb=bytemask:"001122..3355[skip:2]1166..77",rw)
+BPM. width=1, type=RW, bp_address=bytemask:"(0x0 0x11 0x22 0x101 0x33 0x55 0x101 0x101 0x11 0x66 0x101 0x77)"
+
+do_test(bpx=0x123123)
+BPX. bp_address=0x123123
+options: NULL
+
+do_test(bpx=0x123123,dump(eax,1234))
+BPX. bp_address=0x123123
+options: ([DUMP reg:EAX size: 1234])
+
+do_test(bpx=0x123123,dump(filename.dll!symbol,0x29a))
+BPX. bp_address=0x123123
+options: ([DUMP (symbol) filename.dll!symbol size: 666])
+
+do_test(bpx=filename.dll!symbol1,dump(filename.dll!symbol2,0x29a))
+BPX. bp_address=(symbol) filename.dll!symbol1
+options: ([DUMP (symbol) filename.dll!symbol2 size: 666])
+
+do_test(bpx=filename.dll!symbol1,dump(filename.dll!symbol3),dump(eax,123))
+BPX. bp_address=(symbol) filename.dll!symbol1
+options: ([DUMP (symbol) filename.dll!symbol3 size: 16] [DUMP reg:EAX size: 123])
+
+do_test(bpx=filename.dll!symbol1,copy(eax,"hahaha\x00\x11hoho"))
+BPX. bp_address=(symbol) filename.dll!symbol1
+options: ([COPY reg:EAX(0x68 0x61 0x68 0x61 0x68 0x61 0x0 0x11 0x68 0x6f 0x68 0x6f)])
+
+do_test(bpx=bytemask:"001122..3355[skip:2]1166..77",copy(eax,"hahaha\x00\x11hoho"))
+BPX. bp_address=bytemask:"(0x0 0x11 0x22 0x101 0x33 0x55 0x101 0x101 0x11 0x66 0x101 0x77)"
+options: ([COPY reg:EAX(0x68 0x61 0x68 0x61 0x68 0x61 0x0 0x11 0x68 0x6f 0x68 0x6f)])
+
+do_test(bpx=filename.dll!symbol1,copy(filename.dll!symbol2,"hahaha\x00\x11hoho"))
+BPX. bp_address=(symbol) filename.dll!symbol1
+options: ([COPY (symbol) filename.dll!symbol2(0x68 0x61 0x68 0x61 0x68 0x61 0x0 0x11 0x68 0x6f 0x68 0x6f)])
+
+do_test(bpx=filename.dll!symbol1,set(eax,111),set(ebx,222),dump(filename.dll!symbol3,333))
+BPX. bp_address=(symbol) filename.dll!symbol1
+options: ([SET reg:EAX value:111] [SET reg:EBX value:222] [DUMP (symbol) filename.dll!symbol3 size: 333])
+
+do_test(bpf=filename.dll!symbol1,args:6,skip,unicode,when_called_from_func:filename.dll!func,rt:123)
+BPF. bp_address=(symbol) filename.dll!symbol1
+options: unicode skip rt: 0x7b args: 6 
+when_called_from_func: (symbol) filename.dll!func
+
+do_test(bpf=filename.dll!symbol1,dump_args:6,skip_stdcall,when_called_from_address:filename.dll!func+0x1234,rt_probability:0.17,pause:700)
+BPF. bp_address=(symbol) filename.dll!symbol1
+options: skip_stdcall rt_probability: 0.170000 dump_args: 6 pause: 700 
+when_called_from_address: (symbol) filename.dll!func+0x1234
+
+do_test(bpf=filename.dll!symbol1,rt_probability:50%,rt:123)
+BPF. bp_address=(symbol) filename.dll!symbol1
+options: rt: 0x7b rt_probability: 0.500000 
+
+do_test(bpf=filename.dll!symbol1,rt_probability:0%,rt:123)
+BPF. bp_address=(symbol) filename.dll!symbol1
+options: rt: 0x7b rt_probability: 0.000000 
+
+do_test(bpf=filename.dll!symbol1,rt_probability:1%,rt:123)
+BPF. bp_address=(symbol) filename.dll!symbol1
+options: rt: 0x7b rt_probability: 0.010000 
+
+do_test(bpf=filename.dll!symbol1,rt_probability:100%,rt:123)
+BPF. bp_address=(symbol) filename.dll!symbol1
+options: rt: 0x7b 
+
+do_test(bpx=filename.dll!0x12345678,dump(eax,123))
+BPX. bp_address=(adr in PE module) filename.dll!0x12345678
+options: ([DUMP reg:EAX size: 123])
