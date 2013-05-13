@@ -62,9 +62,9 @@ int main()
 
     if (breakpoints)
         obj_free(breakpoints);
-    DFREE_if_need(load_filename);
-    DFREE_if_need(attach_filename);
-    DFREE_if_need(load_command_line);
+    DFREE(load_filename);
+    DFREE(attach_filename);
+    DFREE(load_command_line);
     
     dump_unfreed_blocks();
 
