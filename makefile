@@ -13,17 +13,18 @@ LEX=flex
 SOURCES=y.tab.c opts.lex.c opts_func.c tracer.c cycle.c module.c process.c symbol.c thread.c
 OBJECTS=$(SOURCES:.c=.o)
 DEP_FILES=$(SOURCES:.c=.d)
+LIBS=$(OCTOTHORPE_LIBRARY) $(X86_DISASM_LIBRARY) $(PORG_LIBRARY) $(BOLT_LIBRARY)
 
 all:    tracer.exe $(DEP_FILES) opts_test.exe
 
 %.d: %.c
 	$(CC) -MM $(CFLAGS) $(CPPFLAGS) $< -c > $@
 
-tracer.exe: $(OBJECTS)
-	$(CC) $^ $(OCTOTHORPE_LIBRARY) $(X86_DISASM_LIBRARY) $(PORG_LIBRARY) $(BOLT_LIBRARY) -o $@ -L/lib -lfl -lpsapi -limagehlp
+tracer.exe: $(OBJECTS) $(LIBS)
+	$(CC) $^ $(LIBS) -o $@ -L/lib -lfl -lpsapi -limagehlp
 
-opts_test.exe: opts_test.o opts_func.o y.tab.o opts.lex.o
-	$(CC) $^ $(OCTOTHORPE_LIBRARY) $(X86_DISASM_LIBRARY) $(PORG_LIBRARY) -o $@ -L/lib -lfl 
+opts_test.exe: opts_test.o opts_func.o y.tab.o opts.lex.o $(LIBS)
+	$(CC) $^ $(LIBS) -o $@ -L/lib -lfl 
 	
 clean:
 	$(RM) opts.tab.h opts.tab.c opts.lex.c tracer.exe opts_test.exe

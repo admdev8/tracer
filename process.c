@@ -17,8 +17,10 @@ void process_free (process *p)
         L ("count of p->modules: %d\n", rbtree_count(p->modules));
     };
 
-    rbtree_foreach (p->threads, NULL, NULL, (void (*)(void*))thread_free);
-    rbtree_foreach (p->modules, NULL, NULL, (void (*)(void*))module_free);
+    rbtree_foreach(p->threads, NULL, NULL, (void (*)(void*))thread_free);
+    rbtree_foreach(p->modules, NULL, NULL, (void (*)(void*))module_free);
+    rbtree_deinit(p->threads);
+    rbtree_deinit(p->modules);
     DFREE (p);
 };
 

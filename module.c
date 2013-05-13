@@ -37,6 +37,8 @@ void add_module (process *p, address img_base, HANDLE file_hdl)
         
         m->filename=strbuf_detach(&sb_filename, NULL);
         m->path=strbuf_detach(&sb_path, NULL);
+        strbuf_deinit (&sb_filename);
+        strbuf_deinit (&sb_path);
         if (0 && module_c_debug)
         {
             L ("m->filename=%s\n", m->filename);
@@ -80,8 +82,18 @@ void module_free(module *m)
     DFREE(m->filename);
     DFREE(m->path);
     DFREE(m->internal_name);
-    rbtree_foreach(m->symbols, NULL, NULL, (void(*)(void*))obj_free);
-    rbtree_deinit (m->symbols);
+
+    for (struct rbtree_node_t *i=rbtree_minimum(m->symbols); i!=NULL; i=rbtree_succ(i))
+    {
+        //L ("(to be freed) address: 0x%x, ", (address)i->key);
+        symbols_list *l=(symbols_list*)i->value;
+        //obj_dump(l->symbols);
+        obj_free(l->symbols);
+        //L ("\n");
+        DFREE(l);
+    };
+
+    rbtree_deinit(m->symbols);
     DFREE(m);
 };
 

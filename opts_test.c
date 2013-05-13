@@ -1,4 +1,5 @@
 #include "opts.h"
+#include "dmalloc.h"
 
 static void do_test(char *s)
 {
@@ -58,6 +59,13 @@ int main()
     do_test("bpf=filename.dll!symbol1,rt_probability:1%,rt:123\0");
     do_test("bpf=filename.dll!symbol1,rt_probability:100%,rt:123\0");
     do_test("bpx=filename.dll!0x12345678,dump(eax,123)\0");
+
+    if (breakpoints)
+        obj_free(breakpoints);
+    DFREE_if_need(load_filename);
+    DFREE_if_need(attach_filename);
+    DFREE_if_need(load_command_line);
+    
     dump_unfreed_blocks();
 
     return 0;
