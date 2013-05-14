@@ -4,10 +4,48 @@
 #include <string.h>
 
 #include "dmalloc.h"
+#include "stuff.h"
 #include "X86_register.h"
 #include "opts.h"
 
 BPF* current_BPF=NULL; // filled while parsing
+
+bool is_address_OEP(bp_address *a)
+{
+    return a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL &&
+        stricmp(a->symbol, "OEP")==0 &&
+        a->ofs==0;
+};
+
+bool is_address_fname_OEP(bp_address* a, char *fname)
+{
+    return a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL &&
+        stricmp(a->symbol, "OEP")==0 &&
+        stricmp(a->filename, fname)==0 &&
+        a->ofs==0;
+};
+
+bool is_there_OEP_breakpoint_for_fname(char *fname)
+{
+    if (breakpoints==NULL)
+        return false;
+    for (obj *i=breakpoints; i; i=cdr(i)) // breakpoints is a list
+    {
+        BP *bp=(BP*)obj_unpack_opaque(i);
+        if (bp->t==BP_type_BPX)
+        {
+            if (is_address_fname_OEP(((BPX*)bp->u.bpx)->a, fname))
+                return true;
+        };
+        if (bp->t==BP_type_BPF)
+        {
+            if (is_address_fname_OEP(((BPF*)bp->u.bpf)->a, fname))
+                return true;
+        };
+    };
+    return false;
+};
+
 
 void dump_address (bp_address *a)
 {
@@ -177,6 +215,10 @@ BPX* create_BPX(bp_address *a, obj *options)
     BPX* rt=DCALLOC (BPX, 1, "bp_address");
     rt->a=a;
     rt->options=options;
+
+   if (is_address_OEP(rt->a)) 
+       rt->INT3_style=true; 
+    
     return rt;
 };
 

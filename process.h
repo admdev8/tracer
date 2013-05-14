@@ -12,7 +12,8 @@ typedef struct _process
     HANDLE PHDL;
     address base_of_image;
     HANDLE file_handle;
-    // process name can be obtained from file_handle
+    char *path;
+    char *filename;
 
     rbtree *threads; // -> TID, thread
     rbtree *modules; // base_address (in process), module
@@ -21,4 +22,5 @@ typedef struct _process
 
 void process_free (process *p);
 process *find_process(DWORD PID);
+void process_resolve_path_and_filename_from_hdl(HANDLE file_hdl, process *p);
 

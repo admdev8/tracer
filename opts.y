@@ -9,19 +9,24 @@
 #include "lisp.h"
 #include "X86_register.h"
 
-obj* breakpoints=NULL;
+obj* breakpoints=NULL; // list of opaque objects-pointers to BP structures
+obj* addresses_to_be_resolved=NULL; // list of opaque objects-pointers to bp_address structures. don't free them.
 char* load_filename=NULL;
 char* attach_filename=NULL;
 char *load_command_line=NULL;
 int attach_PID=-1;
 bool debug_children=false;
 
-static void add_new_BP (BP* bp)
+void add_new_BP (BP* bp)
 {
-    if (breakpoints==NULL)
-        breakpoints=cons (create_obj_opaque(bp, (void(*)(void*))dump_BP, (void(*)(void*))BP_free), NULL);
-    else
-        breakpoints=nconc(breakpoints, create_obj_opaque(bp, (void(*)(void*))dump_BP, (void(*)(void*))BP_free));
+    breakpoints=nconc(breakpoints, 
+        cons (create_obj_opaque(bp, (void(*)(void*))dump_BP, (void(*)(void*))BP_free), NULL));
+};
+
+void add_new_address_to_be_resolved (bp_address *a)
+{
+    addresses_to_be_resolved=nconc(addresses_to_be_resolved, 
+        cons (create_obj_opaque(a, (void(*)(void*))dump_address, NULL), NULL));
 };
 
 %}
@@ -64,7 +69,12 @@ static void add_new_BP (BP* bp)
 tracer_option
  : bpm             { add_new_BP ($1); }
  | bpx             { add_new_BP ($1); }
- | bpf             { add_new_BP (create_BP(BP_type_BPF, current_BPF)); current_BPF=NULL; }
+ | bpf             { 
+   if (is_address_OEP(current_BPF)) 
+       current_BPF->INT3_style=true; 
+   add_new_BP (create_BP(BP_type_BPF, current_BPF)); 
+   current_BPF=NULL; 
+ }
  | LOAD_FILENAME   { load_filename=$1; }
  | ATTACH_FILENAME { attach_filename=$1; }
  | ATTACH_PID      { attach_PID=$1; }
@@ -147,15 +157,36 @@ cstring
 
 address
  : abs_address 
-     { $$=create_address_abs ($1); }
+     { 
+        $$=create_address_abs ($1); 
+     }
  | FILENAME_EXCLAMATION SYMBOL_NAME_PLUS DEC_OR_HEX
-     { $$=create_address_filename_symbol ($1, $2, $3); DFREE ($1); DFREE ($2); }
+     { 
+        $$=create_address_filename_symbol ($1, $2, $3); 
+         DFREE ($1); 
+         DFREE ($2); 
+         // every new address, except of abs-address (which is already resolved)
+         // is added to addresses resolving queue
+         add_new_address_to_be_resolved ($$); 
+     }
  | FILENAME_EXCLAMATION SYMBOL_NAME
-     { $$=create_address_filename_symbol ($1, $2, 0); DFREE ($1); DFREE ($2); }
+     { 
+        $$=create_address_filename_symbol ($1, $2, 0); 
+        DFREE ($1); 
+        DFREE ($2); 
+        add_new_address_to_be_resolved ($$); 
+     }
  | FILENAME_EXCLAMATION HEX_NUMBER
-     { $$=create_address_filename_address ($1, $2); DFREE ($1); }
+     { 
+        $$=create_address_filename_address ($1, $2); 
+        DFREE ($1); 
+        add_new_address_to_be_resolved ($$); 
+     }
  | BYTEMASK bytemask BYTEMASK_END 
-     { $$=create_address_bytemask ($2); }
+     { 
+        $$=create_address_bytemask ($2); 
+        add_new_address_to_be_resolved ($$); 
+     }
  ;
 
 DEC_OR_HEX

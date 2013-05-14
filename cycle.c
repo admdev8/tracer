@@ -48,11 +48,9 @@ void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     p->PHDL=i->hProcess;
     p->file_handle=i->hFile;
     p->base_of_image=(address)i->lpBaseOfImage;
-    if (i->lpImageName)
-    {
-        assert(i->fUnicode==0);
-        L ("(name=%s)\n", i->lpImageName);
-    };
+    process_resolve_path_and_filename_from_hdl(i->hFile, p);
+    L ("(name=%s)\n", p->filename);
+    
     p->modules=rbtree_create(true, "modules", compare_size_t); // compare_REGs?
     p->threads=rbtree_create(true, "threads", compare_tetrabytes);
     add_thread (p, TID, i->hThread, (address)i->lpStartAddress);

@@ -7,7 +7,7 @@
 
 #include "address.h" // bolt
 
-#define BYTEMASK_WILDCARD_BYTE 257
+#define BYTEMASK_WILDCARD_BYTE 0x100
 
 typedef tetrabyte REG;
 
@@ -90,6 +90,7 @@ void dump_BPX_option(BPX_option *b);
 typedef struct _BPX
 {
     bp_address *a;
+    bool INT3_style;
     obj* options; // list of opaque objects. each object - ptr to one BPX_option.
                   // may be NULL if options absent
 } BPX;
@@ -101,6 +102,8 @@ void dump_BPX(BPX *);
 typedef struct _BPF
 {
     bp_address *a;
+    bool INT3_style;
+    bool hidden;
     bool unicode, skip, skip_stdcall, trace, trace_cc;
     // these params may be NULL
     obj* rt;
@@ -137,12 +140,21 @@ void BP_free(BP*);
 extern BPF* current_BPF; // filled while parsing
 
 BP* parse_option(char *s);
+bool is_address_OEP(bp_address *a);
+bool is_address_fname_OEP(bp_address* a, char *fname);
+bool is_there_OEP_breakpoint_for_fname(char *fname);
+void dump_address (bp_address *a);
 
 // from opts.y
 extern obj* breakpoints;
+extern obj* addresses_to_be_resolved;
 extern char* load_filename;
 extern char* attach_filename;
 extern char *load_command_line;
 extern int attach_PID;
 extern bool debug_children;
+
+void add_new_BP (BP* bp);
+void add_new_address_to_be_resolved (bp_address *a);
+
 void yyerror(char *s);
