@@ -9,6 +9,7 @@
 #include "opts.h"
 
 BPF* current_BPF=NULL; // filled while parsing
+bp_address* current_BPF_address; // filled while parsing
 
 bool is_address_OEP(bp_address *a)
 {
@@ -31,17 +32,9 @@ bool is_there_OEP_breakpoint_for_fname(char *fname)
         return false;
     for (obj *i=breakpoints; i; i=cdr(i)) // breakpoints is a list
     {
-        BP *bp=(BP*)obj_unpack_opaque(i);
-        if (bp->t==BP_type_BPX)
-        {
-            if (is_address_fname_OEP(((BPX*)bp->u.bpx)->a, fname))
-                return true;
-        };
-        if (bp->t==BP_type_BPF)
-        {
-            if (is_address_fname_OEP(((BPF*)bp->u.bpf)->a, fname))
-                return true;
-        };
+        BP *bp=(BP*)obj_unpack_opaque(car(i));
+        if (is_address_fname_OEP(bp->a, fname))
+            return true;
     };
     return false;
 };
@@ -121,6 +114,8 @@ bp_address *create_address_bytemask(obj *bytemask)
 
 void bp_address_free(bp_address *a)
 {
+    if (a==NULL)
+        return;
     if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL || a->t==OPTS_ADR_TYPE_FILENAME_ADR)
         DFREE(a->filename);
     if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL)
@@ -132,27 +127,22 @@ void bp_address_free(bp_address *a)
 
 void BPX_option_free(BPX_option *o)
 {
-    if (o->a)
-        bp_address_free (o->a);
-    if (o->copy_string)
-        obj_free (o->copy_string);
+    bp_address_free (o->a);
+    obj_free (o->copy_string);
     DFREE (o);
 };
 
 void BPX_free(BPX *o)
 {
-    if (o->a)
-        bp_address_free(o->a);
     if (o->options)
         obj_free(o->options);
     DFREE (o);
 };
 
-BPM *create_BPM(bp_address *a, unsigned width, enum BPM_type t)
+BPM *create_BPM(unsigned width, enum BPM_type t)
 {
-    BPM *rt=DCALLOC (BPM, 1, "bp_address");
+    BPM *rt=DCALLOC (BPM, 1, "BPM");
 
-    rt->a=a;
     rt->width=width;
     rt->t=t;
 
@@ -163,25 +153,19 @@ void dump_BPM(BPM *bpm)
 {
     printf ("BPM. width=%d, ", bpm->width);
     if (bpm->t==BPM_type_RW)
-        printf ("type=RW, ");
+        printf ("type=RW");
     else
-        printf ("type=W, ");
-    printf ("bp_address=");
-    dump_address (bpm->a);
+        printf ("type=W");
     printf ("\n");
 };
 
 void BPM_free(BPM *o)
 {
-    if (o->a)
-        bp_address_free(o->a);
     DFREE (o);
 };
 
 void BPF_free(BPF* o)
 {
-    if (o->a)
-        bp_address_free(o->a);
     if (o->rt)
         obj_free (o->rt);
     if (o->when_called_from_address)
@@ -193,6 +177,7 @@ void BPF_free(BPF* o)
 
 void BP_free(BP* b)
 {
+    bp_address_free(b->a);
     switch (b->t)
     {
         case BP_type_BPM:
@@ -210,44 +195,40 @@ void BP_free(BP* b)
     DFREE(b);
 };
 
-BPX* create_BPX(bp_address *a, obj *options)
+BPX* create_BPX(obj *options)
 {
-    BPX* rt=DCALLOC (BPX, 1, "bp_address");
-    rt->a=a;
+    BPX* rt=DCALLOC (BPX, 1, "BPX");
     rt->options=options;
 
-   if (is_address_OEP(rt->a)) 
-       rt->INT3_style=true; 
-    
     return rt;
 };
 
-BP* create_BP (enum BP_type t, void* p)
+BP* create_BP (enum BP_type t, bp_address* a, void* p)
 {
-    BP* rt=DCALLOC(BP, 1, "bp_address");
+    BP* rt=DCALLOC(BP, 1, "BP");
     rt->t=t;
+
+    if (is_address_OEP(a) && t==BP_type_BPX) 
+        ((BPX*)p)->INT3_style=true; 
+
+    if (is_address_OEP(a) && t==BP_type_BPF) 
+        ((BPF*)p)->INT3_style=true; 
+
+    rt->a=a;
     rt->u.p=p;
     return rt;
 };
 
 void dump_BPX(BPX *b)
 {
-    assert (b->a);
-    printf ("BPX. bp_address=");
-    dump_address (b->a);
-    printf ("\n");
-    printf ("options: ");
+    printf ("BPX. options: ");
     obj_dump(b->options);
     printf ("\n");
 };
 
 void dump_BPF(BPF *b)
 {
-    assert (b->a);
-    printf ("BPF. bp_address=");
-    dump_address (b->a);
-    printf ("\n");
-    printf ("options: ");
+    printf ("BPF. options: ");
     if (b->unicode)
         printf ("unicode ");
     if (b->skip)
@@ -294,6 +275,10 @@ void dump_BPF(BPF *b)
 
 void dump_BP (BP* b)
 {
+    printf ("bp_address=");
+    dump_address (b->a);
+    printf (". ");
+
     switch (b->t)
     {
         case BP_type_BPM:

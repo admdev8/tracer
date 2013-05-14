@@ -72,8 +72,9 @@ tracer_option
  | bpf             { 
    if (is_address_OEP(current_BPF)) 
        current_BPF->INT3_style=true; 
-   add_new_BP (create_BP(BP_type_BPF, current_BPF)); 
-   current_BPF=NULL; 
+   add_new_BP (create_BP(BP_type_BPF, current_BPF_address, current_BPF)); 
+   current_BPF=NULL;
+   current_BPF_address=NULL;
  }
  | LOAD_FILENAME   { load_filename=$1; }
  | ATTACH_FILENAME { attach_filename=$1; }
@@ -83,22 +84,22 @@ tracer_option
  ;
 
 bpm
- : BPM_width address COMMA W        
-   { $$=create_BP(BP_type_BPM, create_BPM ($2, $1, BPM_type_W)); }
- | BPM_width address COMMA RW       
-   { $$=create_BP(BP_type_BPM, create_BPM ($2, $1, BPM_type_RW)); }
+ : BPM_width address COMMA W
+   { $$=create_BP(BP_type_BPM, $2, create_BPM ($1, BPM_type_W)); }
+ | BPM_width address COMMA RW
+   { $$=create_BP(BP_type_BPM, $2, create_BPM ($1, BPM_type_RW)); }
  ;
 
 bpx
  : BPX_EQ address
-   { $$=create_BP(BP_type_BPX, create_BPX ($2, NULL)); }
+   { $$=create_BP(BP_type_BPX, $2, create_BPX (NULL)); }
  | BPX_EQ address COMMA BPX_options
-   { $$=create_BP(BP_type_BPX, create_BPX ($2, $4)); }
+   { $$=create_BP(BP_type_BPX, $2, create_BPX ($4)); }
  ;
 
 bpf
- : BPF_EQ address                   { current_BPF->a=$2; } 
- | BPF_EQ address COMMA BPF_options { current_BPF->a=$2; }
+ : BPF_EQ address                   { current_BPF_address=$2; } 
+ | BPF_EQ address COMMA BPF_options { current_BPF_address=$2; }
  ;
 
 BPX_options

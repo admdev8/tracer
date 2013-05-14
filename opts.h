@@ -9,7 +9,11 @@
 
 #define BYTEMASK_WILDCARD_BYTE 0x100
 
+#ifdef _WIN64
+typedef octabyte REG;
+#else
 typedef tetrabyte REG;
+#endif
 
 enum adr_type
 {
@@ -55,12 +59,11 @@ enum BPM_type
 
 typedef struct _BPM
 {
-    bp_address *a;
     unsigned width;
     enum BPM_type t;
 } BPM;
 
-BPM *create_BPM(bp_address *a, unsigned width, enum BPM_type t);
+BPM *create_BPM(unsigned width, enum BPM_type t);
 void dump_BPM(BPM *);
 void BPM_free(BPM *);
 
@@ -89,19 +92,17 @@ void dump_BPX_option(BPX_option *b);
 
 typedef struct _BPX
 {
-    bp_address *a;
     bool INT3_style;
     obj* options; // list of opaque objects. each object - ptr to one BPX_option.
                   // may be NULL if options absent
 } BPX;
 
 void BPX_free(BPX *);
-BPX* create_BPX(bp_address *a, obj *options);
+BPX* create_BPX(obj *options);
 void dump_BPX(BPX *);
 
 typedef struct _BPF
 {
-    bp_address *a;
     bool INT3_style;
     bool hidden;
     bool unicode, skip, skip_stdcall, trace, trace_cc;
@@ -124,6 +125,7 @@ enum BP_type
 typedef struct _BP
 {
     enum BP_type t;
+    bp_address *a;
     union
     {
         BPM* bpm;
@@ -133,11 +135,12 @@ typedef struct _BP
     } u;
 } BP;
 
-BP* create_BP (enum BP_type t, void* p);
+BP* create_BP (enum BP_type t, bp_address* a, void* p);
 void dump_BP (BP* b);
 void BP_free(BP*);
 
 extern BPF* current_BPF; // filled while parsing
+extern bp_address* current_BPF_address; // filled while parsing
 
 BP* parse_option(char *s);
 bool is_address_OEP(bp_address *a);
