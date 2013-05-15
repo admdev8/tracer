@@ -39,7 +39,6 @@ bool is_there_OEP_breakpoint_for_fname(char *fname)
     return false;
 };
 
-
 void dump_address (bp_address *a)
 {
     assert(a);

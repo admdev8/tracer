@@ -17,15 +17,21 @@ char *load_command_line=NULL;
 int attach_PID=-1;
 bool debug_children=false;
 
+// from opts.l:
+
+void flex_set_str(char *s);
+void flex_cleanup();
+void flex_restart();
+
 void add_new_BP (BP* bp)
 {
-    breakpoints=nconc(breakpoints, 
+    breakpoints=NCONC(breakpoints, 
         cons (create_obj_opaque(bp, (void(*)(void*))dump_BP, (void(*)(void*))BP_free), NULL));
 };
 
 void add_new_address_to_be_resolved (bp_address *a)
 {
-    addresses_to_be_resolved=nconc(addresses_to_be_resolved, 
+    addresses_to_be_resolved=NCONC(addresses_to_be_resolved, 
         cons (create_obj_opaque(a, (void(*)(void*))dump_address, NULL), NULL));
 };
 
@@ -152,7 +158,7 @@ float_or_perc
  ;
 
 cstring
- : CSTRING_BYTE cstring  { $$=nconc (cons(obj_byte($1), NULL), $2); }
+ : CSTRING_BYTE cstring  { $$=NCONC (cons(obj_byte($1), NULL), $2); }
  | CSTRING_BYTE          { $$=cons (obj_byte($1), NULL); }
  ;
 
@@ -200,7 +206,7 @@ abs_address
  ;
 
 bytemask
- : bytemask_element bytemask { $$=nconc ($1, $2); }
+ : bytemask_element bytemask { $$=NCONC ($1, $2); }
  | bytemask_element
  ;
 

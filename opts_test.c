@@ -60,8 +60,8 @@ int main()
     do_test("bpf=filename.dll!symbol1,rt_probability:100%,rt:123\0");
     do_test("bpx=filename.dll!0x12345678,dump(eax,123)\0");
 
-    obj_free(breakpoints);
     obj_free(addresses_to_be_resolved);
+    obj_free(breakpoints);
     DFREE(load_filename);
     DFREE(attach_filename);
     DFREE(load_command_line);

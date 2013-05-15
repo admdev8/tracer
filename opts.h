@@ -29,7 +29,7 @@ typedef struct _bp_address
     bool resolved;
 
     // OPTS_ADR_TYPE_ABS case
-    address abs_address;
+    address abs_address; // always set if resolved
 
     char *filename; // for OPTS_ADR_TYPE_FILENAME_SYMBOL and OPTS_ADR_TYPE_FILENAME_ADR
 

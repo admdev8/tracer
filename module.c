@@ -10,9 +10,34 @@
 
 bool module_c_debug=true;
 
+bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_address *a)
+{
+    // scan symbols in loaded module_just_loaded
+    return false;
+};
+
+void try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
+{
+    if (addresses_to_be_resolved==NULL)
+        return;
+
+    obj* new_addresses_to_be_resolved=NULL;
+
+    printf ("%s() scan addresses_to_be_resolved...\n", __func__);
+    for (obj *i=addresses_to_be_resolved; i; i=cdr(i)) // breakpoints is a list
+    {
+        bp_address *bp_a=(bp_address*)obj_unpack_opaque(car(i));
+        if (try_to_resolve_bp_address_if_need(module_just_loaded, bp_a)==false)
+            new_addresses_to_be_resolved=NCONC(new_addresses_to_be_resolved, cons(car(i), NULL));
+    };
+    obj_free_conses_of_list(addresses_to_be_resolved);
+
+    addresses_to_be_resolved=new_addresses_to_be_resolved;
+};
+
 void add_module (process *p, address img_base, HANDLE file_hdl)
 {
-    module *m=DMALLOC(module, 1, "module");
+    module *m=DCALLOC(module, 1, "module");
     strbuf fullpath_filename=STRBUF_INIT;
     PE_info info;
 
@@ -64,6 +89,8 @@ void add_module (process *p, address img_base, HANDLE file_hdl)
     strbuf_deinit(&fullpath_filename);
     
     rbtree_insert (p->modules, (void*)img_base, (void*)m);
+
+    try_to_resolve_bp_addresses_if_need(m);
 
     PE_info_free(&info);
 

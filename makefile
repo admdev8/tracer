@@ -8,7 +8,8 @@ BOLT=../bolt/
 BOLT_LIBRARY=$(BOLT)boltd.a
 # -DYYDEBUG=1
 CPPFLAGS=-I$(OCTOTHORPE) -I$(X86_DISASM) -I$(PORG) -I$(BOLT) -D_DEBUG
-CFLAGS=-Wall -g -std=c99
+#CFLAGS=-Wall -g -std=c99
+CFLAGS=-Wall -g -std=gnu99
 LEX=flex
 SOURCES=y.tab.c opts.lex.c opts_func.c tracer.c cycle.c module.c process.c symbol.c thread.c
 OBJECTS=$(SOURCES:.c=.o)

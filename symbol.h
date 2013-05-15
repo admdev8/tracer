@@ -28,5 +28,5 @@ typedef struct _symbols_list
     // will it be skipped during tracing?
 } symbols_list;
 
-void add_symbols(rbtree *symtbl, const char * filename, address base, PE_info *info);
+void add_symbols (rbtree *symtbl, const char * filename, address base, PE_info *info);
 
