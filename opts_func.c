@@ -134,8 +134,15 @@ void BPX_option_free(BPX_option *o)
 
 void BPX_free(BPX *o)
 {
-    if (o->options)
-        obj_free(o->options);
+    if (o->opts)
+    {
+        BPX_option *t=o->opts, *t_next=o->opts;
+        for (;t_next;t=t_next)
+        {
+           t_next=t->next;
+           BPX_option_free(t);
+        };
+    };
     DFREE (o);
 };
 
@@ -195,10 +202,10 @@ void BP_free(BP* b)
     DFREE(b);
 };
 
-BPX* create_BPX(obj *options)
+BPX* create_BPX(BPX_option *opts)
 {
     BPX* rt=DCALLOC (BPX, 1, "BPX");
-    rt->options=options;
+    rt->opts=opts;
 
     return rt;
 };
@@ -221,8 +228,13 @@ BP* create_BP (enum BP_type t, bp_address* a, void* p)
 
 void dump_BPX(BPX *b)
 {
-    printf ("BPX. options: ");
-    obj_dump(b->options);
+    printf ("BPX.");
+    if (b->opts)
+    {
+        printf (" options: ");
+        for (BPX_option *o=b->opts; o; o=o->next)
+            dump_BPX_option(o);
+    };
     printf ("\n");
 };
 

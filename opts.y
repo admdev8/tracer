@@ -16,6 +16,7 @@ char* attach_filename=NULL;
 char *load_command_line=NULL;
 int attach_PID=-1;
 bool debug_children=false;
+BPX_option *current_BPX_option=NULL; 
 
 // from opts.l:
 
@@ -62,7 +63,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 %token <str> FILENAME_EXCLAMATION SYMBOL_NAME SYMBOL_NAME_PLUS LOAD_FILENAME ATTACH_FILENAME CMDLINE
 
 %type <a> address
-%type <o> bytemask bytemask_element BPX_options cstring
+%type <o> bytemask bytemask_element cstring
 %type <num> skip_n DEC_OR_HEX abs_address
 %type <bp> bpm bpx
 %type <bpx_option> BPX_option
@@ -100,7 +101,10 @@ bpx
  : BPX_EQ address
    { $$=create_BP(BP_type_BPX, $2, create_BPX (NULL)); }
  | BPX_EQ address COMMA BPX_options
-   { $$=create_BP(BP_type_BPX, $2, create_BPX ($4)); }
+   { 
+       $$=create_BP(BP_type_BPX, $2, create_BPX (current_BPX_option)); 
+       current_BPX_option=NULL;
+   }
  ;
 
 bpf
@@ -110,9 +114,14 @@ bpf
 
 BPX_options
  : BPX_option COMMA BPX_options
- { $$=cons (create_obj_opaque ($1, (void(*)(void*))dump_BPX_option, (void(*)(void*))BPX_option_free), $3); }
+ { 
+     BPX_option *o;
+     assert(current_BPX_option);
+     for (o=current_BPX_option; o->next; o=o->next);
+     o->next=$1;
+ }
  | BPX_option
- { $$=cons (create_obj_opaque ($1, (void(*)(void*))dump_BPX_option, (void(*)(void*))BPX_option_free), NULL); }
+ { current_BPX_option=$1; }
  ;
 
 BPF_options

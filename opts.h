@@ -86,7 +86,7 @@ typedef struct _BPX_option
     // in case of COPY
     byte *copy_string; // may be NULL if absent
     unsigned copy_string_len;
-
+    struct _BPX_option *next;
 } BPX_option;
 
 void BPX_option_free(BPX_option *);
@@ -96,12 +96,11 @@ void dump_BPX_option(BPX_option *b);
 typedef struct _BPX
 {
     bool INT3_style;
-    obj* options; // list of opaque objects. each object - ptr to one BPX_option.
-                  // may be NULL if options absent
+    BPX_option* opts; // may be NULL if options absent
 } BPX;
 
 void BPX_free(BPX *);
-BPX* create_BPX(obj *options);
+BPX* create_BPX(BPX_option *opts);
 void dump_BPX(BPX *);
 
 typedef struct _BPF
