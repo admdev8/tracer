@@ -204,6 +204,7 @@ address
  | BYTEMASK bytemask BYTEMASK_END 
      { 
         $$=create_address_bytemask ($2); 
+        obj_free($2);
         add_new_address_to_be_resolved ($$); 
      }
  ;

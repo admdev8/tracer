@@ -41,7 +41,8 @@ typedef struct _bp_address
     address adr;
 
     // OPTS_ADR_TYPE_BYTEMASK case
-    obj* bytemask;
+    wyde* bytemask;
+    unsigned bytemask_len;
 
 } bp_address;
 

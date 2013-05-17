@@ -58,7 +58,8 @@ void dump_address (bp_address *a)
             break;
         case OPTS_ADR_TYPE_BYTEMASK:
             printf ("bytemask:\"");
-            obj_dump(a->bytemask);
+            for (int i=0; i<a->bytemask_len; i++)
+                printf ("0x%x ", a->bytemask[i]);
             printf ("\"");
             break;
         default:
@@ -106,7 +107,7 @@ bp_address *create_address_bytemask(obj *bytemask)
     bp_address *rt=DCALLOC (bp_address, 1, "bp_address");
 
     rt->t=OPTS_ADR_TYPE_BYTEMASK;
-    rt->bytemask=bytemask;
+    list_of_wydes_to_array(&rt->bytemask, &rt->bytemask_len, bytemask);
 
     return rt;
 };
@@ -120,7 +121,7 @@ void bp_address_free(bp_address *a)
     if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL)
         DFREE(a->symbol);
     if (a->t==OPTS_ADR_TYPE_BYTEMASK)
-        obj_free(a->bytemask);
+        DFREE(a->bytemask);
     DFREE(a);
 };
 
