@@ -83,7 +83,9 @@ typedef struct _BPX_option
     X86_register reg;
     REG size_or_value;
     // in case of COPY
-    obj *copy_string;
+    byte *copy_string; // may be NULL if absent
+    unsigned copy_string_len;
+
 } BPX_option;
 
 void BPX_option_free(BPX_option *);

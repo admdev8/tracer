@@ -127,7 +127,7 @@ void bp_address_free(bp_address *a)
 void BPX_option_free(BPX_option *o)
 {
     bp_address_free (o->a);
-    obj_free (o->copy_string);
+    DFREE (o->copy_string);
     DFREE (o);
 };
 
@@ -319,7 +319,9 @@ void dump_BPX_option(BPX_option *b)
             else
                 printf ("reg:%s", X86_register_ToString(b->reg));
             assert(b->copy_string);
-            obj_dump(b->copy_string);
+            printf ("[");
+            for (int i=0; i<b->copy_string_len; i++)
+                printf ("0x%02X ", b->copy_string[i]);
             printf ("]");
             break;
 

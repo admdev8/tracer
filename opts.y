@@ -132,9 +132,21 @@ BPX_option
  | SET_OP REGISTER COMMA DEC_OR_HEX CP
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->size_or_value=$4; }
  | COPY_OP address COMMA QUOTE cstring QUOTE CP
- { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_COPY; $$->a=$2; $$->copy_string=$5; }
+ { 
+    $$=DCALLOC(BPX_option, 1, "BPX_option"); 
+    $$->t=BPX_option_COPY; 
+    $$->a=$2; 
+    list_of_bytes_to_array (&($$->copy_string), &($$->copy_string_len), $5); 
+    obj_free($5);
+ }
  | COPY_OP REGISTER COMMA QUOTE cstring QUOTE CP
- { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_COPY; $$->reg=$2; $$->copy_string=$5; }
+ { 
+    $$=DCALLOC(BPX_option, 1, "BPX_option"); 
+    $$->t=BPX_option_COPY; 
+    $$->reg=$2; 
+    list_of_bytes_to_array (&($$->copy_string), &($$->copy_string_len), $5); 
+    obj_free($5);
+ }
  ;
 
 BPF_option
