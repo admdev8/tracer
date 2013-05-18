@@ -1,15 +1,18 @@
 #include "symbol.h"
 #include "dmalloc.h"
 
-void add_symbol (rbtree *symtbl, address a, char *name, symbol_type t)
+static symbol *create_symbol (symbol_type t, char *n)
+{
+    symbol *rt=DCALLOC (symbol, 1, "symbol");
+    rt->t=t;
+    rt->name=DSTRDUP(n, "name");
+    return rt;
+};
+
+static void add_symbol (rbtree *symtbl, address a, char *name, symbol_type t)
 {
     // TODO: chk --allsymbols, --allsymbols:
-    symbols_list *l;
-    obj *new_sym;
-
-    new_sym=cons(obj_byte(t), obj_cstring(name));
-
-    l=(symbols_list*)rbtree_lookup(symtbl, (void*)a);
+    symbols_list *l=(symbols_list*)rbtree_lookup(symtbl, (void*)a);
 
     if (l==NULL)
     {
@@ -18,7 +21,10 @@ void add_symbol (rbtree *symtbl, address a, char *name, symbol_type t)
         rbtree_insert(symtbl, (void*)a, (void*)l);
     };
 
-    l->symbols=cons(new_sym, l->symbols);
+    // insert at beginning of list
+    symbol *new_sym=create_symbol(t, name);
+    new_sym->next=l->s;
+    l->s=new_sym;
 };
 
 void add_symbols(rbtree *symtbl, const char * filename, address base, PE_info *info)

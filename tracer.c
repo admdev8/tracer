@@ -98,7 +98,7 @@ void add_OEP_bp_if_we_loading ()
     L ("adding (hidden) OEP breakpoint\n");
     // if not, add one (hidden)
     BPF *OEP_bpf=DCALLOC (BPF, 1, "OEP_BPF");
-    bp_address *OEP_a=create_address_filename_symbol(load_filename, "OEP", 0);
+    bp_address *OEP_a=create_address_filename_symbol_re(load_filename, "OEP", 0);
     OEP_bpf->INT3_style=OEP_bpf->hidden=true;
     add_new_BP (create_BP(BP_type_BPF, OEP_a, OEP_bpf));
     add_new_address_to_be_resolved(OEP_a);
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 
     rbtree_deinit(processes);
 
-    obj_free(addresses_to_be_resolved);
+    dlist_free(addresses_to_be_resolved, NULL);
     free_all_BPs(breakpoints);
     DFREE(load_filename);
     DFREE(attach_filename);

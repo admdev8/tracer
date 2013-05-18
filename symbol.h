@@ -19,12 +19,19 @@ typedef enum _symbol_type
     SYM_TYPE_PE_EXPORT,
     SYM_TYPE_MAP,
     SYM_TYPE_PDB
-    // to add: SYM_TYPE_INLINE_FUNCTION - to be added while scanning for patterns
+    // to be added here: SYM_TYPE_INLINE_FUNCTION - to be added while scanning for patterns
 } symbol_type;
+
+typedef struct _symbol
+{
+    symbol_type t;
+    char *name;
+    struct _symbol *next;
+} symbol;
 
 typedef struct _symbols_list
 {
-    obj *symbols; // list of conses, each cons: type and name
+    symbol *s;
     // will it be skipped during tracing?
 } symbols_list;
 

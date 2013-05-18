@@ -6,7 +6,6 @@
 struct _process;
 typedef struct _process process;
 
-
 typedef struct _module
 {
     char *filename;

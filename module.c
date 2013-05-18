@@ -1,3 +1,5 @@
+#include <assert.h>
+
 #include "module.h"
 #include "process.h"
 #include "strbuf.h"
@@ -6,33 +8,92 @@
 #include "PE.h"
 #include "symbol.h"
 #include "logging.h"
+#include "stuff.h"
 #include "dmalloc.h"
 
 bool module_c_debug=true;
 
-bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_address *a)
+static address module_translate_adr_to_abs_address(module *m, address original_adr)
 {
-    // scan symbols in loaded module_just_loaded
+    return m->base + (original_adr - m->original_base);
+};
+
+static bool search_for_symbol_re_in_module(module *m, regex_t *symbol_re, address *out)
+{
+    // enumerate all symbols in module in order for searching
+
+    for (struct rbtree_node_t* i=rbtree_minimum(m->symbols); i; i=rbtree_succ(i))
+        for (symbol* s=((symbols_list*)i->value)->s; s; s=s->next)
+            if (regexec(symbol_re, s->name, 0, NULL, 0)==0)
+                return *out=(address)i->key, true;
+
     return false;
 };
 
-void try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
+static bool try_to_resolve_bytemask(bp_address *a)
 {
-    if (addresses_to_be_resolved==NULL)
-        return;
+    assert(!"not implemented");
+};
 
-    obj* new_addresses_to_be_resolved=NULL;
+static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_address *a)
+{
+    printf ("%s() a=", __func__);
+    dump_address (a);
+    printf ("\n");
+    assert (a->resolved==false);
 
-    printf ("%s() scan addresses_to_be_resolved...\n", __func__);
-    for (obj *i=addresses_to_be_resolved; i; i=cdr(i)) // breakpoints is a list
+    if (a->t==OPTS_ADR_TYPE_BYTEMASK)
+        return try_to_resolve_bytemask(a);
+
+    if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL || a->t==OPTS_ADR_TYPE_FILENAME_ADR)
     {
-        bp_address *bp_a=(bp_address*)obj_unpack_opaque(car(i));
-        if (try_to_resolve_bp_address_if_need(module_just_loaded, bp_a)==false)
-            new_addresses_to_be_resolved=NCONC(new_addresses_to_be_resolved, cons(car(i), NULL));
-    };
-    obj_free_conses_of_list(addresses_to_be_resolved);
+        // is $a$ related to module_just_loaded?
+        if (stricmp(module_just_loaded->internal_name, a->filename)!=0 &&
+                stricmp (module_just_loaded->filename, a->filename)!=0)
+            return false;
 
-    addresses_to_be_resolved=new_addresses_to_be_resolved;
+        if (a->t==OPTS_ADR_TYPE_FILENAME_ADR)
+        {
+            a->abs_address=module_translate_adr_to_abs_address(module_just_loaded, a->adr);
+            L ("Symbol %s resolved to 0x" PRI_ADR_HEX "\n", a->symbol, a->abs_address);
+            return a->resolved=true;
+        };
+
+        if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL)
+        {
+            address found;
+            if (search_for_symbol_re_in_module(module_just_loaded, &a->symbol_re, &found))
+            {
+                a->abs_address=found + a->ofs;
+                L ("Symbol %s resolved to 0x" PRI_ADR_HEX "\n", a->symbol, a->abs_address);
+                return a->resolved=true;
+            }
+            else
+                die ("Error: Module %s was just loaded, but symbol %s was not found in it!\n", 
+                        module_just_loaded->internal_name, a->symbol);
+        };
+    };
+
+    assert(!"unknown bp_address type");
+    return false; // TMCH
+};
+
+static void try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
+{
+    if (module_c_debug)
+        printf ("%s() scan addresses_to_be_resolved...\n", __func__);
+
+    for (dlist *i=addresses_to_be_resolved; i;) // breakpoints is a list
+    {
+        if (try_to_resolve_bp_address_if_need(module_just_loaded, (bp_address*)i->data))
+        {
+            dlist *tmp=i->next;
+            dlist_unlink(&addresses_to_be_resolved, i);
+            i=tmp;
+        }
+        else
+            i=i->next;
+    };
 };
 
 void add_module (process *p, address img_base, HANDLE file_hdl)
@@ -110,13 +171,17 @@ void module_free(module *m)
     DFREE(m->path);
     DFREE(m->internal_name);
 
-    for (struct rbtree_node_t *i=rbtree_minimum(m->symbols); i!=NULL; i=rbtree_succ(i))
+    for (struct rbtree_node_t *i=rbtree_minimum(m->symbols); i; i=rbtree_succ(i))
     {
-        //L ("(to be freed) address: 0x%x, ", (address)i->key);
         symbols_list *l=(symbols_list*)i->value;
-        //obj_dump(l->symbols);
-        obj_free(l->symbols);
-        //L ("\n");
+        for (symbol* s=l->s; s; )
+        {
+            symbol *tmp=s;
+            s=s->next;
+            DFREE(tmp->name);
+            DFREE(tmp);
+        };
+
         DFREE(l);
     };
 
