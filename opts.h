@@ -4,6 +4,8 @@
 #include <datatypes.h>
 #include "X86_register.h"
 #include "lisp.h"
+#include "dlist.h"
+#include "regex.h"
 
 #include "address.h" // bolt
 
@@ -35,6 +37,7 @@ typedef struct _bp_address
 
     // OPTS_ADR_TYPE_FILENAME_SYMBOL case
     char *symbol;
+    regex_t symbol_re; // all symbols are in regex form (?) so here it is always present (in compiled form)
     unsigned ofs;
 
     // OPTS_ADR_TYPE_FILENAME_ADR case
@@ -46,7 +49,7 @@ typedef struct _bp_address
 
 } bp_address;
 
-bp_address *create_address_filename_symbol(const char *filename, const char *symbol, unsigned ofs);
+bp_address *create_address_filename_symbol_re(const char *filename, const char *symbol_re, unsigned ofs);
 bp_address *create_address_filename_address(const char *filename, address adr);
 bp_address *create_address_abs(unsigned adr);
 bp_address *create_address_bytemask(obj *bytemask);
@@ -154,7 +157,7 @@ void free_all_BPs (BP* bp);
 
 // from opts.y
 extern BP *breakpoints;
-extern obj* addresses_to_be_resolved;
+extern dlist *addresses_to_be_resolved;
 extern char* load_filename;
 extern char* attach_filename;
 extern char *load_command_line;

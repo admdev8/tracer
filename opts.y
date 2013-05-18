@@ -7,16 +7,17 @@
 #include "opts.h"
 #include "dmalloc.h"
 #include "lisp.h"
+#include "dlist.h"
 #include "X86_register.h"
 
 BP* breakpoints=NULL; // list of opaque objects-pointers to BP structures
-obj* addresses_to_be_resolved=NULL; // list of opaque objects-pointers to bp_address structures. don't free them.
+dlist* addresses_to_be_resolved=NULL; // list of opaque objects-pointers to bp_address structures. don't free them.
 char* load_filename=NULL;
 char* attach_filename=NULL;
 char *load_command_line=NULL;
 int attach_PID=-1;
 bool debug_children=false;
-BPX_option *current_BPX_option=NULL; 
+BPX_option *current_BPX_option=NULL; // temporary, while parsing...
 
 // from opts.l:
 
@@ -38,8 +39,10 @@ void add_new_BP (BP* bp)
 
 void add_new_address_to_be_resolved (bp_address *a)
 {
-    addresses_to_be_resolved=NCONC(addresses_to_be_resolved, 
-        cons (create_obj_opaque(a, (void(*)(void*))dump_address, NULL), NULL));
+    if (addresses_to_be_resolved==NULL)
+        addresses_to_be_resolved=dlist_init();
+    
+    dlist_insert_at_begin (addresses_to_be_resolved, a);
 };
 
 %}
@@ -66,7 +69,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 %token <num> BPM_width CSTRING_BYTE ATTACH_PID
 %token <x86reg> REGISTER
 %token <dbl> FLOAT_NUMBER
-%token <str> FILENAME_EXCLAMATION SYMBOL_NAME SYMBOL_NAME_PLUS LOAD_FILENAME ATTACH_FILENAME CMDLINE
+%token <str> FILENAME_EXCLAMATION SYMBOL_NAME_RE SYMBOL_NAME_RE_PLUS LOAD_FILENAME ATTACH_FILENAME CMDLINE
 
 %type <a> address
 %type <o> bytemask bytemask_element cstring
@@ -194,18 +197,18 @@ address
      { 
         $$=create_address_abs ($1); 
      }
- | FILENAME_EXCLAMATION SYMBOL_NAME_PLUS DEC_OR_HEX
+ | FILENAME_EXCLAMATION SYMBOL_NAME_RE_PLUS DEC_OR_HEX
      { 
-        $$=create_address_filename_symbol ($1, $2, $3); 
+        $$=create_address_filename_symbol_re ($1, $2, $3); 
          DFREE ($1); 
          DFREE ($2); 
          // every new address, except of abs-address (which is already resolved)
          // is added to addresses resolving queue
          add_new_address_to_be_resolved ($$); 
      }
- | FILENAME_EXCLAMATION SYMBOL_NAME
+ | FILENAME_EXCLAMATION SYMBOL_NAME_RE
      { 
-        $$=create_address_filename_symbol ($1, $2, 0); 
+        $$=create_address_filename_symbol_re ($1, $2, 0); 
         DFREE ($1); 
         DFREE ($2); 
         add_new_address_to_be_resolved ($$); 

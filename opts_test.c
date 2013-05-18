@@ -1,6 +1,9 @@
 #include "opts.h"
 #include "dmalloc.h"
 
+// opts.tab.c
+int yydebug;
+
 static void do_test(char *s)
 {
     BP *b;
@@ -60,7 +63,7 @@ int main()
     do_test("bpf=filename.dll!symbol1,rt_probability:100%,rt:123\0");
     do_test("bpx=filename.dll!0x12345678,dump(eax,123)\0");
 
-    obj_free(addresses_to_be_resolved);
+    dlist_free(addresses_to_be_resolved, NULL);
     free_all_BPs(breakpoints);
     DFREE(load_filename);
     DFREE(attach_filename);

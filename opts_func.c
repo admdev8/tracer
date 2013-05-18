@@ -67,13 +67,22 @@ void dump_address (bp_address *a)
     };
 };
 
-bp_address *create_address_filename_symbol(const char *filename, const char *symbol, unsigned ofs)
+bp_address *create_address_filename_symbol_re(const char *filename, const char *symbol_re, unsigned ofs)
 {
     bp_address *rt=DCALLOC (bp_address, 1, "bp_address");
 
     rt->t=OPTS_ADR_TYPE_FILENAME_SYMBOL;
     rt->filename=DSTRDUP (filename, "");
-    rt->symbol=DSTRDUP (symbol, "");
+    rt->symbol=DSTRDUP (symbol_re, "");
+    int rc;
+
+    if ((rc=regcomp(&rt->symbol_re, symbol_re, REG_EXTENDED | REG_ICASE | REG_NEWLINE))!=0)
+    {
+        char buffer[100];
+        regerror(rc, &rt->symbol_re, buffer, 100);
+        die("failed regcomp() for pattern '%s' (%s)", symbol_re, buffer);
+    };
+
     rt->ofs=ofs;
 
     return rt;
@@ -118,7 +127,10 @@ void bp_address_free(bp_address *a)
     if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL || a->t==OPTS_ADR_TYPE_FILENAME_ADR)
         DFREE(a->filename);
     if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL)
+    {
         DFREE(a->symbol);
+        regfree(&a->symbol_re);
+    };
     if (a->t==OPTS_ADR_TYPE_BYTEMASK)
         DFREE(a->bytemask);
     DFREE(a);

@@ -5,7 +5,7 @@
 #include "dmalloc.h"
 #include "X86_register.h"
 
-#include "y.tab.h"
+#include "opts.tab.h"
 #include "opts.h"
 
 void print_current_state();
@@ -18,6 +18,7 @@ DEC         (0|[1-9][[:digit:]]*)
 HEX         0[Xx][[:xdigit:]]+
 FILENAME    [[:alnum:]_]+\.[[:alnum:]_]+
 SYMBOL_NAME [[:alpha:]][[:alnum:]_@]*
+SYMBOL_NAME_RE [[:alpha:]][[:alnum:]_@\?\.\|]*
 
 %x STATE_BPM STATE_BPX STATE_BPF
 %x STATE_ADDRESS STATE_ADDRESS_OR_REG STATE_BYTEMASK STATE_BYTEMASK_SKIP_OPT STATE_READ_ADR_OFS
@@ -83,15 +84,15 @@ SYMBOL_NAME [[:alpha:]][[:alnum:]_@]*
     return FLOAT_NUMBER; 
 }
 <STATE_ADDRESS,STATE_ADDRESS_OR_REG>{FILENAME}!               { yylval.str = DSTRDUP(yytext, "yytext"); str_trim_one_char_right(yylval.str); return FILENAME_EXCLAMATION; }
-<STATE_ADDRESS,STATE_ADDRESS_OR_REG>{SYMBOL_NAME}\+           { 
+<STATE_ADDRESS,STATE_ADDRESS_OR_REG>{SYMBOL_NAME_RE}\+           { 
     BEGIN (STATE_READ_ADR_OFS);
     yylval.str = DSTRDUP(yytext, "yytext");
     str_trim_one_char_right(yylval.str);
-    return SYMBOL_NAME_PLUS; }
-<STATE_ADDRESS,STATE_ADDRESS_OR_REG>{SYMBOL_NAME}           { 
+    return SYMBOL_NAME_RE_PLUS; }
+<STATE_ADDRESS,STATE_ADDRESS_OR_REG>{SYMBOL_NAME_RE}           { 
     yy_pop_state(); /* switch back to what was before STATE_ADDRESS */
     yylval.str = DSTRDUP(yytext, "yytext"); 
-    return SYMBOL_NAME; }
+    return SYMBOL_NAME_RE; }
 
 <STATE_BPM,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BPX,STATE_BPF>","                 { return COMMA; }
 <STATE_BPM>w                            { return W; }
