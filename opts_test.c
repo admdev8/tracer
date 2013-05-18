@@ -12,7 +12,7 @@ static void do_test(char *s)
         dump_BP(b);
         printf ("\n");     
         //BP_free(b);
-        obj_free (breakpoints);
+        free_all_BPs (breakpoints);
         breakpoints=NULL;
     }
     else
@@ -61,7 +61,7 @@ int main()
     do_test("bpx=filename.dll!0x12345678,dump(eax,123)\0");
 
     obj_free(addresses_to_be_resolved);
-    obj_free(breakpoints);
+    free_all_BPs(breakpoints);
     DFREE(load_filename);
     DFREE(attach_filename);
     DFREE(load_command_line);

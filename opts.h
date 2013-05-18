@@ -135,6 +135,7 @@ typedef struct _BP
         BPF* bpf;
         void *p;
     } u;
+    struct _BP *next;
 } BP;
 
 BP* create_BP (enum BP_type t, bp_address* a, void* p);
@@ -149,9 +150,10 @@ bool is_address_OEP(bp_address *a);
 bool is_address_fname_OEP(bp_address* a, char *fname);
 bool is_there_OEP_breakpoint_for_fname(char *fname);
 void dump_address (bp_address *a);
+void free_all_BPs (BP* bp);
 
 // from opts.y
-extern obj* breakpoints;
+extern BP *breakpoints;
 extern obj* addresses_to_be_resolved;
 extern char* load_filename;
 extern char* attach_filename;

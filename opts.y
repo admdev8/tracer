@@ -9,7 +9,7 @@
 #include "lisp.h"
 #include "X86_register.h"
 
-obj* breakpoints=NULL; // list of opaque objects-pointers to BP structures
+BP* breakpoints=NULL; // list of opaque objects-pointers to BP structures
 obj* addresses_to_be_resolved=NULL; // list of opaque objects-pointers to bp_address structures. don't free them.
 char* load_filename=NULL;
 char* attach_filename=NULL;
@@ -26,8 +26,14 @@ void flex_restart();
 
 void add_new_BP (BP* bp)
 {
-    breakpoints=NCONC(breakpoints, 
-        cons (create_obj_opaque(bp, (void(*)(void*))dump_BP, (void(*)(void*))BP_free), NULL));
+    if (breakpoints==NULL)
+        breakpoints=bp;
+    else
+    {
+        BP *t;
+        for (t=breakpoints; t->next; t=t->next);
+        t->next=bp;
+    };
 };
 
 void add_new_address_to_be_resolved (bp_address *a)
@@ -77,7 +83,7 @@ tracer_option
  : bpm             { add_new_BP ($1); }
  | bpx             { add_new_BP ($1); }
  | bpf             { 
-   if (is_address_OEP(current_BPF)) 
+   if (is_address_OEP(current_BPF_address)) 
        current_BPF->INT3_style=true; 
    add_new_BP (create_BP(BP_type_BPF, current_BPF_address, current_BPF)); 
    current_BPF=NULL;
@@ -258,12 +264,7 @@ BP* parse_option(char *s)
     };
 
     if (r==0 && breakpoints)
-    {
-        obj *tmp=car(breakpoints);
-        assert (breakpoints);
-        assert (tmp);
-        return obj_unpack_opaque(tmp); // for testing
-    }
+        return breakpoints;
     else
         return NULL;
 };

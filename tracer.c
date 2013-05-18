@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
     rbtree_deinit(processes);
 
     obj_free(addresses_to_be_resolved);
-    obj_free(breakpoints);
+    free_all_BPs(breakpoints);
     DFREE(load_filename);
     DFREE(attach_filename);
     DFREE(load_command_line);

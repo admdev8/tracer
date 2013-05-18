@@ -30,10 +30,9 @@ bool is_there_OEP_breakpoint_for_fname(char *fname)
 {
     if (breakpoints==NULL)
         return false;
-    for (obj *i=breakpoints; i; i=cdr(i)) // breakpoints is a list
+    for (BP *i=breakpoints; i->next; i=i->next)
     {
-        BP *bp=(BP*)obj_unpack_opaque(car(i));
-        if (is_address_fname_OEP(bp->a, fname))
+        if (is_address_fname_OEP(i->a, fname))
             return true;
     };
     return false;
@@ -144,6 +143,19 @@ void BPX_free(BPX *o)
         };
     };
     DFREE (o);
+};
+
+void free_all_BPs (BP* bp)
+{
+    if (bp==NULL)
+        return;
+
+    BP *t=bp, *t_next=bp;
+    for (;t_next;t=t_next)
+    {
+        t_next=t->next;
+        BP_free(t);
+    };
 };
 
 BPM *create_BPM(unsigned width, enum BPM_type t)
