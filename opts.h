@@ -98,7 +98,6 @@ void dump_BPX_option(BPX_option *b);
 
 typedef struct _BPX
 {
-    bool INT3_style;
     BPX_option* opts; // may be NULL if options absent
 } BPX;
 
@@ -108,7 +107,6 @@ void dump_BPX(BPX *);
 
 typedef struct _BPF
 {
-    bool INT3_style;
     bool hidden;
     bool unicode, skip, skip_stdcall, trace, trace_cc;
     // these params may be NULL
@@ -130,6 +128,9 @@ enum BP_type
 typedef struct _BP
 {
     enum BP_type t;
+    bool INT3_style;
+    unsigned DR_n; // in case of INT3_style==false
+    byte saved_byte; // in case of INT3_style==true
     bp_address *a;
     union
     {

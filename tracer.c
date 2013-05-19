@@ -5,13 +5,13 @@
 #include "stuff.h"
 #include "rbtree.h"
 #include "porg_utils.h"
-
+#include "memorycache.h"
 #include "opts.h"
 #include "cycle.h"
 #include "thread.h"
 #include "process.h"
 
-rbtree *processes=NULL;
+rbtree *processes=NULL; // PID, ptr to process
 
 void help_and_exit()
 {
@@ -99,9 +99,48 @@ void add_OEP_bp_if_we_loading ()
     // if not, add one (hidden)
     BPF *OEP_bpf=DCALLOC (BPF, 1, "OEP_BPF");
     bp_address *OEP_a=create_address_filename_symbol_re(load_filename, "OEP", 0);
-    OEP_bpf->INT3_style=OEP_bpf->hidden=true;
-    add_new_BP (create_BP(BP_type_BPF, OEP_a, OEP_bpf));
+    OEP_bpf->hidden=true;
+    BP *new_bp=create_BP(BP_type_BPF, OEP_a, OEP_bpf);
+    new_bp->INT3_style=true;
+    add_new_BP (new_bp);
     add_new_address_to_be_resolved(OEP_a);
+};
+
+void set_breakpoint(process *p, BP *bp)
+{
+    bool b;
+
+    assert (bp->a->resolved);
+
+    if (bp->INT3_style) // always set these breakpoints
+    {
+        assert (bp->t != BP_type_BPM);
+        
+        MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+        b=MC_ReadByte (mc, bp->a->abs_address, &bp->saved_byte);
+        assert(b && "can't read byte at breakpoint start");
+        b=MC_WriteByte (mc, bp->a->abs_address, 0xCC);
+        assert(b && "can't write 0xCC byte at breakpoint start");
+        MC_Flush (mc);
+        MC_MemoryCache_dtor (mc, false);
+
+    }
+    else if (p->we_are_loading_and_OEP_was_executed)
+    {
+        // set DRx breakpoints
+        assert (!"not implemented");
+    };
+};
+
+void set_all_breakpoints(process *p)
+{
+    // enum all breakpoints, pick out a->resolved ones
+    for (BP* b=breakpoints; b; b=b->next)
+    {
+        dump_BP (b);
+        if (b->a->resolved)
+            set_breakpoint(p, b);
+    };
 };
 
 int main(int argc, char *argv[])

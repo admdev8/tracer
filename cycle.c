@@ -15,25 +15,49 @@
 
 bool cycle_c_debug=true;
 
+bool handle_INT3_breakpoint (process *p, BP* bp)
+{
+
+};
+
 DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
 {
+    DWORD PID=de->dwProcessId;
     EXCEPTION_DEBUG_INFO *e=&de->u.Exception;
-    switch (e->ExceptionRecord.ExceptionCode)
+    EXCEPTION_RECORD *er=&e->ExceptionRecord;
+    address adr=(address)er->ExceptionAddress;
+    process *p=(process*)rbtree_lookup(processes, (void*)PID);
+    assert (p && "process with this PID wasn't registered");
+    DWORD rt=DBG_EXCEPTION_NOT_HANDLED; // default;
+
+    switch (er->ExceptionCode)
     {
         case EXCEPTION_SINGLE_STEP:
             L ("EXCEPTION_SINGLE_STEP\n");
             break;
         case EXCEPTION_BREAKPOINT:
-            L ("EXCEPTION_BREAKPOINT\n");
+            {
+                strbuf tmp=STRBUF_INIT;
+                process_get_sym (p, adr, &tmp);
+                L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp, adr);
+                // is this known INT3-style breakpoint?
+                for (BP *bp=breakpoints; bp; bp=bp->next)
+                    if (bp->INT3_style && bp->a->abs_address==adr && handle_INT3_breakpoint (p, bp))
+                    {
+                        rt=DBG_CONTINUE; // handled
+                        break;
+                    };
+                strbuf_deinit(&tmp);
+            };
             break;
         case EXCEPTION_ACCESS_VIOLATION:
             L ("EXCEPTION_ACCESS_VIOLATION\n");
             break;
         default:
-            L ("unknown ExceptionCode: %ld\n", e->ExceptionRecord.ExceptionCode);
+            L ("unknown ExceptionCode: %ld\n", er->ExceptionCode);
             break;
     };
-    return DBG_EXCEPTION_NOT_HANDLED; // default
+    return rt;
 };
 
 void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
@@ -57,6 +81,9 @@ void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     rbtree_insert(processes, (void*)PID, p);
 
     add_module(p, (address)i->lpBaseOfImage, p->file_handle);
+    
+    // there are may be present breakpoints with absolute addresses, so set them
+    set_all_breakpoints(p);
 
     if (cycle_c_debug)
         L ("%s() end\n", __func__);

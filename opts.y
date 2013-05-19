@@ -86,9 +86,10 @@ tracer_option
  : bpm             { add_new_BP ($1); }
  | bpx             { add_new_BP ($1); }
  | bpf             { 
-   if (is_address_OEP(current_BPF_address)) 
-       current_BPF->INT3_style=true; 
-   add_new_BP (create_BP(BP_type_BPF, current_BPF_address, current_BPF)); 
+   //if (is_address_OEP(current_BPF_address)) 
+   BP *bp=create_BP(BP_type_BPF, current_BPF_address, current_BPF);
+   bp->INT3_style=true; 
+   add_new_BP (bp); 
    current_BPF=NULL;
    current_BPF_address=NULL;
  }

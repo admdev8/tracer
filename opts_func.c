@@ -239,11 +239,8 @@ BP* create_BP (enum BP_type t, bp_address* a, void* p)
     BP* rt=DCALLOC(BP, 1, "BP");
     rt->t=t;
 
-    if (is_address_OEP(a) && t==BP_type_BPX) 
-        ((BPX*)p)->INT3_style=true; 
-
-    if (is_address_OEP(a) && t==BP_type_BPF) 
-        ((BPF*)p)->INT3_style=true; 
+    if (is_address_OEP(a) && (t==BP_type_BPX || t==BP_type_BPF))
+        rt->INT3_style=true; 
 
     rt->a=a;
     rt->u.p=p;

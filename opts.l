@@ -7,9 +7,6 @@
 
 #include "opts.tab.h"
 #include "opts.h"
-
-void print_current_state();
-
 %}
 
 %option stack
