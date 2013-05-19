@@ -21,4 +21,7 @@ typedef struct _module
 void add_module (process *p, address img_base, HANDLE file_hdl);
 void module_free(module *m);
 void remove_module (process *p, address img_base);
+bool address_in_module (module *m, address a);
+void module_get_sym (module *m, address a, strbuf *out);
+char *get_module_name (module *m);
 

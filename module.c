@@ -10,6 +10,7 @@
 #include "logging.h"
 #include "stuff.h"
 #include "dmalloc.h"
+#include "tracer.h"
 
 bool module_c_debug=true;
 
@@ -78,8 +79,10 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
     return false; // TMCH
 };
 
-static void try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
+static bool try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
 {
+    bool rt=false;
+
     if (module_c_debug)
         printf ("%s() scan addresses_to_be_resolved...\n", __func__);
 
@@ -90,10 +93,12 @@ static void try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
             dlist *tmp=i->next;
             dlist_unlink(&addresses_to_be_resolved, i);
             i=tmp;
+            rt=true;
         }
         else
             i=i->next;
     };
+    return rt;
 };
 
 void add_module (process *p, address img_base, HANDLE file_hdl)
@@ -151,7 +156,8 @@ void add_module (process *p, address img_base, HANDLE file_hdl)
     
     rbtree_insert (p->modules, (void*)img_base, (void*)m);
 
-    try_to_resolve_bp_addresses_if_need(m);
+    if (try_to_resolve_bp_addresses_if_need(m))
+        set_all_breakpoints(p);
 
     PE_info_free(&info);
 
@@ -203,5 +209,47 @@ void remove_module (process *p, address img_base)
 
     module_free(m);
     rbtree_delete(p->modules, (void*)img_base);
+};
+
+bool address_in_module (module *m, address a)
+{
+    return (a >= m->base) && (a < m->base + m->size);
+};
+
+#if 0
+// may return module.dll!symbol or NULL
+char* sym_exist_at (module *m, address a)
+{
+};
+#endif
+
+// may return module.dll!symbol+0x1234
+void module_get_sym (module *m, address a, strbuf *out)
+{
+    assert (address_in_module (m, a));
+
+    address prev_k;
+    symbols_list *prev_v;
+    
+    symbols_list *l=rbtree_lookup2(m->symbols, (void*)a, (void**)&prev_k, (void**)&prev_v, NULL, NULL);
+    if (l)
+    {
+        // take 'top' symbol
+        symbol *s=l->s;
+        strbuf_addf (out, "%s!%s", get_module_name (m), s->name);
+    }
+    else
+    {
+        symbol *s=prev_v->s;
+        strbuf_addf (out, "%s!%s+0x%x", get_module_name (m), s->name, a-prev_k);
+    };
+};
+
+char *get_module_name (module *m)
+{
+    if (m->internal_name)
+        return m->internal_name;
+    else
+        return m->filename;
 };
 
