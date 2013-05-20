@@ -12,22 +12,46 @@
 #include "rbtree.h"
 #include "process.h"
 #include "tracer.h"
+#include "X86_emu.h"
+#include "stuff.h"
 
 bool cycle_c_debug=true;
 
-bool handle_INT3_breakpoint (process *p, BP* bp)
+bool handle_INT3_breakpoint (process *p, thread *t, BP* bp)
 {
+    CONTEXT ctx;
+    ctx.ContextFlags = CONTEXT_ALL;
+    DWORD rt;
+    rt=GetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);      
+    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
 
+    CONTEXT_decrement_PC(&ctx);
+
+    Da_emulate_result r=Da_emulate (bp->ins, &ctx, mc);
+    
+    if (r!=DA_EMULATED_OK)
+    {
+        L ("r=%s\n", Da_emulate_result_to_string(r));
+        die("not emulated\n");
+    };
+
+    //L ("emulated OK!\n");
+    //dump_CONTEXT(&cur_fds, &ctx, false, false);
+
+    MC_Flush (mc);
+    MC_MemoryCache_dtor (mc, false);
+    rt=SetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
+    return true;
 };
 
 DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
 {
-    DWORD PID=de->dwProcessId;
+    DWORD PID=de->dwProcessId, TID=de->dwThreadId;
     EXCEPTION_DEBUG_INFO *e=&de->u.Exception;
     EXCEPTION_RECORD *er=&e->ExceptionRecord;
     address adr=(address)er->ExceptionAddress;
-    process *p=(process*)rbtree_lookup(processes, (void*)PID);
-    assert (p && "process with this PID wasn't registered");
+    process *p=find_process(PID);
+    thread *t=find_thread(PID, TID);
     DWORD rt=DBG_EXCEPTION_NOT_HANDLED; // default;
 
     switch (er->ExceptionCode)
@@ -42,7 +66,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp, adr);
                 // is this known INT3-style breakpoint?
                 for (BP *bp=breakpoints; bp; bp=bp->next)
-                    if (bp->INT3_style && bp->a->abs_address==adr && handle_INT3_breakpoint (p, bp))
+                    if (bp->INT3_style && bp->a->abs_address==adr && handle_INT3_breakpoint (p, t, bp))
                     {
                         rt=DBG_CONTINUE; // handled
                         break;
@@ -51,7 +75,9 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
             };
             break;
         case EXCEPTION_ACCESS_VIOLATION:
-            L ("EXCEPTION_ACCESS_VIOLATION\n");
+            L ("EXCEPTION_ACCESS_VIOLATION at 0x" PRI_ADR_HEX " ExceptionInformation[0]=%d\n",
+                    (address)de->u.Exception.ExceptionRecord.ExceptionAddress,
+                    de->u.Exception.ExceptionRecord.ExceptionInformation[0]);
             break;
         default:
             L ("unknown ExceptionCode: %ld\n", er->ExceptionCode);
@@ -143,7 +169,7 @@ void handle_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     DWORD PID=de->dwProcessId;
     process *p=find_process(PID);
 
-    L ("EXIT_PROCESS_DEBUG_EVENT. ExitCode=%d (0x%x)\n", i->dwExitCode);
+    L ("EXIT_PROCESS_DEBUG_EVENT. ExitCode=%d (0x%x)\n", i->dwExitCode, i->dwExitCode);
     process_free (p);
     rbtree_delete (processes, (void*)PID);
 };

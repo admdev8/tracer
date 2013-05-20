@@ -2,6 +2,8 @@
 
 #include <stdbool.h>
 #include <datatypes.h>
+
+#include "x86_disas.h"
 #include "X86_register.h"
 #include "lisp.h"
 #include "dlist.h"
@@ -129,8 +131,13 @@ typedef struct _BP
 {
     enum BP_type t;
     bool INT3_style;
-    unsigned DR_n; // in case of INT3_style==false
-    byte saved_byte; // in case of INT3_style==true
+    
+    // in case of INT3_style==false
+    unsigned DR_n; 
+    // in case of INT3_style==true
+    byte saved_byte;
+    Da* ins; // disassembled instruction at the place of INT3
+
     bp_address *a;
     union
     {

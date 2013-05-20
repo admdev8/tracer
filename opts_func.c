@@ -75,13 +75,19 @@ bp_address *create_address_filename_symbol_re(const char *filename, const char *
     rt->filename=DSTRDUP (filename, "");
     rt->symbol=DSTRDUP (symbol_re, "");
     int rc;
+    strbuf sb=STRBUF_INIT;
+    strbuf_addc(&sb, '^');
+    strbuf_addstr(&sb, symbol_re);
+    strbuf_addc(&sb, '$');
 
-    if ((rc=regcomp(&rt->symbol_re, symbol_re, REG_EXTENDED | REG_ICASE | REG_NEWLINE))!=0)
+    if ((rc=regcomp(&rt->symbol_re, sb.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE))!=0)
     {
         char buffer[100];
         regerror(rc, &rt->symbol_re, buffer, 100);
         die("failed regcomp() for pattern '%s' (%s)", symbol_re, buffer);
     };
+
+    strbuf_deinit(&sb);
 
     rt->ofs=ofs;
 
@@ -223,6 +229,7 @@ void BP_free(BP* b)
         default:
             assert(0);
     };
+    Da_free(b->ins);
     DFREE(b);
 };
 
@@ -326,6 +333,7 @@ void dump_BP (BP* b)
         default:
             assert(0);
     };
+    //printf ("next=0x%p\n", b->next);
 };
 
 void dump_BPX_option(BPX_option *b)

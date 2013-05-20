@@ -31,8 +31,6 @@ clean:
 	$(RM) opts.tab.h opts.tab.c opts.lex.c tracer.exe opts_test.exe
 	$(RM) $(DEP_FILES)
 	$(RM) $(OBJECTS)
-	$(RM) opts.tab.h
-	$(RM) opts.tab.c
 
 opts.tab.h opts.tab.c: opts.y
 	$(BISON) -d opts.y -t

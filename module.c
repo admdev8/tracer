@@ -49,8 +49,7 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
     if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL || a->t==OPTS_ADR_TYPE_FILENAME_ADR)
     {
         // is $a$ related to module_just_loaded?
-        if (stricmp(module_just_loaded->internal_name, a->filename)!=0 &&
-                stricmp (module_just_loaded->filename, a->filename)!=0)
+        if (stricmp(get_module_name(module_just_loaded), a->filename)!=0)
             return false;
 
         if (a->t==OPTS_ADR_TYPE_FILENAME_ADR)

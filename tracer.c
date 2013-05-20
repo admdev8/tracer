@@ -112,18 +112,34 @@ void set_breakpoint(process *p, BP *bp)
 
     assert (bp->a->resolved);
 
+    printf ("setting INT3-breakpoint for ");
+    dump_address(bp->a);
+    printf ("\n");
+
     if (bp->INT3_style) // always set these breakpoints
     {
         assert (bp->t != BP_type_BPM);
-        
-        MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
-        b=MC_ReadByte (mc, bp->a->abs_address, &bp->saved_byte);
-        assert(b && "can't read byte at breakpoint start");
-        b=MC_WriteByte (mc, bp->a->abs_address, 0xCC);
-        assert(b && "can't write 0xCC byte at breakpoint start");
-        MC_Flush (mc);
-        MC_MemoryCache_dtor (mc, false);
 
+        if (bp->ins==NULL) // not yet set
+        {
+            MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+
+            bp->ins=Da_Da_callbacks (Fuzzy_Undefined, bp->a->abs_address, 
+                     (bool (*)(void*, disas_address, uint8_t*))MC_ReadByte, 
+                     (bool (*)(void*, disas_address, uint16_t*))MC_ReadWyde, 
+                     (bool (*)(void*, disas_address, uint32_t*))MC_ReadTetrabyte, 
+                     (bool (*)(void*, disas_address, uint64_t*))MC_ReadOctabyte, 
+                     (void*)mc);
+
+            assert (bp->ins && "can't disassemble instruction at breakpoint start");
+
+            b=MC_ReadByte (mc, bp->a->abs_address, &bp->saved_byte);
+            assert(b && "can't read byte at breakpoint start");
+            b=MC_WriteByte (mc, bp->a->abs_address, 0xCC);
+            assert(b && "can't write 0xCC byte at breakpoint start");
+            MC_Flush (mc);
+            MC_MemoryCache_dtor (mc, false);
+        };
     }
     else if (p->we_are_loading_and_OEP_was_executed)
     {
@@ -145,7 +161,7 @@ void set_all_breakpoints(process *p)
 
 int main(int argc, char *argv[])
 {
-    //dmalloc_break_at_seq_n (620);
+    //dmalloc_break_at_seq_n (102312);
     //
     if (argc==1)
         help_and_exit();
@@ -162,6 +178,9 @@ int main(int argc, char *argv[])
     debug_or_attach();
     processes=rbtree_create(true, "processes", compare_tetrabytes);
     cycle();
+
+    // any left processes?
+    rbtree_foreach(processes, NULL, NULL, (void(*)(void*))process_free);
 
     rbtree_deinit(processes);
 
