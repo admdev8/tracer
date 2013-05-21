@@ -14,6 +14,8 @@
 #include "tracer.h"
 #include "X86_emu.h"
 #include "stuff.h"
+#include "BPF.h"
+#include "BPX.h"
 
 bool cycle_c_debug=true;
 
@@ -27,16 +29,19 @@ bool handle_INT3_breakpoint (process *p, thread *t, BP* bp)
 
     CONTEXT_decrement_PC(&ctx);
 
-    Da_emulate_result r=Da_emulate (bp->ins, &ctx, mc);
+    Da_emulate_result r;
     
-    if (r!=DA_EMULATED_OK)
-    {
-        L ("r=%s\n", Da_emulate_result_to_string(r));
-        die("not emulated\n");
-    };
+    if ((r=Da_emulate (bp->ins, &ctx, mc))!=DA_EMULATED_OK)
+        die("not emulated: %s\n", Da_emulate_result_to_string(r));
 
-    //L ("emulated OK!\n");
-    //dump_CONTEXT(&cur_fds, &ctx, false, false);
+    if (bp->t==BP_type_BPF)
+        handle_BPF(bp, p, t, false);
+    else if (bp->t==BP_type_BPX)
+        handle_BPX(bp, p, t, false);
+    else
+    {
+        assert(0);
+    };
 
     MC_Flush (mc);
     MC_MemoryCache_dtor (mc, false);

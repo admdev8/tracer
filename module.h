@@ -3,7 +3,6 @@
 #include "rbtree.h"
 #include "opts.h"
 
-struct _process;
 typedef struct _process process;
 
 typedef struct _module

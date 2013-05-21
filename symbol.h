@@ -8,7 +8,6 @@
 #include "PE.h"
 #include "rbtree.h"
 
-struct _module;
 typedef struct _module module;
 
 typedef enum _symbol_type

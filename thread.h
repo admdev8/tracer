@@ -3,7 +3,6 @@
 #include <windows.h>
 #include "address.h"
 
-struct _process;
 typedef struct _process process;
 
 typedef struct _thread
