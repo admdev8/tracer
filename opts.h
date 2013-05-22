@@ -24,7 +24,8 @@ BP* parse_option(char *s);
 bool is_there_OEP_breakpoint_for_fname(char *fname);
 
 // from opts.y
-extern BP *breakpoints;
+extern BP* OEP_breakpoint;
+extern BP* DRx_breakpoints[4];
 extern dlist *addresses_to_be_resolved;
 extern char* load_filename;
 extern char* attach_filename;

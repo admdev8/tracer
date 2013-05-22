@@ -4,6 +4,7 @@
 #include "BP.h"
 #include "strbuf.h"
 #include "stuff.h"
+#include "opts.h"
 
 bool is_address_OEP(bp_address *a)
 {
@@ -19,34 +20,52 @@ bool is_address_fname_OEP(bp_address* a, char *fname)
         stricmp(a->filename, fname)==0 &&
         a->ofs==0;
 };
-void dump_address (bp_address *a)
+
+void address_to_string (bp_address *a, strbuf *out)
 {
     assert(a);
 
     switch (a->t)
     {
         case OPTS_ADR_TYPE_ABS:
-            printf ("0x%x", a->abs_address);
+            strbuf_addf (out, "0x" PRI_ADR_HEX, a->abs_address);
             break;
         case OPTS_ADR_TYPE_FILENAME_SYMBOL:
-            printf ("(symbol) %s!%s", a->filename, a->symbol);
+            strbuf_addf (out, "%s!%s", a->filename, a->symbol);
             if (a->ofs)
-                printf ("+0x%x", a->ofs);
+                strbuf_addf (out, "+0x%x", a->ofs);
             break;
         case OPTS_ADR_TYPE_FILENAME_ADR:
-            printf ("(adr in PE module) %s!0x%x", a->filename, a->adr);
+            strbuf_addf (out, "%s!0x" PRI_ADR_HEX, a->filename, a->adr);
             break;
         case OPTS_ADR_TYPE_BYTEMASK:
-            printf ("bytemask:\"");
+            strbuf_addstr (out, "bytemask:\"");
             for (int i=0; i<a->bytemask_len; i++)
-                printf ("0x%x ", a->bytemask[i]);
-            printf ("\"");
+            {
+                wyde bm=a->bytemask[i];
+                if (bm==BYTEMASK_WILDCARD_BYTE)
+                    strbuf_addstr (out, "..");
+                else
+                    strbuf_addf (out, "%02X", bm);
+            };
+            strbuf_addstr (out, "\"");
             break;
         default:
             assert(0);
             break;
     };
 };
+
+void dump_address (bp_address *a)
+{
+    assert(a);
+    strbuf sb=STRBUF_INIT;
+
+    address_to_string (a, &sb);
+    printf ("%s", sb.buf);
+    strbuf_deinit (&sb);
+};
+
 bp_address *create_address_filename_symbol_re(const char *filename, const char *symbol_re, unsigned ofs)
 {
     bp_address *rt=DCALLOC (bp_address, 1, "bp_address");
@@ -119,6 +138,7 @@ void bp_address_free(bp_address *a)
         DFREE(a->bytemask);
     DFREE(a);
 };
+
 void BPX_option_free(BPX_option *o)
 {
     bp_address_free (o->a);
@@ -138,18 +158,6 @@ void BPX_free(BPX *o)
         };
     };
     DFREE (o);
-};
-void free_all_BPs (BP* bp)
-{
-    if (bp==NULL)
-        return;
-
-    BP *t=bp, *t_next=bp;
-    for (;t_next;t=t_next)
-    {
-        t_next=t->next;
-        BP_free(t);
-    };
 };
 
 BPM *create_BPM(unsigned width, enum BPM_type t)
@@ -176,6 +184,7 @@ void BPM_free(BPM *o)
 {
     DFREE (o);
 };
+
 void BPF_free(BPF* o)
 {
     if (o->rt)
@@ -186,8 +195,11 @@ void BPF_free(BPF* o)
         bp_address_free(o->when_called_from_func);
     DFREE (o);
 };
+
 void BP_free(BP* b)
 {
+    if (b==NULL)
+        return; // free(NULL) behaviour
     bp_address_free(b->a);
     switch (b->t)
     {
@@ -206,6 +218,7 @@ void BP_free(BP* b)
     Da_free(b->ins);
     DFREE(b);
 };
+
 BPX* create_BPX(BPX_option *opts)
 {
     BPX* rt=DCALLOC (BPX, 1, "BPX");
@@ -218,14 +231,19 @@ BP* create_BP (enum BP_type t, bp_address* a, void* p)
 {
     BP* rt=DCALLOC(BP, 1, "BP");
     rt->t=t;
-
-    if (is_address_OEP(a) && (t==BP_type_BPX || t==BP_type_BPF))
-        rt->INT3_style=true; 
-
     rt->a=a;
     rt->u.p=p;
+    
+    if (is_address_OEP(a))
+    {
+        if (OEP_breakpoint)
+            die ("Only one breakpoint at OEP can be present\n");
+        OEP_breakpoint=rt; 
+    };
+
     return rt;
 };
+
 void dump_BPX(BPX *b)
 {
     printf ("BPX.");
@@ -237,6 +255,7 @@ void dump_BPX(BPX *b)
     };
     printf ("\n");
 };
+
 void dump_BPF(BPF *b)
 {
     printf ("BPF. options: ");
@@ -283,6 +302,7 @@ void dump_BPF(BPF *b)
         printf ("\n");
     };
 };
+
 void dump_BP (BP* b)
 {
     printf ("bp_address=");

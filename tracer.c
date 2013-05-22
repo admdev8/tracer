@@ -10,8 +10,11 @@
 #include "cycle.h"
 #include "thread.h"
 #include "process.h"
+#include "CONTEXT_utils.h"
 
 rbtree *processes=NULL; // PID, ptr to process
+
+bool tracer_c_debug=true;
 
 void help_and_exit()
 {
@@ -80,82 +83,57 @@ void check_option_constraints()
             die ("-c options useless without -l option\n");
         if (debug_children)
             die ("--child option useless without -l option\n");
+        if (OEP_breakpoint)
+            die ("OEP breakpoint is useless without -l option\n");
     };
 };
 
-void add_OEP_bp_if_we_loading ()
+void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
 {
-    if (load_filename==NULL)
-        return;
-
-    // are there OEP option? enum all breakpoints, search for BPF/BPX-type with filename=ours and address=OEP
-    if (is_there_OEP_breakpoint_for_fname(load_filename)) // FIXME: cut path if needed
+    if (tracer_c_debug)
     {
-        L ("is_there_OEP_breakpoint_for_fname(%s) returned true\n", load_filename);
-        return;
+        strbuf sb=STRBUF_INIT;
+        address_to_string(bp->a, &sb);
+        L ("%s(): setting DRx-breakpoint %d for %s\n", __func__, DRx_no, sb.buf);
+        strbuf_deinit (&sb);
     };
 
-    L ("adding (hidden) OEP breakpoint\n");
-    // if not, add one (hidden)
-    BPF *OEP_bpf=DCALLOC (BPF, 1, "OEP_BPF");
-    bp_address *OEP_a=create_address_filename_symbol_re(load_filename, "OEP", 0);
-    OEP_bpf->hidden=true;
-    BP *new_bp=create_BP(BP_type_BPF, OEP_a, OEP_bpf);
-    new_bp->INT3_style=true;
-    add_new_BP (new_bp);
-    add_new_address_to_be_resolved(OEP_a);
+    CONTEXT_setDRx_and_DR7 (ctx, DRx_no, bp->a->abs_address);
 };
 
-void set_breakpoint(process *p, BP *bp)
+void set_or_update_all_breakpoints(process *p)
 {
-    bool b;
+    if (tracer_c_debug)
+        L ("%s() begin\n", __func__);
 
-    assert (bp->a->resolved);
-
-    printf ("setting INT3-breakpoint for ");
-    dump_address(bp->a);
-    printf ("\n");
-
-    if (bp->INT3_style) // always set these breakpoints
-    {
-        assert (bp->t != BP_type_BPM);
-
-        if (bp->ins==NULL) // not yet set
-        {
-            MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
-
-            bp->ins=Da_Da_callbacks (Fuzzy_Undefined, bp->a->abs_address, 
-                     (bool (*)(void*, disas_address, uint8_t*))MC_ReadByte, 
-                     (bool (*)(void*, disas_address, uint16_t*))MC_ReadWyde, 
-                     (bool (*)(void*, disas_address, uint32_t*))MC_ReadTetrabyte, 
-                     (bool (*)(void*, disas_address, uint64_t*))MC_ReadOctabyte, 
-                     (void*)mc);
-
-            assert (bp->ins && "can't disassemble instruction at breakpoint start");
-
-            b=MC_ReadByte (mc, bp->a->abs_address, &bp->saved_byte);
-            assert(b && "can't read byte at breakpoint start");
-            b=MC_WriteByte (mc, bp->a->abs_address, 0xCC);
-            assert(b && "can't write 0xCC byte at breakpoint start");
-            MC_Flush (mc);
-            MC_MemoryCache_dtor (mc, false);
-        };
-    }
-    else if (p->we_are_loading_and_OEP_was_executed)
-    {
-        // set DRx breakpoints
-        assert (!"not implemented");
-    };
-};
-
-void set_all_breakpoints(process *p)
-{
     // enum all breakpoints, pick out a->resolved ones
-    for (BP* b=breakpoints; b; b=b->next)
+    for (unsigned DRx_no=0; DRx_no<4; DRx_no++)
     {
-        dump_BP (b);
-        if (b->a->resolved)
-            set_breakpoint(p, b);
+        BP *bp=DRx_breakpoints[DRx_no];
+        if (bp)
+            L ("%s() DRx_breakpoints[%d]=0x%p\n", __func__, DRx_no, bp);
+        else
+            continue;
+
+        //dump_BP (bp);
+
+        if (bp->a->resolved==false)
+            continue;
+
+        if (p->we_are_loading_and_OEP_was_executed==false)
+            continue;
+        for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
+        {
+            thread *t=(thread*)(_t->value);
+            CONTEXT ctx;
+            ctx.ContextFlags = CONTEXT_ALL;
+            DWORD rt;
+            rt=GetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);      
+
+            set_or_update_DRx_breakpoint(bp, &ctx, DRx_no);
+
+            rt=SetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
+        };
     };
 };
 
@@ -173,7 +151,8 @@ int main(int argc, char *argv[])
 
     L_init ("tracer.log");
 
-    add_OEP_bp_if_we_loading();
+    for (int i=0; i<4; i++)
+        L ("DRx_breakpoints[%d]=0x%p\n", i, DRx_breakpoints[i]);
 
     debug_or_attach();
     processes=rbtree_create(true, "processes", compare_tetrabytes);
@@ -185,7 +164,10 @@ int main(int argc, char *argv[])
     rbtree_deinit(processes);
 
     dlist_free(addresses_to_be_resolved, NULL);
-    free_all_BPs(breakpoints);
+    BP_free(OEP_breakpoint);
+    for (unsigned i=0; i<4; i++)
+        BP_free(DRx_breakpoints[i]);
+
     DFREE(load_filename);
     DFREE(attach_filename);
     DFREE(load_command_line);

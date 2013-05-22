@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "bitfields.h"
 #include "dmalloc.h"
 #include "logging.h"
 #include "porg_utils.h"
@@ -16,37 +17,84 @@
 #include "stuff.h"
 #include "BPF.h"
 #include "BPX.h"
+#include "x86.h"
 
 bool cycle_c_debug=true;
 
-bool handle_INT3_breakpoint (process *p, thread *t, BP* bp)
+bool handle_OEP_breakpoint (process *p, thread *t)
 {
+    if (cycle_c_debug)
+        L ("%s() begin\n", __func__);
+
     CONTEXT ctx;
     ctx.ContextFlags = CONTEXT_ALL;
     DWORD rt;
-    rt=GetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);      
+    rt=GetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
     MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
 
     CONTEXT_decrement_PC(&ctx);
+    rt=SetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
 
-    Da_emulate_result r;
-    
-    if ((r=Da_emulate (bp->ins, &ctx, mc))!=DA_EMULATED_OK)
-        die("not emulated: %s\n", Da_emulate_result_to_string(r));
+    bool b=MC_WriteByte (mc, CONTEXT_get_PC(&ctx), p->executable_module->saved_OEP_byte);
+    assert (b && "cannot restore original byte at OEP");
 
-    if (bp->t==BP_type_BPF)
-        handle_BPF(bp, p, t, false);
-    else if (bp->t==BP_type_BPX)
-        handle_BPX(bp, p, t, false);
-    else
+    if (OEP_breakpoint)
     {
-        assert(0);
+        assert (!"TODO: handle OEP breakpoint (not implemented)");
     };
 
+    if (load_filename)
+        p->we_are_loading_and_OEP_was_executed=true;
+
+    set_or_update_all_breakpoints(p);
+
     MC_Flush (mc);
-    MC_MemoryCache_dtor (mc, false);
-    rt=SetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
+    MC_MemoryCache_dtor (mc, true);
     return true;
+};
+
+void handle_BP(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
+{
+    BP* bp=DRx_breakpoints[DRx_no];
+    switch (bp->t)
+    {
+        case BP_type_BPF:
+            handle_BPF(bp, p, t, DRx_no, ctx, mc);
+            break;
+        case BP_type_BPX:
+            handle_BPX(bp, p, t, DRx_no, ctx, mc);
+            break;
+        default:
+            assert(0);
+    };
+};
+
+void handle_Bx (DWORD DR6, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
+{
+    if (IS_SET(DR6, FLAG_DR6_B0))
+    {
+        assert (DRx_breakpoints[0]);
+        handle_BP(p, t, 0, ctx, mc);
+    };
+    
+    if (IS_SET(DR6, FLAG_DR6_B1))
+    {
+        assert (DRx_breakpoints[1]);
+        handle_BP(p, t, 1, ctx, mc);
+    };
+    
+    if (IS_SET(DR6, FLAG_DR6_B2))
+    {
+        assert (DRx_breakpoints[2]);
+        handle_BP(p, t, 2, ctx, mc);
+    };
+
+    if (IS_SET(DR6, FLAG_DR6_B3))
+    {
+        assert (DRx_breakpoints[3]);
+        handle_BP(p, t, 3, ctx, mc);
+    };
+    // FLAG_DR6_BS ?
 };
 
 DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
@@ -62,20 +110,43 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
     switch (er->ExceptionCode)
     {
         case EXCEPTION_SINGLE_STEP:
-            L ("EXCEPTION_SINGLE_STEP\n");
+            {
+                strbuf tmp=STRBUF_INIT;
+                process_get_sym (p, adr, &tmp);
+                CONTEXT ctx;
+                ctx.ContextFlags = CONTEXT_ALL;
+                DWORD tmpd;
+                tmpd=GetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);           
+                MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+
+                L ("EXCEPTION_SINGLE_STEP %s (0x" PRI_ADR_HEX ") DR6=", tmp.buf, adr); 
+                dump_DR6 (&cur_fds, ctx.Dr6); L(" (0x%x)\n", ctx.Dr6);
+                L ("DR7="); dump_DR7 (&cur_fds, ctx.Dr7); L("\n");
+                L ("DR0=0x" PRI_REG_HEX "\n", ctx.Dr0);
+                
+                handle_Bx (ctx.Dr6, p, t, &ctx, mc);
+
+                MC_Flush (mc);
+                MC_MemoryCache_dtor (mc, false);
+                tmpd=SetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);
+                strbuf_deinit(&tmp);
+                rt=DBG_CONTINUE; // handled
+            };
             break;
         case EXCEPTION_BREAKPOINT:
             {
                 strbuf tmp=STRBUF_INIT;
                 process_get_sym (p, adr, &tmp);
-                L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp, adr);
-                // is this known INT3-style breakpoint?
-                for (BP *bp=breakpoints; bp; bp=bp->next)
-                    if (bp->INT3_style && bp->a->abs_address==adr && handle_INT3_breakpoint (p, t, bp))
-                    {
-                        rt=DBG_CONTINUE; // handled
-                        break;
-                    };
+                L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
+                // is it OEP?
+                if (adr == p->executable_module->OEP)
+                {
+                    handle_OEP_breakpoint (p, t);
+                    rt=DBG_CONTINUE; // handled
+                };
+
+                if (rt==DBG_EXCEPTION_NOT_HANDLED)
+                    L ("Warning: unknown (to us) INT3 breakpoint\n");
                 strbuf_deinit(&tmp);
             };
             break;
@@ -89,6 +160,16 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
             break;
     };
     return rt;
+};
+
+void save_OEP_byte_and_set_INT3_breakpoint (MemoryCache *mc, module *m)
+{
+    bool b;
+    
+    b=MC_ReadByte (mc, m->OEP, &m->saved_OEP_byte);
+    assert(b && "can't read byte at breakpoint start");
+    b=MC_WriteByte (mc, m->OEP, 0xCC);
+    assert(b && "can't write 0xCC byte at breakpoint start");
 };
 
 void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
@@ -111,10 +192,21 @@ void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     add_thread (p, TID, i->hThread, (address)i->lpStartAddress);
     rbtree_insert(processes, (void*)PID, p);
 
-    add_module(p, (address)i->lpBaseOfImage, p->file_handle);
+    p->executable_module=add_module(p, (address)i->lpBaseOfImage, p->file_handle);
+
+    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+
+    if (load_filename)
+        save_OEP_byte_and_set_INT3_breakpoint (mc, p->executable_module);
+    else
+    {
+        // we are attaching?
+        // there are may be present breakpoints with absolute addresses, so set them
+        set_or_update_all_breakpoints(p);
+    };
     
-    // there are may be present breakpoints with absolute addresses, so set them
-    set_all_breakpoints(p);
+    MC_Flush (mc);
+    MC_MemoryCache_dtor (mc, false);
 
     if (cycle_c_debug)
         L ("%s() end\n", __func__);

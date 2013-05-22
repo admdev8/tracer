@@ -100,7 +100,7 @@ static bool try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
     return rt;
 };
 
-void add_module (process *p, address img_base, HANDLE file_hdl)
+module* add_module (process *p, address img_base, HANDLE file_hdl)
 {
     module *m=DCALLOC(module, 1, "module");
     strbuf fullpath_filename=STRBUF_INIT;
@@ -145,6 +145,7 @@ void add_module (process *p, address img_base, HANDLE file_hdl)
     
     m->base=img_base;
     m->original_base=info.original_base;
+    m->OEP=info.OEP;
     m->size=info.size;
     if (info.internal_name)
         m->internal_name=DSTRDUP(info.internal_name, "internal_name");
@@ -156,12 +157,14 @@ void add_module (process *p, address img_base, HANDLE file_hdl)
     rbtree_insert (p->modules, (void*)img_base, (void*)m);
 
     if (try_to_resolve_bp_addresses_if_need(m))
-        set_all_breakpoints(p);
+        set_or_update_all_breakpoints(p);
 
     PE_info_free(&info);
 
     if (module_c_debug)
         L ("%s() end\n", __func__);
+
+    return m;
 };
 
 void module_free(module *m)

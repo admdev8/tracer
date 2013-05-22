@@ -18,6 +18,8 @@ typedef struct _process
     char *path;
     char *filename;
 
+    module *executable_module;
+
     rbtree *threads; // -> TID, thread
     rbtree *modules; // base_address (in process), module
 

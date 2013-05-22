@@ -81,7 +81,6 @@ typedef struct _BPX
 
 typedef struct _BPF
 {
-    bool hidden;
     bool unicode, skip, skip_stdcall, trace, trace_cc;
     // these params may be NULL
     obj* rt;
@@ -100,12 +99,6 @@ enum BP_type
 typedef struct _BP
 {
     enum BP_type t;
-    bool INT3_style;
-    
-    // in case of INT3_style==false
-    unsigned DR_n; 
-    // in case of INT3_style==true
-    byte saved_byte;
     Da* ins; // disassembled instruction at the place of INT3
 
     bp_address *a;
@@ -138,5 +131,5 @@ void dump_BP (BP* b);
 void BP_free(BP*);
 bool is_address_OEP(bp_address *a);
 bool is_address_fname_OEP(bp_address* a, char *fname);
+void address_to_string (bp_address *a, strbuf *out);
 void dump_address (bp_address *a);
-void free_all_BPs (BP* bp);

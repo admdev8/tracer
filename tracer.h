@@ -4,5 +4,5 @@
 
 rbtree *processes; // PID, process
 
-void set_all_breakpoints(process *p);
+void set_or_update_all_breakpoints(process *p);
 

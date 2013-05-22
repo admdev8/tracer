@@ -12,12 +12,14 @@ typedef struct _module
     char *internal_name;
     address base;
     address original_base;
+    address OEP;
+    byte saved_OEP_byte; // in case of 'main' executable
     SIZE_T size;
     rbtree *symbols; // -> address, symbols_list
     // is_all_symbols_in_module_skipped ? 
 } module;
 
-void add_module (process *p, address img_base, HANDLE file_hdl);
+module* add_module (process *p, address img_base, HANDLE file_hdl);
 void module_free(module *m);
 void remove_module (process *p, address img_base);
 bool address_in_module (module *m, address a);

@@ -4,13 +4,16 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "stuff.h"
 #include "opts.h"
 #include "dmalloc.h"
 #include "lisp.h"
 #include "dlist.h"
 #include "X86_register.h"
 
-BP* breakpoints=NULL; // list of opaque objects-pointers to BP structures
+BP* OEP_breakpoint=NULL;
+BP* DRx_breakpoints[4]={ NULL, NULL, NULL, NULL };
 dlist* addresses_to_be_resolved=NULL; // list of opaque objects-pointers to bp_address structures. don't free them.
 char* load_filename=NULL;
 char* attach_filename=NULL;
@@ -18,6 +21,8 @@ char *load_command_line=NULL;
 int attach_PID=-1;
 bool debug_children=false;
 BPX_option *current_BPX_option=NULL; // temporary, while parsing...
+BPF* current_BPF=NULL; // filled while parsing
+bp_address* current_BPF_address; // filled while parsing
 
 // from opts.l:
 
@@ -27,14 +32,13 @@ void flex_restart();
 
 void add_new_BP (BP* bp)
 {
-    if (breakpoints==NULL)
-        breakpoints=bp;
-    else
-    {
-        BP *t;
-        for (t=breakpoints; t->next; t=t->next);
-        t->next=bp;
-    };
+    for (int i=0; i<4; i++)
+        if (DRx_breakpoints[i]==NULL)
+        {
+            DRx_breakpoints[i]=bp;
+            return;
+        };
+    die ("No more free DRx slots. Only 4 breakpoints allowed!\n");
 };
 
 void add_new_address_to_be_resolved (bp_address *a)
@@ -86,9 +90,7 @@ tracer_option
  : bpm             { add_new_BP ($1); }
  | bpx             { add_new_BP ($1); }
  | bpf             { 
-   //if (is_address_OEP(current_BPF_address)) 
    BP *bp=create_BP(BP_type_BPF, current_BPF_address, current_BPF);
-   bp->INT3_style=true; 
    add_new_BP (bp); 
    current_BPF=NULL;
    current_BPF_address=NULL;
@@ -267,8 +269,8 @@ BP* parse_option(char *s)
         exit(0);
     };
 
-    if (r==0 && breakpoints)
-        return breakpoints;
+    if (r==0 && DRx_breakpoints[0])
+        return DRx_breakpoints[0];
     else
         return NULL;
 };
