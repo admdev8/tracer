@@ -11,7 +11,10 @@ typedef struct _thread
     DWORD TID;
     HANDLE THDL;
     address start;
+
+    // BPF-related info
     BPF_state BPF_states[4]; // for each DRx breakpoint
+    REG* BPF_args;
 } thread;
 
 void thread_free (thread *t);

@@ -8,4 +8,4 @@ typedef struct _BP BP;
 typedef struct _process process;
 typedef struct _thread thread;
 
-void handle_BPX(BP *bp, process *p, thread *t, int DRx_no /* -1 for OEP */, CONTEXT *ctx, MemoryCache *mc);
+void handle_BPX(process *p, thread *t, int DRx_no /* -1 for OEP */, CONTEXT *ctx, MemoryCache *mc);

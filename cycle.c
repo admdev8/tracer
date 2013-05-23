@@ -55,14 +55,20 @@ bool handle_OEP_breakpoint (process *p, thread *t)
 
 void handle_BP(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
 {
-    BP* bp=DRx_breakpoints[DRx_no];
+    BP* bp;
+
+    if (DRx_no==-1)
+        bp=OEP_breakpoint;
+    else
+        bp=DRx_breakpoints[DRx_no];
+
     switch (bp->t)
     {
         case BP_type_BPF:
-            handle_BPF(bp, p, t, DRx_no, ctx, mc);
+            handle_BPF(p, t, DRx_no, ctx, mc);
             break;
         case BP_type_BPX:
-            handle_BPX(bp, p, t, DRx_no, ctx, mc);
+            handle_BPX(p, t, DRx_no, ctx, mc);
             break;
         default:
             assert(0);

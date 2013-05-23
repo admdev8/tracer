@@ -14,4 +14,4 @@ typedef enum _BPF_state
     BPF_state_at_return
 } BPF_state;
 
-void handle_BPF(BP *bp, process *p, thread *t, int DRx_no /* -1 for OEP */, CONTEXT *ctx, MemoryCache *mc);
+void handle_BPF(process *p, thread *t, int DRx_no /* -1 for OEP */, CONTEXT *ctx, MemoryCache *mc);
