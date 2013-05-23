@@ -16,6 +16,18 @@ rbtree *processes=NULL; // PID, ptr to process
 
 bool tracer_c_debug=true;
 
+void dump_PID_if_need(process *p)
+{
+   if (rbtree_count(processes)>1)
+       L ("PID=%d|", p->PID);
+};
+
+void dump_TID_if_need(process *p, thread *t)
+{
+   if (rbtree_count(p->threads)>1)
+       L ("TID=%d|", t->TID);
+};
+
 void help_and_exit()
 {
     printf ("help...\n");

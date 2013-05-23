@@ -5,17 +5,25 @@
 #include "process.h"
 #include "thread.h"
 #include "opts.h"
+#include "tracer.h"
 
-static void BPF_dump_arg (MemoryCache *mc, REG arg)
+static void BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode)
 {
-    L ("0x" PRI_REG_HEX, arg);
+    strbuf sb=STRBUF_INIT;
+
+    if (MC_GetString(mc, arg, unicode, &sb))
+        L ("\"%s\"", sb.buf);
+    else
+        L ("0x" PRI_REG_HEX, arg);
+
+    strbuf_deinit (&sb);
 };
 
-static void BPF_dump_args (MemoryCache *mc, REG* args, unsigned args_n)
+static void BPF_dump_args (MemoryCache *mc, REG* args, unsigned args_n, bool unicode)
 {
     for (unsigned i=0; i<args_n; i++)
     {
-        BPF_dump_arg (mc, args[i]);
+        BPF_dump_arg (mc, args[i], unicode);
         if ((i+1) != args_n)
             L (", ");
     };
@@ -51,8 +59,10 @@ void handle_BPF(process *p, thread *t, int DRx_no /* -1 for OEP */, CONTEXT *ctx
     {
         // do function begin things
         load_args(t, CONTEXT_get_SP(ctx), mc, bpf->args);
+        dump_PID_if_need(p);
+        dump_TID_if_need(p, t);
         L ("(%d) %s (", DRx_no, sb_address.buf);
-        BPF_dump_args (mc, t->BPF_args, bpf->args);
+        BPF_dump_args (mc, t->BPF_args, bpf->args, bpf->unicode);
         L (")\n");
         // set current DRx to return
         address ret_adr;
@@ -69,7 +79,10 @@ void handle_BPF(process *p, thread *t, int DRx_no /* -1 for OEP */, CONTEXT *ctx
     else if (*cur_state==BPF_state_at_return)
     {
         // do function finish things
-        L ("(%d) %s (...) -> ...\n", DRx_no, sb_address.buf);
+        REG accum=CONTEXT_get_Accum (ctx);
+        dump_PID_if_need(p);
+        dump_TID_if_need(p, t);
+        L ("(%d) %s () -> " PRI_SIZE_T_DEC " (0x" PRI_REG_HEX ")\n", DRx_no, sb_address.buf, accum, accum);
         DFREE(t->BPF_args); t->BPF_args=NULL;
         // set back current DRx to begin
         CONTEXT_setDRx_and_DR7 (ctx, DRx_no, bp_a->abs_address);
