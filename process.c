@@ -74,5 +74,10 @@ module *find_module_for_address (process *p, address a)
 
 void process_get_sym (process *p, address a, strbuf *out)
 {
-    module_get_sym (find_module_for_address (p, a), a, out);
+    module *m=find_module_for_address (p, a);
+    
+    if (0 && process_c_debug)
+        L ("%s() a=0x" PRI_ADR_HEX " m->base=0x " PRI_ADR_HEX " m->size=0x%x\n", __func__, a, m->base, m->size);
+    
+    module_get_sym (m, a, out);
 };
