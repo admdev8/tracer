@@ -346,13 +346,14 @@ void cycle()
             {
                 if (cycle_c_debug)
                     L ("%s() no more processes to receive events from\n", __func__);
-                break; 
+                goto exit; 
             };
             ContinueDebugEvent (de.dwProcessId, de.dwThreadId, ContinueStatus);
             if (detaching)
                 clean_all_DRx();
         };
 
+exit:
     if (cycle_c_debug)
         L ("%s() end\n", __func__);
 };
