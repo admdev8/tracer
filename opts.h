@@ -32,6 +32,7 @@ extern char* attach_filename;
 extern char *load_command_line;
 extern int attach_PID;
 extern bool debug_children;
+extern bool dash_s;
 
 void add_new_BP (BP* bp);
 void add_new_address_to_be_resolved (bp_address *a);

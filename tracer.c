@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <signal.h>
 
 #include "logging.h"
 #include "dmalloc.h"
@@ -15,6 +16,7 @@
 rbtree *processes=NULL; // PID, ptr to process
 
 bool tracer_c_debug=true;
+bool detaching=false;
 
 void dump_PID_if_need(process *p)
 {
@@ -65,21 +67,64 @@ void load_process()
     strbuf_deinit (&cmd_line);
 };
 
+void attach_process(obj *PIDs)
+{
+    for (obj *i=PIDs; i; i=cdr(i))
+    {
+        if (DebugActiveProcess (obj_get_as_tetrabyte(car(i)))==FALSE)
+            die_GetLastError ("DebugActiveProcess() failed\n");
+    };
+};
+
+void clean_all_DRx()
+{
+    if (tracer_c_debug)
+        L ("%s()\n", __func__);
+
+    for (struct rbtree_node_t *_p=rbtree_minimum(processes); _p; _p=rbtree_succ(_p))
+    {
+        process *p=(process*)(_p->value);
+
+        for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
+        {
+            thread *t=(thread*)(_t->value);
+            CONTEXT ctx;
+            ctx.ContextFlags = CONTEXT_ALL;
+            DWORD tmpd;
+            tmpd=GetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);           
+
+            ctx.Dr0=ctx.Dr1=ctx.Dr2=ctx.Dr3=ctx.Dr7=0;
+
+            tmpd=SetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);
+        };
+    };
+};
+
+void detach()
+{
+    L ("Detaching...\n");
+    detaching=true;
+};
+
 void debug_or_attach()
 {
+    obj* attach_PIDs=NULL;
+
     if (load_filename)
     {
         load_process();
     } else if (attach_filename)
     {
-        if (load_command_line)
-            printf ("Command line option will be ignored...\n");
-        assert(!"not implemented");
+        attach_PIDs=FindProcessByName(attach_filename);
+        if (attach_PIDs==NULL)
+            die ("Can't find process named %s\n", attach_filename);
+        attach_process(attach_PIDs);
+        obj_free(attach_PIDs);
     } else if (attach_PID!=-1)
     {
-        if (load_command_line)
-            printf ("Command line option will be ignored...\n");
-        assert(!"not implemented");
+        attach_PIDs=cons(obj_tetrabyte(attach_PID), NULL);
+        attach_process(attach_PIDs);
+        obj_free(attach_PIDs);
     }
     else
         die ("No program specified for load or attach\n");
@@ -149,6 +194,104 @@ void set_or_update_all_breakpoints(process *p)
     };
 };
 
+void print_stack_for_all_processes_and_threads()
+{
+    for (struct rbtree_node_t *_p=rbtree_minimum(processes); _p; _p=rbtree_succ(_p))
+    {
+        process *p=(process*)(_p->value);
+
+        for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
+        {
+            thread *t=(thread*)(_t->value);
+            CONTEXT ctx;
+            ctx.ContextFlags = CONTEXT_ALL;
+            DWORD tmpd;
+            tmpd=GetThreadContext (t->THDL, &ctx); 
+            if (tmpd==FALSE)
+                die_GetLastError ("GetThreadContext() failed\n");
+
+            MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+
+            if (rbtree_count(processes)>1)
+                L ("PID=%d\n", p->PID);
+            if (rbtree_count(p->threads)>1)
+                L ("TID=%d\n", t->TID);
+            dump_stack_EBP_frame (p, t, &ctx, mc);
+
+            MC_MemoryCache_dtor(mc, true);
+        };
+    };
+};
+
+static void WINAPI thread_B (DWORD param) 
+{
+    HANDLE hConsoleInput=GetStdHandle (STD_INPUT_HANDLE);
+
+    if (hConsoleInput!=INVALID_HANDLE_VALUE)
+    {
+        while (TRUE)
+        {
+            DWORD inp_read;
+            INPUT_RECORD inp_record;
+            if (ReadConsoleInput (hConsoleInput, &inp_record, 1, &inp_read)!=FALSE)
+            {
+                if (inp_record.EventType==KEY_EVENT)
+                    if (inp_record.Event.KeyEvent.bKeyDown==FALSE)
+                    {
+                        if (inp_record.Event.KeyEvent.wVirtualKeyCode==VK_ESCAPE)
+                        {
+                            L ("ESC pressed...\n");
+                            detach();
+                        };
+
+                        if (inp_record.Event.KeyEvent.wVirtualKeyCode==VK_SPACE) // VK_F1/etc also available
+                            print_stack_for_all_processes_and_threads();
+                    };
+            }
+            else
+                return;
+        };
+    }
+    else
+        return;
+};
+
+static void __cdecl signal_handler (int signo)
+{
+    if (signo==SIGINT)
+    {
+        L ("Ctrl-C or Ctrl-Break pressed\n");
+        detach();
+    };
+};
+
+static DWORD thread_B_id;
+static HANDLE thread_B_handle;
+BOOL (WINAPI * DebugActiveProcessStop_ptr)(DWORD pid)=NULL;
+
+void detach_from_all_processes()
+{
+    if (tracer_c_debug)
+        L ("%s() begin\n", __func__);
+
+    for (struct rbtree_node_t *_p=rbtree_minimum(processes); _p; _p=rbtree_succ(_p))
+    {
+        process *p=(process*)(_p->value);
+
+        if (DebugActiveProcessStop_ptr!=NULL)
+        {
+            if ((*DebugActiveProcessStop_ptr) (p->PID)==FALSE)
+                die_GetLastError ("DebugActiveProcessStop() failed");
+        }
+        else
+        {
+            L ("kernel32.dll!DebugActiveProcessStop() was not found, we have to kill process (PID=%d)\n", p->PID);
+            BOOL b=TerminateProcess (p->PHDL, 0);
+            assert (b);
+        };
+    };
+};
+
 int main(int argc, char *argv[])
 {
     //dmalloc_break_at_seq_n (102312);
@@ -168,7 +311,23 @@ int main(int argc, char *argv[])
 
     debug_or_attach();
     processes=rbtree_create(true, "processes", compare_tetrabytes);
+    
+    thread_B_handle=CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)thread_B, (PVOID)0, 0, &thread_B_id);
+    if (thread_B_handle==NULL)
+        die ("Cannot create thread B");
+    signal(SIGINT, &signal_handler);
+    
+    if (EnableDebugPrivilege (TRUE)==FALSE)
+        die_GetLastError ("EnableDebugPrivilege() failed\n");
+   
+    DebugActiveProcessStop_ptr=(BOOL (WINAPI *)(DWORD))(GetProcAddress (LoadLibrary ("kernel32.dll"), "DebugActiveProcessStop"));
+    if (DebugActiveProcessStop_ptr==NULL)
+        L ("DebugActiveProcessStop() was not found in your kernel32.dll. Detach wouldn't be possible.\n");
+
     cycle();
+
+    if (load_filename==NULL)
+        detach_from_all_processes();
 
     // any left processes?
     rbtree_foreach(processes, NULL, NULL, (void(*)(void*))process_free);

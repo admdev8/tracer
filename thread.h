@@ -20,4 +20,4 @@ typedef struct _thread
 void thread_free (thread *t);
 thread *find_thread (DWORD PID, DWORD TID);
 void add_thread (process *p, DWORD TID, HANDLE THDL, address start);
-
+void dump_stack_EBP_frame (process *p, thread *t, CONTEXT * ctx, MemoryCache *mem);

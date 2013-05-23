@@ -338,18 +338,21 @@ void cycle()
     if (cycle_c_debug)
         L ("%s() begin\n", __func__);
 
-    while (WaitForDebugEvent (&de, 1000)) // 1000ms. INFINITE shouldn't be here!
-    {
-        ContinueStatus=handle_debug_event(&de);
-        if (rbtree_empty(processes))
+    while (detaching==false)
+        while (WaitForDebugEvent (&de, 1000)) // 1000ms. INFINITE shouldn't be here!
         {
-            if (cycle_c_debug)
-                L ("%s() no more processes to receive events from\n", __func__);
-            break; 
+            ContinueStatus=handle_debug_event(&de);
+            if (rbtree_empty(processes))
+            {
+                if (cycle_c_debug)
+                    L ("%s() no more processes to receive events from\n", __func__);
+                break; 
+            };
+            ContinueDebugEvent (de.dwProcessId, de.dwThreadId, ContinueStatus);
+            if (detaching)
+                clean_all_DRx();
         };
-        ContinueDebugEvent (de.dwProcessId, de.dwThreadId, ContinueStatus);
-    };
-    
+
     if (cycle_c_debug)
         L ("%s() end\n", __func__);
 };

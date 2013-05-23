@@ -34,6 +34,7 @@ SYMBOL_NAME_RE [[:alpha:]][[:alnum:]_@\?\.\|]*
 <INITIAL>-a:{FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return ATTACH_FILENAME; };
 <INITIAL>-c:.*         { yylval.str=DSTRDUP(yytext+3, "yytext"); return CMDLINE; };
 <INITIAL>--child       { return CHILD; }
+<INITIAL>-s            { return DASH_S; }
 
 <STATE_ADDRESS_OR_REG>eax   { yylval.x86reg=R_EAX; yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>ebx   { yylval.x86reg=R_EBX; yy_pop_state(); return REGISTER; }
