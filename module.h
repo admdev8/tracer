@@ -8,11 +8,13 @@ typedef struct _process process;
 typedef struct _module
 {
     char *filename;
+    char *filename_without_ext;
     char *path;
-    char *internal_name;
+    char *internal_name; // may be NULL
     address base;
     address original_base;
     address OEP;
+    DWORD PE_timestamp;
     byte saved_OEP_byte; // in case of 'main' executable
     SIZE_T size;
     rbtree *symbols; // -> address, symbols_list

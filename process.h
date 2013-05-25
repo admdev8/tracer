@@ -15,8 +15,6 @@ typedef struct _process
     HANDLE PHDL;
     address base_of_image;
     HANDLE file_handle;
-    char *path;
-    char *filename;
 
     module *executable_module;
 
@@ -29,7 +27,6 @@ typedef struct _process
 
 void process_free (process *p);
 process *find_process(DWORD PID);
-void process_resolve_path_and_filename_from_hdl(HANDLE file_hdl, process *p);
 module *find_module_for_address (process *p, address a);
 void process_get_sym (process *p, address a, strbuf *out);
 

@@ -22,8 +22,6 @@ void process_free (process *p)
     rbtree_foreach(p->modules, NULL, NULL, (void (*)(void*))module_free);
     rbtree_deinit(p->threads);
     rbtree_deinit(p->modules);
-    DFREE(p->filename);
-    DFREE(p->path);
     DFREE (p);
 };
 
@@ -32,31 +30,6 @@ process *find_process(DWORD PID)
     process *p=(process*)rbtree_lookup(processes, (void*)PID);
     assert (p!=NULL && "PID not found in processes table");
     return p;
-};
-
-void process_resolve_path_and_filename_from_hdl(HANDLE file_hdl, process *p)
-{
-    strbuf fullpath_filename=STRBUF_INIT;
-
-    if (GetFileNameFromHandle(file_hdl, &fullpath_filename))
-    {
-        strbuf sb_filename=STRBUF_INIT, sb_path=STRBUF_INIT;
-
-        full_path_and_filename_to_path_only (&sb_path, fullpath_filename.buf);
-        full_path_and_filename_to_filename_only (&sb_filename, fullpath_filename.buf);
-        
-        p->filename=strbuf_detach(&sb_filename, NULL);
-        p->path=strbuf_detach(&sb_path, NULL);
-        strbuf_deinit (&sb_filename);
-        strbuf_deinit (&sb_path);
-    }
-    else
-    {
-        p->filename=DSTRDUP("?", "");
-        p->path=DSTRDUP("?", "");
-    };
-
-    strbuf_deinit(&fullpath_filename);
 };
 
 module *find_module_for_address (process *p, address a)

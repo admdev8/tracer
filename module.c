@@ -10,6 +10,7 @@
 #include "logging.h"
 #include "stuff.h"
 #include "dmalloc.h"
+#include "files.h"
 #include "tracer.h"
 
 bool module_c_debug=true;
@@ -100,66 +101,200 @@ static bool try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
     return rt;
 };
 
-module* add_module (process *p, address img_base, HANDLE file_hdl)
+static void set_filename_and_path_for_module (HANDLE file_hdl, module *m, strbuf *fullpath_filename)
 {
-    module *m=DCALLOC(module, 1, "module");
-    strbuf fullpath_filename=STRBUF_INIT;
-    PE_info info;
-
-    if (module_c_debug)
-        L ("%s() begin\n", __func__);
-
-    if (GetFileNameFromHandle(file_hdl, &fullpath_filename))
+    if (GetFileNameFromHandle(file_hdl, fullpath_filename))
     {
-        strbuf sb_filename=STRBUF_INIT, sb_path=STRBUF_INIT;
+        strbuf sb_filename=STRBUF_INIT, sb_filename_without_ext=STRBUF_INIT, sb_path=STRBUF_INIT;
 
         if (0 && module_c_debug)
-            L ("fullpath_filename=%s\n", fullpath_filename.buf);
+            L ("fullpath_filename=%s\n", fullpath_filename->buf);
 
-        full_path_and_filename_to_path_only (&sb_path, fullpath_filename.buf);
-        full_path_and_filename_to_filename_only (&sb_filename, fullpath_filename.buf);
+        full_path_and_filename_to_path_only (&sb_path, fullpath_filename->buf);
+        full_path_and_filename_to_filename_only (&sb_filename, &sb_filename_without_ext, fullpath_filename->buf);
         
         if (0 && module_c_debug)
         {
             L ("sb_path=%s\n", sb_path.buf);
             L ("sb_filename=%s\n", sb_filename.buf);
+            L ("sb_filename_without_ext=%s\n", sb_filename_without_ext.buf);
         };
         
         m->filename=strbuf_detach(&sb_filename, NULL);
+        m->filename_without_ext=strbuf_detach(&sb_filename_without_ext, NULL);
         m->path=strbuf_detach(&sb_path, NULL);
+
         strbuf_deinit (&sb_filename);
+        strbuf_deinit (&sb_filename_without_ext);
         strbuf_deinit (&sb_path);
         if (0 && module_c_debug)
         {
             L ("m->filename=%s\n", m->filename);
+            L ("m->filename_without_ext=%s\n", m->filename_without_ext);
             L ("m->path=%s\n", m->path);
         };
     }
     else
     {
         m->filename=DSTRDUP("?", "");
+        m->filename_without_ext=DSTRDUP("?", "");
         m->path=DSTRDUP("?", "");
     };
-    
-    PE_get_info (fullpath_filename.buf, img_base, &info);
-    
-    m->base=img_base;
-    m->original_base=info.original_base;
-    m->OEP=info.OEP;
-    m->size=info.size;
-    if (info.internal_name)
-        m->internal_name=DSTRDUP(info.internal_name, "internal_name");
-    m->symbols=rbtree_create(true, "symbols", compare_size_t);
-    add_symbols(m->symbols, fullpath_filename.buf, img_base, &info);
+};
 
+static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_filename, address img_base)
+{
+    PE_info *info=DCALLOC(PE_info, 1, "PE_info");
+
+    PE_get_info (fullpath_filename->buf, img_base, info);
+    m->base=img_base;
+    m->original_base=info->original_base;
+    m->OEP=info->OEP;
+    m->size=info->size;
+    m->PE_timestamp=info->timestamp;
+    if (info->internal_name)
+        m->internal_name=DSTRDUP(info->internal_name, "internal_name");
+    PE_add_symbols(p, m, fullpath_filename->buf, img_base, info);
+    
+    return info;
+};
+
+obj* get_symbols_from_ORACLE_SYM (const char *fname, address img_base, PE_info *info, 
+        bool check_PE_timestamp, const char *short_PE_name)
+{
+    BOOL b;
+    REG cnt;
+    REG *d1, *d2;
+    char* d3;
+    obj *rt=NULL;
+
+    HANDLE f=CreateFile (fname, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 
+            FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (f==NULL)
+        die ("Cannot open file: %s\n", fname);
+
+    DWORD len=GetFileSize (f, NULL);
+    assert (len!=INVALID_FILE_SIZE);
+
+    HANDLE fm=CreateFileMapping (f, NULL, PAGE_READONLY, 0, 0, NULL);
+
+    if (fm==NULL)
+        die_GetLastError ("CreateFileMapping() failed\n");
+
+    address adr=(REG)MapViewOfFile (fm, FILE_MAP_READ, 0, 0, 0);
+
+    if (adr==0)
+        die_GetLastError ("MapViewOfFile() failed\n");
+
+#ifdef _WIN64
+    char* sig="OSYMAM64";
+    unsigned sig_len=8;
+#else
+    char* sig="OSYM";
+    unsigned sig_len=4;
+#endif
+
+    if (memcmp ((void*)adr, sig, sig_len)!=0 || memcmp ((BYTE*)adr+len-sizeof(REG)*2, sig, sig_len)!=0)
+    {
+        printf ("%s is not ORACLE.SYM file (signature mismatch)\n", fname);
+        goto unmap_close_exit;
+    };
+
+    // point after signature
+    memcpy (&cnt, (BYTE*)adr+sizeof (REG), sizeof (REG));
+    
+    REG SYM_timedatestamp;
+
+    if (oracle_version==11)
+    {
+        memcpy (&SYM_timedatestamp, (BYTE*)adr+sizeof (REG)*2, sizeof (REG));
+
+        if (check_PE_timestamp)
+            // this is how check is done in orageneric11.dll!_ssskgdsym_init_symtab
+            if ((info->timestamp-60 > (SYM_timedatestamp&0xffffffff)) || (info->timestamp+60 < (SYM_timedatestamp&0xffffffff)))
+            {
+                assert(short_PE_name);
+                printf ("%s file is not corresponding to %s!\n", fname, short_PE_name);
+                goto unmap_close_exit;
+            };
+        d1=(REG*)adr+3;
+    }
+    else
+        d1=(REG*)adr+2;
+
+    d2=d1+cnt;
+    d3=(char*)(d2+cnt);
+
+    for (REG i=0; i<cnt; i++)
+    {
+        char *name=d3+(*(d2+i));
+        REG a=(REG)*(d1+i);
+
+        // All oracle .SYM files for Oracle DLLs has addresses starting at 0x10000000
+        // without any relation to DLL's image base
+        if ((a&0xF0000000) == 0x10000000)
+        {
+            // dirty hack
+            a=(a - 0x10000000) + (REG)img_base;
+        };
+
+        if (a >= (REG)img_base && a <= ((REG)img_base + info->size))
+            rt=cons (cons (obj_REG(a), obj_cstring(name)), rt);
+    };
+
+unmap_close_exit:
+    b=UnmapViewOfFile ((LPCVOID)adr);
+    assert (b==TRUE);
+    CloseHandle (f);
+    return rt;
+};
+
+static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address img_base, PE_info *info, const char* short_PE_name)
+{
+    strbuf sb=STRBUF_INIT;
+   
+    strbuf_addf (&sb, "%sRDBMS\\ADMIN\\%s.sym", ORACLE_HOME.buf, m->filename_without_ext);
+
+    L ("Looking for %s\n", sb.buf);
+
+    if (file_exist(sb.buf))
+    {
+        L ("Found %s\n", sb.buf);
+
+        obj* tmp=get_symbols_from_ORACLE_SYM (sb.buf, img_base, info, true, short_PE_name);
+        for (obj *i=tmp; i; i=cdr(i))
+            add_symbol (p, m, obj_get_as_REG(car(car(i))), obj_get_as_cstring(cdr(car(i))), 
+                    SYM_TYPE_ORACLE_SYM);
+        obj_free(tmp);
+    };
+
+    strbuf_deinit(&sb);
+};
+
+module* add_module (process *p, address img_base, HANDLE file_hdl)
+{
+    module *m=DCALLOC(module, 1, "module");
+    strbuf fullpath_filename=STRBUF_INIT;
+
+    if (module_c_debug)
+        L ("%s() begin\n", __func__);
+    
+    m->symbols=rbtree_create(true, "symbols", compare_size_t);
+
+    set_filename_and_path_for_module(file_hdl, m, &fullpath_filename);
+    
+    PE_info* info=get_all_info_from_PE (p, m, &fullpath_filename, img_base);
+    if (ORACLE_HOME.strlen>0)
+        add_symbols_from_ORACLE_SYM_if_exist (p, m, img_base, info, get_module_name(m));
+    
+    PE_info_free(info);
     strbuf_deinit(&fullpath_filename);
     
     rbtree_insert (p->modules, (void*)img_base, (void*)m);
 
     if (try_to_resolve_bp_addresses_if_need(m))
         set_or_update_all_breakpoints(p);
-
-    PE_info_free(&info);
 
     if (module_c_debug)
         L ("%s() end\n", __func__);
@@ -176,6 +311,7 @@ void module_free(module *m)
         L ("m->symbols count=%d\n", rbtree_count (m->symbols));
     };
     DFREE(m->filename);
+    DFREE(m->filename_without_ext);
     DFREE(m->path);
     DFREE(m->internal_name);
 

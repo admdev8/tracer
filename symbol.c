@@ -1,5 +1,6 @@
 #include "symbol.h"
 #include "dmalloc.h"
+#include "tracer.h"
 
 static symbol *create_symbol (symbol_type t, char *n)
 {
@@ -9,9 +10,16 @@ static symbol *create_symbol (symbol_type t, char *n)
     return rt;
 };
 
-static void add_symbol (rbtree *symtbl, address a, char *name, symbol_type t)
+void add_symbol (process *p, module *m, address a, char *name, symbol_type t)
 {
-    // TODO: chk --allsymbols, --allsymbols:
+    rbtree *symtbl=m->symbols;
+    if ((dump_all_symbols_re && (regexec (dump_all_symbols_re, name, 0, NULL, 0)==0)) ||
+        (dump_all_symbols_re==NULL && dump_all_symbols))
+    {
+        dump_PID_if_need(p);
+        L("New symbol. Module=[%s], address=[0x" PRI_ADR_HEX "], name=[%s]\n", get_module_name(m), a, name);
+    };
+
     symbols_list *l=(symbols_list*)rbtree_lookup(symtbl, (void*)a);
 
     if (l==NULL)
@@ -27,27 +35,25 @@ static void add_symbol (rbtree *symtbl, address a, char *name, symbol_type t)
     l->s=new_sym;
 };
 
-void add_symbols(rbtree *symtbl, const char * filename, address base, PE_info *info)
+void PE_add_symbols(process *p, module *m, const char * filename, address base, PE_info *info)
 {
-    obj *i;
- 
     // priority matters
 
     // add OEP
-    add_symbol(symtbl, info->OEP, "OEP", SYM_TYPE_OEP);
+    add_symbol(p, m, info->OEP, "OEP", SYM_TYPE_OEP);
     // add BASE
-    add_symbol(symtbl, base, "BASE", SYM_TYPE_BASE);
+    add_symbol(p, m, base, "BASE", SYM_TYPE_BASE);
     
     // add image exports
-    for (i=info->exports_ordinals; i; i=cdr(i))
+    for (obj* i=info->exports_ordinals; i; i=cdr(i))
     {
         char tmp[20];
         snprintf(tmp, sizeof(tmp), "ordinal_%d", obj_get_as_tetrabyte(cdr(car(i))));
-        add_symbol (symtbl, obj_get_as_REG(car(car(i))), tmp, SYM_TYPE_PE_EXPORT_ORDINAL);
+        add_symbol (p, m, obj_get_as_REG(car(car(i))), tmp, SYM_TYPE_PE_EXPORT_ORDINAL);
     };
 
-    for (i=info->exports; i; i=cdr(i))
-        add_symbol (symtbl, obj_get_as_REG(car(car(i))), obj_get_as_cstring(cdr(car(i))), SYM_TYPE_PE_EXPORT);
+    for (obj* i=info->exports; i; i=cdr(i))
+        add_symbol (p, m, obj_get_as_REG(car(car(i))), obj_get_as_cstring(cdr(car(i))), SYM_TYPE_PE_EXPORT);
     // add from .MAP file
     // add from .PDB file
     // add from Oracle SYM file

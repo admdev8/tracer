@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <signal.h>
 
+#include "files.h"
+#include "fuzzybool.h"
 #include "logging.h"
 #include "dmalloc.h"
 #include "stuff.h"
@@ -292,10 +294,58 @@ void detach_from_all_processes()
     };
 };
 
+strbuf ORACLE_HOME;
+int oracle_version=-1; // -1 mean 'unknown'
+
+void set_ORACLE_HOME()
+{
+    strbuf_init (&ORACLE_HOME, 0);
+    char *tmp=getenv("ORACLE_HOME");
+    if (tmp==NULL)
+        return;
+    L ("ORACLE_HOME is set to [%s]\n", tmp);
+
+    strbuf_addstr(&ORACLE_HOME, tmp);
+    if (strbuf_last_char(&ORACLE_HOME)!='\\')
+        strbuf_addc(&ORACLE_HOME, '\\');
+
+    strbuf tmp2;
+
+    strbuf_init(&tmp2, 0);
+    strbuf_addf (&tmp2, "%sBIN\\oravsn11.dll", ORACLE_HOME.buf);
+    if (file_exist(tmp2.buf))
+    {
+        L ("Oracle RDBMS version 11.x\n");
+        oracle_version=11;
+    };
+    strbuf_deinit(&tmp2);
+
+    strbuf_init(&tmp2, 0);
+    strbuf_addf (&tmp2, "%sBIN\\oravsn10.dll", ORACLE_HOME.buf);
+    if (file_exist(tmp2.buf))
+    {
+        L ("Oracle RDBMS version 10.x\n");
+        oracle_version=10;
+    };
+    strbuf_deinit(&tmp2);
+
+    strbuf_init(&tmp2, 0);
+    strbuf_addf (&tmp2, "%sBIN\\oravsn9.dll", ORACLE_HOME.buf);
+    if (file_exist(tmp2.buf))
+    {
+        L ("Oracle RDBMS version 9.x\n");
+        oracle_version=9;
+    };
+    strbuf_deinit(&tmp2);
+
+    if (oracle_version==-1)
+        L ("Warning: Oracle RDBMS version wasn't determined\n");
+};
+
 int main(int argc, char *argv[])
 {
-    //dmalloc_break_at_seq_n (102312);
-    //
+    //dmalloc_break_at_seq_n (70);
+    
     if (argc==1)
         help_and_exit();
 
@@ -305,16 +355,20 @@ int main(int argc, char *argv[])
     check_option_constraints();
 
     L_init ("tracer.log");
+    set_ORACLE_HOME();
 
     for (int i=0; i<4; i++)
         L ("DRx_breakpoints[%d]=0x%p\n", i, DRx_breakpoints[i]);
 
     debug_or_attach();
     processes=rbtree_create(true, "processes", compare_tetrabytes);
-    
-    thread_B_handle=CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)thread_B, (PVOID)0, 0, &thread_B_id);
-    if (thread_B_handle==NULL)
-        die ("Cannot create thread B");
+   
+    if (run_thread_b && IsDebuggerPresent()==FALSE) // do not start thread B if gdb is used...
+    {
+        thread_B_handle=CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)thread_B, (PVOID)0, 0, &thread_B_id);
+        if (thread_B_handle==NULL)
+            die ("Cannot create thread B");
+    };
     signal(SIGINT, &signal_handler);
     
     if (EnableDebugPrivilege (TRUE)==FALSE)
@@ -342,7 +396,10 @@ int main(int argc, char *argv[])
     DFREE(load_filename);
     DFREE(attach_filename);
     DFREE(load_command_line);
+    if (dump_all_symbols_re)
+        regfree (dump_all_symbols_re);
 
+    strbuf_deinit(&ORACLE_HOME);
     dump_unfreed_blocks();
     return 0;
 };

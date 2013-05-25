@@ -11,11 +11,12 @@
 
 %option stack
 
-DEC         (0|[1-9][[:digit:]]*)
-HEX         0[Xx][[:xdigit:]]+
-FILENAME    [[:alnum:]_]+\.[[:alnum:]_]+
-SYMBOL_NAME [[:alpha:]][[:alnum:]_@]*
-SYMBOL_NAME_RE [[:alpha:]][[:alnum:]_@\?\.\|]*
+DEC            (0|[1-9][[:digit:]]*)
+HEX            0[Xx][[:xdigit:]]+
+FILENAME       [[:alnum:]_]+\.[[:alnum:]_]+
+SYMBOL_NAME    [[:alpha:]][[:alnum:]_@]*
+REGEXP         [[:alnum:]_@\?\.\|\*\^\$]*
+SYMBOL_NAME_RE [[:alpha:]]{REGEXP}
 
 %x STATE_BPM STATE_BPX STATE_BPF
 %x STATE_ADDRESS STATE_ADDRESS_OR_REG STATE_BYTEMASK STATE_BYTEMASK_SKIP_OPT STATE_READ_ADR_OFS
@@ -35,6 +36,16 @@ SYMBOL_NAME_RE [[:alpha:]][[:alnum:]_@\?\.\|]*
 <INITIAL>-c:.*         { yylval.str=DSTRDUP(yytext+3, "yytext"); return CMDLINE; };
 <INITIAL>--child       { return CHILD; }
 <INITIAL>-s            { return DASH_S; }
+<INITIAL>-dont-run-thread-b { return DONT_RUN_THREAD_B; }
+<INITIAL>--allsymbols:{REGEXP}  { 
+        yylval.str=DSTRDUP(yytext+strlen("--allsymbols:"), "yytext"); 
+        printf ("--allsymbols: [%s]\n", yylval.str);
+        return ALL_SYMBOLS; 
+    }
+<INITIAL>--allsymbols           { 
+        yylval.str=NULL; 
+        return ALL_SYMBOLS; 
+    }
 
 <STATE_ADDRESS_OR_REG>eax   { yylval.x86reg=R_EAX; yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>ebx   { yylval.x86reg=R_EBX; yy_pop_state(); return REGISTER; }

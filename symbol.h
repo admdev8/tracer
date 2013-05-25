@@ -17,6 +17,7 @@ typedef enum _symbol_type
     SYM_TYPE_PE_EXPORT_ORDINAL,
     SYM_TYPE_PE_EXPORT,
     SYM_TYPE_MAP,
+    SYM_TYPE_ORACLE_SYM,
     SYM_TYPE_PDB
     // to be added here: SYM_TYPE_INLINE_FUNCTION - to be added while scanning for patterns
 } symbol_type;
@@ -34,5 +35,6 @@ typedef struct _symbols_list
     // will it be skipped during tracing?
 } symbols_list;
 
-void add_symbols (rbtree *symtbl, const char * filename, address base, PE_info *info);
+void add_symbol (process *p, module *m, address a, char *name, symbol_type t);
+void PE_add_symbols (process *p, module *m, const char * filename, address base, PE_info *info);
 

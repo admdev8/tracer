@@ -24,7 +24,9 @@ bool dash_s=false;
 BPX_option *current_BPX_option=NULL; // temporary, while parsing...
 BPF* current_BPF=NULL; // filled while parsing
 bp_address* current_BPF_address; // filled while parsing
-
+bool run_thread_b=true;
+bool dump_all_symbols=false;
+regex_t *dump_all_symbols_re=NULL;
 // from opts.l:
 
 void flex_set_str(char *s);
@@ -67,7 +69,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 
 %token COMMA PLUS TWO_POINTS R_SQUARE_BRACKET SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
 %token W RW _EOF DUMP_OP SET_OP COPY_OP CP QUOTE PERCENT BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
-%token BPF_TRACE BPF_TRACE_COLON DASH_S
+%token BPF_TRACE BPF_TRACE_COLON DASH_S DONT_RUN_THREAD_B
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC
 %token <num> DEC_NUMBER HEX_NUMBER HEX_BYTE
@@ -75,6 +77,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 %token <x86reg> REGISTER
 %token <dbl> FLOAT_NUMBER
 %token <str> FILENAME_EXCLAMATION SYMBOL_NAME_RE SYMBOL_NAME_RE_PLUS LOAD_FILENAME ATTACH_FILENAME CMDLINE
+%token <str> ALL_SYMBOLS
 
 %type <a> address
 %type <o> bytemask bytemask_element cstring
@@ -101,7 +104,23 @@ tracer_option
  | ATTACH_PID      { attach_PID=$1; }
  | CHILD           { debug_children=true; }
  | DASH_S          { dash_s=true; }
+ | DONT_RUN_THREAD_B  { run_thread_b=false; }
  | CMDLINE         { load_command_line=$1; }
+ | ALL_SYMBOLS     { 
+    dump_all_symbols=true;
+    if ($1)
+    {
+        int rc;
+        dump_all_symbols_re=DCALLOC(regex_t, 1, "regex_t");
+        if ((rc=regcomp(dump_all_symbols_re, $1, REG_EXTENDED | REG_ICASE | REG_NEWLINE))!=0)
+        {
+            char buffer[100];
+            regerror(rc, dump_all_symbols_re, buffer, 100);
+            die("failed regcomp() for pattern '%s' (%s)", $1, buffer);
+        };
+        //printf ("dump_all_symbols_re is set\n");
+    }
+    }
  ;
 
 bpm

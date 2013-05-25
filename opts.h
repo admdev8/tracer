@@ -33,6 +33,12 @@ extern char *load_command_line;
 extern int attach_PID;
 extern bool debug_children;
 extern bool dash_s;
+bool dump_all_symbols;
+regex_t *dump_all_symbols_re;
+
+// you may want to disable thread B while debugging in gdb, because thread B's input
+// interfering with gdb
+extern bool run_thread_b; 
 
 void add_new_BP (BP* bp);
 void add_new_address_to_be_resolved (bp_address *a);
