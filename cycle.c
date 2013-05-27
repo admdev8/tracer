@@ -144,8 +144,15 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 strbuf tmp=STRBUF_INIT;
                 process_get_sym (p, adr, &tmp);
                 L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
-                // is it OEP?
-                if (adr == p->executable_module->OEP)
+
+                if (stricmp(tmp.buf, "ntdll.dll!DbgBreakPoint")==0)
+                {
+                    L ("We handle this\n");
+                    rt=DBG_CONTINUE;
+                };
+
+                // we are loading and is it OEP?
+                if (rt==DBG_EXCEPTION_NOT_HANDLED && load_filename && (adr==p->executable_module->OEP))
                 {
                     handle_OEP_breakpoint (p, t);
                     rt=DBG_CONTINUE; // handled

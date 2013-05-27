@@ -380,8 +380,7 @@ int main(int argc, char *argv[])
 
     cycle();
 
-    if (load_filename==NULL)
-        detach_from_all_processes();
+    detach_from_all_processes();
 
     // any left processes?
     rbtree_foreach(processes, NULL, NULL, (void(*)(void*))process_free);

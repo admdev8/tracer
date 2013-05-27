@@ -7,8 +7,9 @@ PORG_LIBRARY=$(PORG)porgd.a
 BOLT=../bolt/
 BOLT_LIBRARY=$(BOLT)boltd.a
 CPPFLAGS=-I$(OCTOTHORPE) -I$(X86_DISASM) -I$(PORG) -I$(BOLT) -D_DEBUG -DYYDEBUG=1
-#CFLAGS=-Wall -g -std=c99
-CFLAGS=-Wall -g -std=gnu99
+#GPROF_FLAG=-pg
+GPROF_FLAG=
+CFLAGS=-Wall -g $(GPROF_FLAG) -std=gnu99
 FLEX=flex
 BISON=bison
 SOURCES=opts.tab.c opts.lex.c tracer.c cycle.c module.c process.c symbol.c thread.c BP.c BPF.c BPX.c
@@ -22,10 +23,10 @@ all:    tracer.exe $(DEP_FILES) opts_test.exe
 	$(CC) -MM $(CFLAGS) $(CPPFLAGS) $< -c > $@
 
 tracer.exe: $(OBJECTS) $(LIBS)
-	$(CC) $^ $(LIBS) -o $@ -L/lib -lfl -lpsapi -limagehlp
+	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L/lib -lfl -lpsapi -limagehlp
 
 opts_test.exe: opts_test.o opts.tab.o opts.lex.o BP.o $(LIBS)
-	$(CC) $^ $(LIBS) -o $@ -L/lib -lfl 
+	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L/lib -lfl 
 	
 clean:
 	$(RM) opts.tab.h opts.tab.c opts.lex.c tracer.exe opts_test.exe
