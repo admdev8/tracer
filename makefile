@@ -12,7 +12,8 @@ GPROF_FLAG=
 CFLAGS=-Wall -g $(GPROF_FLAG) -std=gnu99
 FLEX=flex
 BISON=bison
-SOURCES=opts.tab.c opts.lex.c tracer.c cycle.c module.c process.c symbol.c thread.c BP.c BPF.c BPX.c
+SOURCES=opts.tab.c opts.lex.c tracer.c cycle.c module.c process.c symbol.c thread.c BP.c \
+	BPF.c BPX.c bp_address.c utils.c
 OBJECTS=$(SOURCES:.c=.o)
 DEP_FILES=$(SOURCES:.c=.d)
 LIBS=$(OCTOTHORPE_LIBRARY) $(X86_DISASM_LIBRARY) $(PORG_LIBRARY) $(BOLT_LIBRARY)
@@ -25,8 +26,8 @@ all:    tracer.exe $(DEP_FILES) opts_test.exe
 tracer.exe: $(OBJECTS) $(LIBS)
 	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L/lib -lfl -lpsapi -limagehlp
 
-opts_test.exe: opts_test.o opts.tab.o opts.lex.o BP.o $(LIBS)
-	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L/lib -lfl 
+opts_test.exe: opts_test.o opts.tab.o opts.lex.o BP.o BPF.o bp_address.o process.o thread.o module.o symbol.o utils.o $(LIBS)
+	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L/lib -lfl -lpsapi -limagehlp
 	
 clean:
 	$(RM) opts.tab.h opts.tab.c opts.lex.c tracer.exe opts_test.exe

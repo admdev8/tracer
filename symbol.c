@@ -1,6 +1,7 @@
 #include "symbol.h"
 #include "dmalloc.h"
 #include "tracer.h"
+#include "utils.h"
 
 static symbol *create_symbol (symbol_type t, char *n)
 {

@@ -18,6 +18,7 @@
 #include "BPF.h"
 #include "BPX.h"
 #include "x86.h"
+#include "utils.h"
 
 bool cycle_c_debug=true;
 

@@ -2,6 +2,8 @@
 
 #include <stdbool.h>
 
+#include "strbuf.h"
+#include "lisp.h"
 #include "regex.h"
 #include "datatypes.h"
 
@@ -38,3 +40,13 @@ typedef struct _bp_address
     unsigned bytemask_len;
 
 } bp_address;
+
+bp_address *create_address_filename_symbol_re(const char *filename, const char *symbol_re, unsigned ofs);
+bp_address *create_address_filename_address(const char *filename, address adr);
+bp_address *create_address_abs(unsigned adr);
+bp_address *create_address_bytemask(obj *bytemask);
+void bp_address_free(bp_address *a);
+bool is_address_OEP(bp_address *a);
+bool is_address_fname_OEP(bp_address* a, char *fname);
+void address_to_string (bp_address *a, strbuf *out);
+void dump_address (bp_address *a);

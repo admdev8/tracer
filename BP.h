@@ -3,11 +3,11 @@
 #include "x86_disas.h"
 #include "X86_register.h"
 #include "datatypes.h"
-#include "address.h" // from bolt
 #include "regex.h"
 #include "lisp.h"
-#include "BPF.h"
-#include "bp_address.h"
+
+typedef struct _bp_address bp_address;
+typedef struct _BPF BPF;
 
 enum BPM_type
 {
@@ -70,11 +70,6 @@ typedef struct _BP
     struct _BP *next;
 } BP;
 
-bp_address *create_address_filename_symbol_re(const char *filename, const char *symbol_re, unsigned ofs);
-bp_address *create_address_filename_address(const char *filename, address adr);
-bp_address *create_address_abs(unsigned adr);
-bp_address *create_address_bytemask(obj *bytemask);
-void bp_address_free(bp_address *a);
 BPM *create_BPM(unsigned width, enum BPM_type t);
 void dump_BPM(BPM *);
 void BPM_free(BPM *);
@@ -83,11 +78,6 @@ void dump_BPX_option(BPX_option *b);
 void BPX_free(BPX *);
 BPX* create_BPX(BPX_option *opts);
 void dump_BPX(BPX *);
-void BPF_free(BPF*);
 BP* create_BP (enum BP_type t, bp_address* a, void* p);
 void dump_BP (BP* b);
 void BP_free(BP*);
-bool is_address_OEP(bp_address *a);
-bool is_address_fname_OEP(bp_address* a, char *fname);
-void address_to_string (bp_address *a, strbuf *out);
-void dump_address (bp_address *a);

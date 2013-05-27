@@ -7,6 +7,7 @@
 
 #include "opts.tab.h"
 #include "opts.h"
+#include "BPF.h"
 %}
 
 %option stack

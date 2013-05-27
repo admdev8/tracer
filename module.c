@@ -13,6 +13,7 @@
 #include "dmalloc.h"
 #include "files.h"
 #include "tracer.h"
+#include "bp_address.h"
 
 bool module_c_debug=true;
 

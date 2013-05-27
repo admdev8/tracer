@@ -1,11 +1,71 @@
 #include <assert.h>
 
 #include "BPF.h"
+#include "bp_address.h"
+#include "dmalloc.h"
 #include "BP.h"
 #include "process.h"
 #include "thread.h"
+#include "utils.h"
 #include "opts.h"
-#include "tracer.h"
+
+void dump_BPF(BPF *b)
+{
+    printf ("BPF. options: ");
+    if (b->unicode)
+        printf ("unicode ");
+    if (b->skip)
+        printf ("skip ");
+    if (b->skip_stdcall)
+        printf ("skip_stdcall ");
+    if (b->trace)
+        printf ("trace ");
+    if (b->trace_cc)
+        printf ("trace_cc ");
+    if (b->rt)
+    {
+        printf ("rt: ");
+        obj_dump (b->rt);
+        printf (" ");
+    };
+    
+    if (b->rt_probability!=1)
+        printf ("rt_probability: %f ", b->rt_probability);
+    
+    if (b->args)
+        printf ("args: %d ", b->args);
+    
+    if (b->dump_args)
+        printf ("dump_args: %d ", b->dump_args);
+    
+    if (b->pause)
+        printf ("pause: %d ", b->pause);
+
+    printf ("\n");
+    if (b->when_called_from_address)
+    {
+        printf ("when_called_from_address: ");
+        dump_address (b->when_called_from_address);
+        printf ("\n");
+    };
+    if (b->when_called_from_func)
+    {
+        printf ("when_called_from_func: ");
+        dump_address (b->when_called_from_func);
+        printf ("\n");
+    };
+};
+
+void BPF_free(BPF* o)
+{
+    if (o->rt)
+        obj_free (o->rt);
+    if (o->when_called_from_address)
+        bp_address_free(o->when_called_from_address);
+    if (o->when_called_from_func)
+        bp_address_free(o->when_called_from_func);
+    DFREE (o);
+};
 
 static void BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode)
 {

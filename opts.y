@@ -11,6 +11,9 @@
 #include "lisp.h"
 #include "dlist.h"
 #include "X86_register.h"
+#include "BP.h"
+#include "BPF.h"
+#include "bp_address.h"
 
 BP* OEP_breakpoint=NULL;
 BP* DRx_breakpoints[4]={ NULL, NULL, NULL, NULL };
