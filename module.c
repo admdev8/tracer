@@ -1,5 +1,6 @@
 #include <assert.h>
 
+#include "oracle_sym.h"
 #include "module.h"
 #include "process.h"
 #include "strbuf.h"
@@ -146,7 +147,10 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
 {
     PE_info *info=DCALLOC(PE_info, 1, "PE_info");
 
-    PE_get_info (fullpath_filename->buf, img_base, info);
+    add_symbol_params params={p, m, SYM_TYPE_PE_EXPORT};
+
+    PE_get_info (fullpath_filename->buf, img_base, info, (void (*)(address,  char *, void *))add_symbol, 
+            (void*)&params);
     m->base=img_base;
     m->original_base=info->original_base;
     m->OEP=info->OEP;
@@ -154,105 +158,22 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
     m->PE_timestamp=info->timestamp;
     if (info->internal_name)
         m->internal_name=DSTRDUP(info->internal_name, "internal_name");
-    PE_add_symbols(p, m, fullpath_filename->buf, img_base, info);
     
+    //PE_add_symbols(p, m, fullpath_filename->buf, img_base, info);
+   
+    // add OEP
+    params.t=SYM_TYPE_OEP;
+    add_symbol(info->OEP, "OEP", &params);
+    // add BASE
+    params.t=SYM_TYPE_BASE;
+    add_symbol(img_base, "BASE", &params); 
     return info;
-};
-
-obj* get_symbols_from_ORACLE_SYM (const char *fname, address img_base, PE_info *info, 
-        bool check_PE_timestamp, const char *short_PE_name)
-{
-    BOOL b;
-    REG cnt;
-    REG *d1, *d2;
-    char* d3;
-    obj *rt=NULL;
-
-    HANDLE f=CreateFile (fname, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 
-            FILE_ATTRIBUTE_NORMAL, NULL);
-
-    if (f==NULL)
-        die ("Cannot open file: %s\n", fname);
-
-    DWORD len=GetFileSize (f, NULL);
-    assert (len!=INVALID_FILE_SIZE);
-
-    HANDLE fm=CreateFileMapping (f, NULL, PAGE_READONLY, 0, 0, NULL);
-
-    if (fm==NULL)
-        die_GetLastError ("CreateFileMapping() failed\n");
-
-    address adr=(REG)MapViewOfFile (fm, FILE_MAP_READ, 0, 0, 0);
-
-    if (adr==0)
-        die_GetLastError ("MapViewOfFile() failed\n");
-
-#ifdef _WIN64
-    char* sig="OSYMAM64";
-    unsigned sig_len=8;
-#else
-    char* sig="OSYM";
-    unsigned sig_len=4;
-#endif
-
-    if (memcmp ((void*)adr, sig, sig_len)!=0 || memcmp ((BYTE*)adr+len-sizeof(REG)*2, sig, sig_len)!=0)
-    {
-        printf ("%s is not ORACLE.SYM file (signature mismatch)\n", fname);
-        goto unmap_close_exit;
-    };
-
-    // point after signature
-    memcpy (&cnt, (BYTE*)adr+sizeof (REG), sizeof (REG));
-    
-    REG SYM_timedatestamp;
-
-    if (oracle_version==11)
-    {
-        memcpy (&SYM_timedatestamp, (BYTE*)adr+sizeof (REG)*2, sizeof (REG));
-
-        if (check_PE_timestamp)
-            // this is how check is done in orageneric11.dll!_ssskgdsym_init_symtab
-            if ((info->timestamp-60 > (SYM_timedatestamp&0xffffffff)) || (info->timestamp+60 < (SYM_timedatestamp&0xffffffff)))
-            {
-                assert(short_PE_name);
-                printf ("%s file is not corresponding to %s!\n", fname, short_PE_name);
-                goto unmap_close_exit;
-            };
-        d1=(REG*)adr+3;
-    }
-    else
-        d1=(REG*)adr+2;
-
-    d2=d1+cnt;
-    d3=(char*)(d2+cnt);
-
-    for (REG i=0; i<cnt; i++)
-    {
-        char *name=d3+(*(d2+i));
-        REG a=(REG)*(d1+i);
-
-        // All oracle .SYM files for Oracle DLLs has addresses starting at 0x10000000
-        // without any relation to DLL's image base
-        if ((a&0xF0000000) == 0x10000000)
-        {
-            // dirty hack
-            a=(a - 0x10000000) + (REG)img_base;
-        };
-
-        if (a >= (REG)img_base && a <= ((REG)img_base + info->size))
-            rt=cons (cons (obj_REG(a), obj_cstring(name)), rt);
-    };
-
-unmap_close_exit:
-    b=UnmapViewOfFile ((LPCVOID)adr);
-    assert (b==TRUE);
-    CloseHandle (f);
-    return rt;
 };
 
 static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address img_base, PE_info *info, const char* short_PE_name)
 {
     strbuf sb=STRBUF_INIT;
+    add_symbol_params params={ p, m, SYM_TYPE_ORACLE_SYM };
    
     strbuf_addf (&sb, "%sRDBMS\\ADMIN\\%s.sym", ORACLE_HOME.buf, m->filename_without_ext);
 
@@ -261,12 +182,16 @@ static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address
     if (file_exist(sb.buf))
     {
         L ("Found %s\n", sb.buf);
+        
+        int err=get_symbols_from_ORACLE_SYM (sb.buf, img_base, info->size, info->timestamp, true, 
+                (void (*)(address,  char *, void *))add_symbol, (void*)&params, oracle_version);
 
-        obj* tmp=get_symbols_from_ORACLE_SYM (sb.buf, img_base, info, true, short_PE_name);
-        for (obj *i=tmp; i; i=cdr(i))
-            add_symbol (p, m, obj_get_as_REG(car(car(i))), obj_get_as_cstring(cdr(car(i))), 
-                    SYM_TYPE_ORACLE_SYM);
-        obj_free(tmp);
+        if (err==ORACLE_SYM_IMPORTER_ERROR_FILE_OPENING_ERROR)
+            die ("Can't open %s\n", sb.buf);
+        if (err==ORACLE_SYM_IMPORTER_ERROR_SIGNATURE_MISMATCH)
+            L ("%s: signature mismatch\n", sb.buf);
+        if (err==ORACLE_SYM_IMPORTER_ERROR_PE_FILE_MISMATCH)
+            L ("%s is not related to %s PE file!\n", sb.buf, short_PE_name);
     };
 
     strbuf_deinit(&sb);

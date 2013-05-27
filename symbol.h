@@ -14,7 +14,6 @@ typedef enum _symbol_type
 {
     SYM_TYPE_OEP,
     SYM_TYPE_BASE,
-    SYM_TYPE_PE_EXPORT_ORDINAL,
     SYM_TYPE_PE_EXPORT,
     SYM_TYPE_MAP,
     SYM_TYPE_ORACLE_SYM,
@@ -35,6 +34,12 @@ typedef struct _symbols_list
     // will it be skipped during tracing?
 } symbols_list;
 
-void add_symbol (process *p, module *m, address a, char *name, symbol_type t);
-void PE_add_symbols (process *p, module *m, const char * filename, address base, PE_info *info);
+typedef struct _add_symbol_params
+{
+    process* p;
+    module* m;
+    symbol_type t;
+} add_symbol_params;
+
+void add_symbol (address a, char *name, add_symbol_params *params);
 
