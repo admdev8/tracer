@@ -6,40 +6,8 @@
 #include "address.h" // from bolt
 #include "regex.h"
 #include "lisp.h"
-
-#define BYTEMASK_WILDCARD_BYTE 0x100
-
-enum adr_type
-{
-    OPTS_ADR_TYPE_ABS, // always resolved
-    OPTS_ADR_TYPE_FILENAME_SYMBOL,
-    OPTS_ADR_TYPE_FILENAME_ADR,
-    OPTS_ADR_TYPE_BYTEMASK
-};
-
-typedef struct _bp_address
-{
-    enum adr_type t;
-    bool resolved;
-
-    // OPTS_ADR_TYPE_ABS case
-    address abs_address; // always set if resolved
-
-    char *filename; // for OPTS_ADR_TYPE_FILENAME_SYMBOL and OPTS_ADR_TYPE_FILENAME_ADR
-
-    // OPTS_ADR_TYPE_FILENAME_SYMBOL case
-    char *symbol;
-    regex_t symbol_re; // all symbols are in regex form (?) so here it is always present (in compiled form)
-    unsigned ofs;
-
-    // OPTS_ADR_TYPE_FILENAME_ADR case
-    address adr;
-
-    // OPTS_ADR_TYPE_BYTEMASK case
-    wyde* bytemask;
-    unsigned bytemask_len;
-
-} bp_address;
+#include "BPF.h"
+#include "bp_address.h"
 
 enum BPM_type
 {
@@ -78,16 +46,6 @@ typedef struct _BPX
 {
     BPX_option* opts; // may be NULL if options absent
 } BPX;
-
-typedef struct _BPF
-{
-    bool unicode, skip, skip_stdcall, trace, trace_cc;
-    // these params may be NULL
-    obj* rt;
-    double rt_probability;
-    unsigned args, dump_args, pause;
-    bp_address *when_called_from_address, *when_called_from_func;
-} BPF;
 
 enum BP_type
 {
