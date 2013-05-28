@@ -22,6 +22,23 @@
 
 bool cycle_c_debug=true;
 
+void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
+{
+    BP* bp=breakpoints[bp_no];
+
+    switch (bp->t)
+    {
+        case BP_type_BPF:
+            handle_BPF(p, t, bp_no, ctx, mc);
+            break;
+        case BP_type_BPX:
+            handle_BPX(p, t, bp_no, ctx, mc);
+            break;
+        default:
+            assert(0);
+    };
+};
+
 bool handle_OEP_breakpoint (process *p, thread *t)
 {
     if (cycle_c_debug)
@@ -39,69 +56,50 @@ bool handle_OEP_breakpoint (process *p, thread *t)
     bool b=MC_WriteByte (mc, CONTEXT_get_PC(&ctx), p->executable_module->saved_OEP_byte);
     assert (b && "cannot restore original byte at OEP");
 
-    if (OEP_breakpoint)
-    {
-        assert (!"TODO: handle OEP breakpoint (not implemented)");
-    };
+    if (breakpoints[OEP_BP_NO])
+        handle_BP(p, t, OEP_BP_NO, &ctx, mc);
 
     if (load_filename)
         p->we_are_loading_and_OEP_was_executed=true;
 
-    set_or_update_all_breakpoints(p);
+    set_or_update_all_DRx_breakpoints(p); // only DRx breakpoints set/updated!
 
     MC_Flush (mc);
     MC_MemoryCache_dtor (mc, true);
     return true;
 };
 
-void handle_BP(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
+void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 {
-    BP* bp;
-
-    if (DRx_no==-1)
-        bp=OEP_breakpoint;
-    else
-        bp=DRx_breakpoints[DRx_no];
-
-    switch (bp->t)
+    if (IS_SET(ctx->Dr6, FLAG_DR6_B0))
     {
-        case BP_type_BPF:
-            handle_BPF(p, t, DRx_no, ctx, mc);
-            break;
-        case BP_type_BPX:
-            handle_BPX(p, t, DRx_no, ctx, mc);
-            break;
-        default:
-            assert(0);
-    };
-};
-
-void handle_Bx (DWORD DR6, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
-{
-    if (IS_SET(DR6, FLAG_DR6_B0))
-    {
-        assert (DRx_breakpoints[0]);
+        assert (breakpoints[0]);
         handle_BP(p, t, 0, ctx, mc);
     };
     
-    if (IS_SET(DR6, FLAG_DR6_B1))
+    if (IS_SET(ctx->Dr6, FLAG_DR6_B1))
     {
-        assert (DRx_breakpoints[1]);
+        assert (breakpoints[1]);
         handle_BP(p, t, 1, ctx, mc);
     };
     
-    if (IS_SET(DR6, FLAG_DR6_B2))
+    if (IS_SET(ctx->Dr6, FLAG_DR6_B2))
     {
-        assert (DRx_breakpoints[2]);
+        assert (breakpoints[2]);
         handle_BP(p, t, 2, ctx, mc);
     };
 
-    if (IS_SET(DR6, FLAG_DR6_B3))
+    if (IS_SET(ctx->Dr6, FLAG_DR6_B3))
     {
-        assert (DRx_breakpoints[3]);
+        assert (breakpoints[3]);
         handle_BP(p, t, 3, ctx, mc);
     };
-    // FLAG_DR6_BS ?
+
+    if (IS_SET(ctx->Dr6, FLAG_DR6_BS))
+    {
+        assert (t->tracing && "BS flag in DR6, but no breakpoint in tracing mode");
+        handle_BP(p, t, t->tracing_bp, ctx, mc);
+    };
 };
 
 DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
@@ -131,7 +129,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 L ("DR7="); dump_DR7 (&cur_fds, ctx.Dr7); L("\n");
                 L ("DR0=0x" PRI_REG_HEX "\n", ctx.Dr0);
                 
-                handle_Bx (ctx.Dr6, p, t, &ctx, mc);
+                handle_Bx (p, t, &ctx, mc);
 
                 MC_Flush (mc);
                 MC_MemoryCache_dtor (mc, false);
@@ -215,7 +213,7 @@ void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     {
         // we are attaching?
         // there are may be present breakpoints with absolute addresses, so set them
-        set_or_update_all_breakpoints(p);
+        set_or_update_all_DRx_breakpoints(p);
     };
     
     MC_Flush (mc);

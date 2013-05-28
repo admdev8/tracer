@@ -15,8 +15,8 @@ static void do_test(char *s)
         dump_BP(b);
         printf ("\n");     
         //BP_free(b);
-        BP_free (DRx_breakpoints[0]);
-        DRx_breakpoints[0]=NULL;
+        BP_free (breakpoints[0]);
+        breakpoints[0]=NULL;
     }
     else
     {

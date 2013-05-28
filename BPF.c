@@ -8,6 +8,9 @@
 #include "thread.h"
 #include "utils.h"
 #include "opts.h"
+#include "CONTEXT_utils.h"
+#include "bitfields.h"
+#include "x86.h"
 
 void dump_BPF(BPF *b)
 {
@@ -20,24 +23,24 @@ void dump_BPF(BPF *b)
         printf ("skip_stdcall ");
     if (b->trace)
         printf ("trace ");
-    if (b->trace_cc)
-        printf ("trace_cc ");
+    if (b->cc)
+        printf ("cc ");
     if (b->rt)
     {
         printf ("rt: ");
         obj_dump (b->rt);
         printf (" ");
     };
-    
+
     if (b->rt_probability!=1)
         printf ("rt_probability: %f ", b->rt_probability);
-    
+
     if (b->args)
         printf ("args: %d ", b->args);
-    
+
     if (b->dump_args)
         printf ("dump_args: %d ", b->dump_args);
-    
+
     if (b->pause)
         printf ("pause: %d ", b->pause);
 
@@ -88,7 +91,7 @@ static void BPF_dump_args (MemoryCache *mc, REG* args, unsigned args_n, bool uni
             L (", ");
     };
 };
-    
+
 static void load_args(thread *t, address SP, MemoryCache *mc, unsigned args)
 {
     t->BPF_args=DMALLOC(REG, args, "REG");
@@ -99,74 +102,170 @@ static void load_args(thread *t, address SP, MemoryCache *mc, unsigned args)
     t->BPF_args=NULL;
 };
 
-void handle_BPF(process *p, thread *t, int DRx_no /* -1 for OEP */, CONTEXT *ctx, MemoryCache *mc)
+static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
-    BP *bp;
-    
-    if (DRx_no==-1)
-        bp=OEP_breakpoint;
-    else
-        bp=DRx_breakpoints[DRx_no];
-
+    // do function begin things
     BPF *bpf=bp->u.bpf;
     bp_address *bp_a=bp->a;
-    BPF_state* cur_state=&t->BPF_states[DRx_no];
-    strbuf sb_address=STRBUF_INIT;
-
+    bool got_ret_adr=false;
+    strbuf sb=STRBUF_INIT, sb_address=STRBUF_INIT;
     address_to_string(bp_a, &sb_address);
-    
-    if (*cur_state==BPF_state_default)
+
+    if (MC_ReadREG(mc, CONTEXT_get_SP(ctx), &t->ret_adr))
     {
-        // do function begin things
-        address ret_adr;
-        bool got_ret_adr=false;
-        strbuf sb=STRBUF_INIT;
-
-        if (MC_ReadREG(mc, CONTEXT_get_SP(ctx), &ret_adr))
-        {
-            L ("ret_adr=0x" PRI_ADR_HEX "\n", ret_adr);
-            // set current DRx to return
-            CONTEXT_setDRx_and_DR7 (ctx, DRx_no, ret_adr);
-            *cur_state=BPF_state_at_return;
-            process_get_sym (p, ret_adr, &sb);
-            got_ret_adr=true;
-        }
-        else
-            L ("Cannot read a register at SP, so, BPF return will not be handled\n");
-
-        load_args(t, CONTEXT_get_SP(ctx), mc, bpf->args);
-        
-        dump_PID_if_need(p); dump_TID_if_need(p, t);
-        L ("(%d) %s (", DRx_no, sb_address.buf);
-        BPF_dump_args (mc, t->BPF_args, bpf->args, bpf->unicode);
-        L (")");
-        if (got_ret_adr)
-            L (" (called from %s (0x" PRI_ADR_HEX "))", sb.buf, ret_adr);
-        L ("\n");
-        
-        strbuf_deinit(&sb);
-
-        if (dash_s)
-            dump_stack_EBP_frame (p, t, ctx, mc);
-
-    }
-    else if (*cur_state==BPF_state_at_return)
-    {
-        // do function finish things
-        REG accum=CONTEXT_get_Accum (ctx);
-
-        dump_PID_if_need(p); dump_TID_if_need(p, t);
-        L ("(%d) %s () -> " PRI_SIZE_T_DEC " (0x" PRI_REG_HEX ")\n", DRx_no, sb_address.buf, accum, accum);
-        
-        DFREE(t->BPF_args); t->BPF_args=NULL;
-        // set back current DRx to begin
-        CONTEXT_setDRx_and_DR7 (ctx, DRx_no, bp_a->abs_address);
-        *cur_state=BPF_state_default;
+        L ("ret_adr=0x" PRI_ADR_HEX "\n", t->ret_adr);
+        // set current DRx to return
+        assert(bp_no<4); // ???
+        CONTEXT_setDRx_and_DR7 (ctx, bp_no, t->ret_adr);
+        process_get_sym (p, t->ret_adr, &sb);
+        got_ret_adr=true;
     }
     else
-    {
-        assert(!"invalid *cur_state");
-    };
+        L ("Cannot read a register at SP, so, BPF return will not be handled\n");
+
+    load_args(t, CONTEXT_get_SP(ctx), mc, bpf->args);
+
+    dump_PID_if_need(p); dump_TID_if_need(p, t);
+    L ("(%d) %s (", bp_no, sb_address.buf);
+    BPF_dump_args (mc, t->BPF_args, bpf->args, bpf->unicode);
+    L (")");
+    if (got_ret_adr)
+        L (" (called from %s (0x" PRI_ADR_HEX "))", sb.buf, t->ret_adr);
+    L ("\n");
+
+    strbuf_deinit(&sb);
+
+    if (dash_s)
+        dump_stack_EBP_frame (p, t, ctx, mc);
 
     strbuf_deinit(&sb_address);
+    return got_ret_adr;
+};
+
+static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
+{
+    bp_address *bp_a=bp->a;
+    strbuf sb_address=STRBUF_INIT;
+    address_to_string(bp_a, &sb_address);
+    // do function finish things
+    REG accum=CONTEXT_get_Accum (ctx);
+
+    dump_PID_if_need(p); dump_TID_if_need(p, t);
+    L ("(%d) %s () -> " PRI_SIZE_T_DEC " (0x" PRI_REG_HEX ")\n", bp_no, sb_address.buf, accum, accum);
+
+    DFREE(t->BPF_args); t->BPF_args=NULL;
+    // set back current DRx to begin
+    assert(bp_no<4); // ???
+    CONTEXT_setDRx_and_DR7 (ctx, bp_no, bp_a->abs_address);
+    strbuf_deinit(&sb_address);
+};
+
+bool tracing_dbg=true;
+
+static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
+{
+    bool emulated=false;
+    address PC;
+
+    if (tracing_dbg)
+    {
+        PC=CONTEXT_get_PC(ctx);
+        strbuf sb=STRBUF_INIT;
+        process_get_sym(p, PC, &sb);
+
+        L ("%s() PC=%s (0x%x)\n", __func__, sb.buf, PC);
+        strbuf_deinit (&sb);
+    };
+
+    do // emu cycle
+    {
+        PC=CONTEXT_get_PC(ctx);
+        // (to be implemented in future): check other BPF/BPX breakpoints. handle them if need.
+
+        // finished? PC==ret_adr? return 2
+        if (PC==t->ret_adr)
+            return 2;
+
+        // need to skip something? are we at the start of function to skip? is SYSCALL here? depth-level reached?
+        // set drx, return 3
+        DWORD tmp;
+        if (MC_ReadTetrabyte (mc, PC, &tmp) && tmp==0xC015FF64) // 64 FF 15 C0 00 00 00 <call large dword ptr fs:0C0h>
+        {
+            L ("syscall to be skipped\n");
+            CONTEXT_setDRx_and_DR7 (ctx, bp_no, PC+7);
+            return 3;
+        };
+        
+        // handle all here
+
+    } while (emulated);
+    
+    // continue?
+    return 1;
+};
+
+void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
+{
+    BP *bp=breakpoints[bp_no];
+    BPF_state* state=&t->BPF_states[bp_no];
+    BPF *bpf=bp->u.bpf;
+
+    switch (*state)
+    {
+        case BPF_state_default:
+            if (handle_begin(p, t, bp, bp_no, ctx, mc)==false)
+                return; // got no return address, exit
+
+            if (bpf->trace)
+            {
+                // begin tracing
+                set_TF(ctx);
+                *state=BPF_state_tracing_inside_function;
+                t->tracing=true; t->tracing_bp=bp_no;
+                goto call_handle_tracing_etc;
+            }
+            else
+                *state=BPF_state_at_return;
+            break;
+
+        case BPF_state_at_return:
+            goto handle_finish_and_switch_to_default;
+
+        case BPF_state_tracing_inside_function:
+            goto call_handle_tracing_etc;
+
+        case BPF_state_tracing_skipping:
+            CONTEXT_setDRx_and_DR7 (ctx, bp_no, t->ret_adr); // return DRx back
+            *state=BPF_state_tracing_inside_function;
+            goto call_handle_tracing_etc;
+
+        default:
+            assert(!"invalid *state");
+            break; // TMCH
+    };
+    return;
+
+call_handle_tracing_etc:
+    switch (handle_tracing(bp_no, p, t, ctx, mc))
+    {
+        case 1: // go on
+            L ("handle_tracing() -> 1\n");
+            set_TF (ctx);
+            break;
+        case 2: // finished
+            L ("handle_tracing() -> 2\n");
+            t->tracing=false;
+            clear_TF(ctx);
+            REMOVE_BIT(ctx->Dr6, FLAG_DR6_BS);
+            goto handle_finish_and_switch_to_default;
+        case 3: // need to skip something
+            L ("handle_tracing() -> 3\n");
+            *state=BPF_state_tracing_skipping;
+            break;
+    };
+    return;
+
+handle_finish_and_switch_to_default:
+    handle_finish(p, t, bp, bp_no, ctx, mc);
+    *state=BPF_state_default;
 };

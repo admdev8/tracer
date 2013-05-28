@@ -133,7 +133,7 @@ void check_option_constraints()
             die ("-c options useless without -l option\n");
         if (debug_children)
             die ("--child option useless without -l option\n");
-        if (OEP_breakpoint)
+        if (breakpoints[OEP_BP_NO])
             die ("OEP breakpoint is useless without -l option\n");
     };
 };
@@ -286,7 +286,7 @@ void set_ORACLE_HOME()
 
 int main(int argc, char *argv[])
 {
-    //dmalloc_break_at_seq_n (70);
+    //dmalloc_break_at_seq_n (70034);
     
     if (argc==1)
         help_and_exit();
@@ -300,7 +300,7 @@ int main(int argc, char *argv[])
     set_ORACLE_HOME();
 
     for (int i=0; i<4; i++)
-        L ("DRx_breakpoints[%d]=0x%p\n", i, DRx_breakpoints[i]);
+        L ("DRx_breakpoints[%d]=0x%p\n", i, breakpoints[i]);
 
     debug_or_attach();
     processes=rbtree_create(true, "processes", compare_tetrabytes);
@@ -330,9 +330,8 @@ int main(int argc, char *argv[])
     rbtree_deinit(processes);
 
     dlist_free(addresses_to_be_resolved, NULL);
-    BP_free(OEP_breakpoint);
-    for (unsigned i=0; i<4; i++)
-        BP_free(DRx_breakpoints[i]);
+    for (unsigned i=0; i<5; i++)
+        BP_free(breakpoints[i]);
 
     DFREE(load_filename);
     DFREE(attach_filename);

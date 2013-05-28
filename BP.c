@@ -7,6 +7,7 @@
 #include "stuff.h"
 #include "opts.h"
 #include "bp_address.h"
+#include "BPF.h"
 
 void BPX_option_free(BPX_option *o)
 {
@@ -94,9 +95,9 @@ BP* create_BP (enum BP_type t, bp_address* a, void* p)
     
     if (is_address_OEP(a))
     {
-        if (OEP_breakpoint)
+        if (breakpoints[OEP_BP_NO])
             die ("Only one breakpoint at OEP can be present\n");
-        OEP_breakpoint=rt; 
+        breakpoints[OEP_BP_NO]=rt; 
     };
 
     return rt;

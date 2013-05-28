@@ -35,7 +35,7 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
     CONTEXT_setDRx_and_DR7 (ctx, DRx_no, bp->a->abs_address);
 };
 
-void set_or_update_all_breakpoints(process *p)
+void set_or_update_all_DRx_breakpoints(process *p) // rename!
 {
     //if (tracer_c_debug)
         L ("%s() begin\n", __func__);
@@ -43,7 +43,7 @@ void set_or_update_all_breakpoints(process *p)
     // enum all breakpoints, pick out a->resolved ones
     for (unsigned DRx_no=0; DRx_no<4; DRx_no++)
     {
-        BP *bp=DRx_breakpoints[DRx_no];
+        BP *bp=breakpoints[DRx_no];
         if (bp)
             L ("%s() DRx_breakpoints[%d]=0x%p\n", __func__, DRx_no, bp);
         else

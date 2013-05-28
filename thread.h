@@ -13,8 +13,12 @@ typedef struct _thread
     address start;
 
     // BPF-related info
-    BPF_state BPF_states[4]; // for each DRx breakpoint
+    BPF_state BPF_states[5]; // for each DRx breakpoint. 0..3 - DR0-3, 4th - OEP bp
     REG* BPF_args;
+    address ret_adr; // sometimes present
+
+    bool tracing;
+    int tracing_bp; // in case of tracing
 } thread;
 
 void thread_free (thread *t);

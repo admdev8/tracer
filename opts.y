@@ -15,8 +15,7 @@
 #include "BPF.h"
 #include "bp_address.h"
 
-BP* OEP_breakpoint=NULL;
-BP* DRx_breakpoints[4]={ NULL, NULL, NULL, NULL };
+BP* breakpoints[5]={ NULL, NULL, NULL, NULL, NULL }; // 0..3 - DR0-3, 4th - OEP bp
 dlist* addresses_to_be_resolved=NULL; // list of opaque objects-pointers to bp_address structures. don't free them.
 char* load_filename=NULL;
 char* attach_filename=NULL;
@@ -39,9 +38,9 @@ void flex_restart();
 void add_new_BP (BP* bp)
 {
     for (int i=0; i<4; i++)
-        if (DRx_breakpoints[i]==NULL)
+        if (breakpoints[i]==NULL)
         {
-            DRx_breakpoints[i]=bp;
+            breakpoints[i]=bp;
             return;
         };
     die ("No more free DRx slots. Only 4 breakpoints allowed!\n");
@@ -197,7 +196,7 @@ BPX_option
 BPF_option
  : BPF_UNICODE                      { current_BPF->unicode=1; }
  | BPF_TRACE                        { current_BPF->trace=1; }
- | BPF_TRACE_COLON BPF_CC           { current_BPF->trace=1; current_BPF->trace_cc=1; }
+ | BPF_TRACE_COLON BPF_CC           { current_BPF->trace=1; current_BPF->cc=1; }
  | BPF_SKIP                         { current_BPF->skip=1; } 
  | BPF_SKIP_STDCALL                 { current_BPF->skip_stdcall=1; }
  | BPF_PAUSE DEC_OR_HEX             { current_BPF->pause=$2; }
@@ -293,8 +292,8 @@ BP* parse_option(char *s)
         exit(0);
     };
 
-    if (r==0 && DRx_breakpoints[0])
-        return DRx_breakpoints[0];
+    if (r==0 && breakpoints[0])
+        return breakpoints[0];
     else
         return NULL;
 };

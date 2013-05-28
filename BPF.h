@@ -14,12 +14,14 @@ typedef struct _thread thread;
 typedef enum _BPF_state
 {
     BPF_state_default=0,
-    BPF_state_at_return
+    BPF_state_at_return,
+    BPF_state_tracing_inside_function,
+    BPF_state_tracing_skipping
 } BPF_state;
 
 typedef struct _BPF
 {
-    bool unicode, skip, skip_stdcall, trace, trace_cc;
+    bool unicode, skip, skip_stdcall, trace, cc;
     // these params may be NULL
     obj* rt;
     double rt_probability;

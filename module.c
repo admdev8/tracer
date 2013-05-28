@@ -14,6 +14,7 @@
 #include "files.h"
 #include "tracer.h"
 #include "bp_address.h"
+#include "utils.h"
 
 bool module_c_debug=true;
 
@@ -220,7 +221,7 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
     rbtree_insert (p->modules, (void*)img_base, (void*)m);
 
     if (try_to_resolve_bp_addresses_if_need(m))
-        set_or_update_all_breakpoints(p);
+        set_or_update_all_DRx_breakpoints(p);
 
     if (module_c_debug)
         L ("%s() end\n", __func__);
@@ -277,7 +278,7 @@ void remove_module (process *p, address img_base)
 
 bool address_in_module (module *m, address a)
 {
-    return (a >= m->base) && (a < m->base + m->size);
+    return (a >= m->base) && (a < (m->base + m->size));
 };
 
 #if 0
