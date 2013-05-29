@@ -195,7 +195,12 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
             CONTEXT_setDRx_and_DR7 (ctx, bp_no, PC+7);
             return 3;
         };
-        
+/*
+        if (ins==I_CALL)
+            t->tracing_CALLs_executed++;
+        if (ins==I_RETN)
+            t->tracing_CALLs_executed--;
+*/
         // handle all here
 
     } while (emulated);

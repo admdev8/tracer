@@ -284,9 +284,103 @@ void set_ORACLE_HOME()
         L ("Warning: Oracle RDBMS version wasn't determined\n");
 };
 
+typedef struct _trace_skip_element
+{
+   regex_t re_path;
+   regex_t re_module;
+   regex_t re_function;
+   BOOL is_function_wildcard; // is re_function = '.*'?
+   struct _trace_skip_element *next;
+} trace_skip_element;
+
+trace_skip_element *trace_skip_options=NULL;
+
+bool load_cfg(const char *fname)
+{
+    FILE *f;
+    const char* CFG_PAT="^trace_skip=([^!; ]*)!([^!; ]*)!([^!; ]*)([[:space:]])?(;.*)?$";
+    regex_t trace_skip_pat;
+    bool rt;
+
+    if (regcomp(&trace_skip_pat, CFG_PAT, REG_EXTENDED | REG_ICASE | REG_NEWLINE))
+        die("failed regcomp() for pattern '%s'", CFG_PAT);
+
+    f=fopen (fname, "rt");
+    if (f==NULL) // file absent
+    {
+        rt=false;
+        goto exit;
+    };
+
+    char buf[1024];
+    while(fgets(buf, 1024, f)!=NULL)
+    {
+        regmatch_t matches[4];
+
+        //printf ("buf=[%s]\n", buf);
+        if (regexec (&trace_skip_pat, buf, 4, matches, 0)==0)
+        {
+            strbuf opt1=STRBUF_INIT;
+            strbuf opt2=STRBUF_INIT;
+            strbuf opt3=STRBUF_INIT;
+            trace_skip_element *tmp;
+
+            strbuf_addstr_range_be(&opt1, buf, matches[1].rm_so, matches[1].rm_eo);
+            strbuf_addstr_range_be(&opt2, buf, matches[2].rm_so, matches[2].rm_eo);
+            strbuf_addstr_range_be(&opt3, buf, matches[3].rm_so, matches[3].rm_eo);
+
+            env_vars_expansion(&opt1);
+
+            tmp=DCALLOC(trace_skip_element, 1, "trace_skip_element");
+
+            if (regcomp(&tmp->re_path, opt1.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE))
+                die ("incorrect first regular exression at %s", buf);
+
+            if (regcomp(&tmp->re_module, opt2.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE))
+                die ("incorrect second regular exression at %s", buf);
+
+            if (regcomp(&tmp->re_function, opt3.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE))
+                die ("incorrect third regular exression at %s", buf);
+
+            if (strcmp (opt3.buf, ".*")==0)
+                tmp->is_function_wildcard=TRUE;
+
+            if (trace_skip_options==NULL)
+                trace_skip_options=tmp;
+            else
+            {
+                trace_skip_element *i;
+                for (i=trace_skip_options; i->next!=NULL; i=i->next); // find last element
+                i->next=tmp; // add new element
+            };
+            strbuf_deinit(&opt1);
+            strbuf_deinit(&opt2);
+            strbuf_deinit(&opt3);
+        };
+    };
+    int t_i=fclose (f);
+    assert (t_i==0);
+    rt=true;
+
+exit:
+    regfree(&trace_skip_pat);
+    return rt;
+};
+
+void free_trace_skip_options(trace_skip_element *i)
+{
+    if (i==NULL)
+        return;
+    regfree(&i->re_path);
+    regfree(&i->re_module);
+    regfree(&i->re_function);
+    free_trace_skip_options(i->next);
+    DFREE(i);
+};
+
 int main(int argc, char *argv[])
 {
-    //dmalloc_break_at_seq_n (70034);
+    //dmalloc_break_at_seq_n (66);
     
     if (argc==1)
         help_and_exit();
@@ -297,6 +391,10 @@ int main(int argc, char *argv[])
     check_option_constraints();
 
     L_init ("tracer.log");
+
+    if (load_cfg("tracer.cfg")==false)
+        L ("Warning: no tracer.cfg file.\n");
+
     set_ORACLE_HOME();
 
     for (int i=0; i<4; i++)
@@ -329,6 +427,8 @@ int main(int argc, char *argv[])
 
     rbtree_deinit(processes);
 
+    free_trace_skip_options(trace_skip_options);
+
     dlist_free(addresses_to_be_resolved, NULL);
     for (unsigned i=0; i<5; i++)
         BP_free(breakpoints[i]);
@@ -340,6 +440,7 @@ int main(int argc, char *argv[])
         regfree (dump_all_symbols_re);
 
     strbuf_deinit(&ORACLE_HOME);
+
     dump_unfreed_blocks();
     return 0;
 };

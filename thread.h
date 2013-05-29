@@ -18,7 +18,8 @@ typedef struct _thread
     address ret_adr; // sometimes present
 
     bool tracing;
-    int tracing_bp; // in case of tracing
+    unsigned tracing_bp; // in case of tracing
+    //int tracing_CALLs_executed; // 0 is default, 1 after first CALL, etc
 } thread;
 
 void thread_free (thread *t);
