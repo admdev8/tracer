@@ -28,7 +28,7 @@ static bool search_for_symbol_re_in_module(module *m, regex_t *symbol_re, addres
     // enumerate all symbols in module in order for searching
 
     for (struct rbtree_node_t* i=rbtree_minimum(m->symbols); i; i=rbtree_succ(i))
-        for (symbol* s=((symbols_list*)i->value)->s; s; s=s->next)
+        for (symbol* s=(symbol*)i->value; s; s=s->next)
             if (regexec(symbol_re, s->name, 0, NULL, 0)==0)
                 return *out=(address)i->key, true;
 
@@ -214,7 +214,22 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
     PE_info* info=get_all_info_from_PE (p, m, &fullpath_filename, img_base);
     if (ORACLE_HOME.strlen>0)
         add_symbols_from_ORACLE_SYM_if_exist (p, m, img_base, info, get_module_name(m));
-    
+   
+    // will symbols from this module skipping during tracing?
+    int j;
+    trace_skip_element * i;
+    for (i=trace_skip_options, j=0; i; i=i->next,j++)
+    {
+        if (regexec (&i->re_path, m->path, 0, NULL, 0)==0)
+            if (regexec (&i->re_module, get_module_name(m), 0, NULL, 0)==0)
+                if (i->is_function_wildcard)
+                {
+                    L ("All symbols in module %s will be skipped during tracing\n", get_module_name(m));
+                    m->skip_all_symbols_in_module_on_trace=true;
+                    break;
+                };
+    };
+
     PE_info_free(info);
     strbuf_deinit(&fullpath_filename);
     
@@ -244,16 +259,13 @@ void module_free(module *m)
 
     for (struct rbtree_node_t *i=rbtree_minimum(m->symbols); i; i=rbtree_succ(i))
     {
-        symbols_list *l=(symbols_list*)i->value;
-        for (symbol* s=l->s; s; )
+        for (symbol* s=(symbol*)i->value; s; )
         {
             symbol *tmp=s;
             s=s->next;
             DFREE(tmp->name);
             DFREE(tmp);
         };
-
-        DFREE(l);
     };
 
     rbtree_deinit(m->symbols);
@@ -281,12 +293,13 @@ bool address_in_module (module *m, address a)
     return (a >= m->base) && (a < (m->base + m->size));
 };
 
-#if 0
-// may return module.dll!symbol or NULL
-char* sym_exist_at (module *m, address a)
+// may return some symbol or NULL
+symbol* module_sym_exist_at (module *m, address a)
 {
+    assert (address_in_module (m, a));
+
+    return rbtree_lookup(m->symbols, (void*)a);
 };
-#endif
 
 // may return module.dll!symbol+0x1234
 void module_get_sym (module *m, address a, strbuf *out)
@@ -294,18 +307,18 @@ void module_get_sym (module *m, address a, strbuf *out)
     assert (address_in_module (m, a));
 
     address prev_k;
-    symbols_list *prev_v;
+    symbol *prev_v;
     
-    symbols_list *l=rbtree_lookup2(m->symbols, (void*)a, (void**)&prev_k, (void**)&prev_v, NULL, NULL);
-    if (l)
+    symbol *first_sym=rbtree_lookup2(m->symbols, (void*)a, (void**)&prev_k, (void**)&prev_v, NULL, NULL);
+    if (first_sym)
     {
         // take 'top' symbol
-        symbol *s=l->s;
+        symbol *s=first_sym;
         strbuf_addf (out, "%s!%s", get_module_name (m), s->name);
     }
     else
     {
-        symbol *s=prev_v->s;
+        symbol *s=prev_v;
         strbuf_addf (out, "%s!%s+0x%x", get_module_name (m), s->name, a-prev_k);
     };
 };

@@ -15,7 +15,7 @@
 #include "BPF.h"
 #include "bp_address.h"
 
-BP* breakpoints[5]={ NULL, NULL, NULL, NULL, NULL }; // 0..3 - DR0-3, 4th - OEP bp
+BP* breakpoints[4]={ NULL, NULL, NULL, NULL }; // 0..3 - DR0-3, 4th - OEP bp
 dlist* addresses_to_be_resolved=NULL; // list of opaque objects-pointers to bp_address structures. don't free them.
 char* load_filename=NULL;
 char* attach_filename=NULL;
@@ -40,6 +40,7 @@ void add_new_BP (BP* bp)
     for (int i=0; i<4; i++)
         if (breakpoints[i]==NULL)
         {
+            //printf ("%s() setting breakpoints[%d]...\n", __func__, i);
             breakpoints[i]=bp;
             return;
         };

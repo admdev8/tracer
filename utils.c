@@ -8,6 +8,8 @@
 #include "BP.h"
 #include "bp_address.h"
 #include "opts.h"
+#include "bitfields.h"
+#include "x86.h"
 
 void dump_PID_if_need(process *p)
 {
@@ -35,7 +37,7 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
     CONTEXT_setDRx_and_DR7 (ctx, DRx_no, bp->a->abs_address);
 };
 
-void set_or_update_all_DRx_breakpoints(process *p) // rename!
+void set_or_update_all_DRx_breakpoints(process *p)
 {
     //if (tracer_c_debug)
         L ("%s() begin\n", __func__);

@@ -93,13 +93,6 @@ BP* create_BP (enum BP_type t, bp_address* a, void* p)
     rt->a=a;
     rt->u.p=p;
     
-    if (is_address_OEP(a))
-    {
-        if (breakpoints[OEP_BP_NO])
-            die ("Only one breakpoint at OEP can be present\n");
-        breakpoints[OEP_BP_NO]=rt; 
-    };
-
     return rt;
 };
 

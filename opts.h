@@ -17,8 +17,6 @@ typedef octabyte REG;
 typedef tetrabyte REG;
 #endif
 
-#define OEP_BP_NO 4
-
 extern BPF* current_BPF; // filled while parsing
 extern bp_address* current_BPF_address; // filled while parsing
 
@@ -26,7 +24,7 @@ BP* parse_option(char *s);
 bool is_there_OEP_breakpoint_for_fname(char *fname);
 
 // from opts.y
-extern BP* breakpoints[5];
+extern BP* breakpoints[4];
 extern dlist *addresses_to_be_resolved;
 extern char* load_filename;
 extern char* attach_filename;

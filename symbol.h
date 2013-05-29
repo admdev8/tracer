@@ -7,6 +7,7 @@
 #include "lisp.h"
 #include "PE.h"
 #include "rbtree.h"
+#include "fuzzybool.h"
 
 typedef struct _module module;
 
@@ -25,14 +26,9 @@ typedef struct _symbol
 {
     symbol_type t;
     char *name;
+    TrueFalseUndefined skip_on_tracing;
     struct _symbol *next;
 } symbol;
-
-typedef struct _symbols_list
-{
-    symbol *s;
-    // will it be skipped during tracing?
-} symbols_list;
 
 typedef struct _add_symbol_params
 {
@@ -42,4 +38,4 @@ typedef struct _add_symbol_params
 } add_symbol_params;
 
 void add_symbol (address a, char *name, add_symbol_params *params);
-
+bool symbol_skip_on_tracing(module *m, symbol *s);

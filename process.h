@@ -8,6 +8,7 @@
 #include "strbuf.h"
 
 typedef struct _module module;
+typedef struct _symbol symbol;
 
 typedef struct _process
 {
@@ -28,5 +29,6 @@ typedef struct _process
 void process_free (process *p);
 process *find_process(DWORD PID);
 module *find_module_for_address (process *p, address a);
+symbol *process_sym_exist_at (process *p, address a);
 void process_get_sym (process *p, address a, strbuf *out);
 

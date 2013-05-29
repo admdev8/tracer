@@ -47,6 +47,14 @@ module *find_module_for_address (process *p, address a)
     };
 };
 
+// may return NULL
+symbol *process_sym_exist_at (process *p, address a)
+{
+    module *m=find_module_for_address (p, a);
+
+    return module_sym_exist_at (m, a);
+};
+
 void process_get_sym (process *p, address a, strbuf *out)
 {
     if (0 && process_c_debug)

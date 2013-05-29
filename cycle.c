@@ -19,11 +19,14 @@
 #include "BPX.h"
 #include "x86.h"
 #include "utils.h"
+#include "bp_address.h"
 
 bool cycle_c_debug=true;
 
 void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
+    L ("%s(bp_no=%d) begin\n", __func__, bp_no);
+
     BP* bp=breakpoints[bp_no];
 
     switch (bp->t)
@@ -37,6 +40,7 @@ void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
         default:
             assert(0);
     };
+    L ("%s() end\n", __func__);
 };
 
 bool handle_OEP_breakpoint (process *p, thread *t)
@@ -56,21 +60,23 @@ bool handle_OEP_breakpoint (process *p, thread *t)
     bool b=MC_WriteByte (mc, CONTEXT_get_PC(&ctx), p->executable_module->saved_OEP_byte);
     assert (b && "cannot restore original byte at OEP");
 
-    if (breakpoints[OEP_BP_NO])
-        handle_BP(p, t, OEP_BP_NO, &ctx, mc);
-
     if (load_filename)
         p->we_are_loading_and_OEP_was_executed=true;
 
-    set_or_update_all_DRx_breakpoints(p); // only DRx breakpoints set/updated!
+    set_or_update_all_DRx_breakpoints(p); // for all threads! only DRx breakpoints set/updated!
 
     MC_Flush (mc);
     MC_MemoryCache_dtor (mc, true);
+
+    if (cycle_c_debug)
+        L ("%s() end\n", __func__);
+
     return true;
 };
 
 void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 {
+    L ("%s() begin\n", __func__);
     if (IS_SET(ctx->Dr6, FLAG_DR6_B0))
     {
         assert (breakpoints[0]);
@@ -100,6 +106,14 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
         assert (t->tracing && "BS flag in DR6, but no breakpoint in tracing mode");
         handle_BP(p, t, t->tracing_bp, ctx, mc);
     };
+/*
+    if (ctx->Dr6==0) // sometimes observed while tracing
+    {
+        assert (t->tracing && "DR6 is zero, but no breakpoint in tracing mode");
+        handle_BP(p, t, t->tracing_bp, ctx, mc);
+    };
+*/
+    L ("%s() end\n", __func__);
 };
 
 DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)

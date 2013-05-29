@@ -11,6 +11,7 @@
 #include "CONTEXT_utils.h"
 #include "bitfields.h"
 #include "x86.h"
+#include "symbol.h"
 
 void dump_BPF(BPF *b)
 {
@@ -115,8 +116,8 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
     {
         L ("ret_adr=0x" PRI_ADR_HEX "\n", t->ret_adr);
         // set current DRx to return
-        assert(bp_no<4); // ???
-        CONTEXT_setDRx_and_DR7 (ctx, bp_no, t->ret_adr);
+        assert(bp_no<4); // be sure we work only with DRx breakpoints
+        CONTEXT_setDRx_and_DR7 (ctx, bp_no, t->ret_adr); // set breakpoint at return
         process_get_sym (p, t->ret_adr, &sb);
         got_ret_adr=true;
     }
@@ -155,7 +156,7 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
 
     DFREE(t->BPF_args); t->BPF_args=NULL;
     // set back current DRx to begin
-    assert(bp_no<4); // ???
+    assert(bp_no<4); // be sure we work only with DRx breakpoints
     CONTEXT_setDRx_and_DR7 (ctx, bp_no, bp_a->abs_address);
     strbuf_deinit(&sb_address);
 };
@@ -195,6 +196,25 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
             CONTEXT_setDRx_and_DR7 (ctx, bp_no, PC+7);
             return 3;
         };
+
+        // is there symbol?
+        module *m=find_module_for_address (p, PC);
+        symbol *s=process_sym_exist_at(p, PC);
+        if (s)
+        {
+            // should it be skipped?
+            if (symbol_skip_on_tracing(m, s))
+            {
+                DWORD ret_adr;
+                L ("symbol to be skipped\n");
+                if (MC_ReadREG(mc, CONTEXT_get_SP(ctx), &ret_adr)==false)
+                {
+                    assert(0);
+                };
+                CONTEXT_setDRx_and_DR7 (ctx, bp_no, ret_adr);
+                return 3;
+            };
+        };
 /*
         if (ins==I_CALL)
             t->tracing_CALLs_executed++;
@@ -211,6 +231,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
 
 void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
+    L ("%s() begin\n", __func__);
     BP *bp=breakpoints[bp_no];
     BPF_state* state=&t->BPF_states[bp_no];
     BPF *bpf=bp->u.bpf;
@@ -219,7 +240,7 @@ void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
     {
         case BPF_state_default:
             if (handle_begin(p, t, bp, bp_no, ctx, mc)==false)
-                return; // got no return address, exit
+                goto exit; // got no return address, exit
 
             if (bpf->trace)
             {
@@ -248,7 +269,7 @@ void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
             assert(!"invalid *state");
             break; // TMCH
     };
-    return;
+    goto exit;
 
 call_handle_tracing_etc:
     switch (handle_tracing(bp_no, p, t, ctx, mc))
@@ -265,12 +286,16 @@ call_handle_tracing_etc:
             goto handle_finish_and_switch_to_default;
         case 3: // need to skip something
             L ("handle_tracing() -> 3\n");
+            clear_TF(ctx);
             *state=BPF_state_tracing_skipping;
             break;
     };
-    return;
+    goto exit;
 
 handle_finish_and_switch_to_default:
     handle_finish(p, t, bp, bp_no, ctx, mc);
     *state=BPF_state_default;
+
+exit:
+    L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
 };

@@ -17,6 +17,7 @@
 #include "utils.h"
 #include "BP.h"
 #include "bp_address.h"
+#include "tracer.h"
 
 rbtree *processes=NULL; // PID, ptr to process
 
@@ -133,8 +134,6 @@ void check_option_constraints()
             die ("-c options useless without -l option\n");
         if (debug_children)
             die ("--child option useless without -l option\n");
-        if (breakpoints[OEP_BP_NO])
-            die ("OEP breakpoint is useless without -l option\n");
     };
 };
 
@@ -284,15 +283,6 @@ void set_ORACLE_HOME()
         L ("Warning: Oracle RDBMS version wasn't determined\n");
 };
 
-typedef struct _trace_skip_element
-{
-   regex_t re_path;
-   regex_t re_module;
-   regex_t re_function;
-   BOOL is_function_wildcard; // is re_function = '.*'?
-   struct _trace_skip_element *next;
-} trace_skip_element;
-
 trace_skip_element *trace_skip_options=NULL;
 
 bool load_cfg(const char *fname)
@@ -343,7 +333,7 @@ bool load_cfg(const char *fname)
                 die ("incorrect third regular exression at %s", buf);
 
             if (strcmp (opt3.buf, ".*")==0)
-                tmp->is_function_wildcard=TRUE;
+                tmp->is_function_wildcard=true;
 
             if (trace_skip_options==NULL)
                 trace_skip_options=tmp;
