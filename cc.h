@@ -9,12 +9,19 @@ typedef struct _thread thread;
 typedef struct _module module;
 
 // order matters!
-#define NOTICE_OP1 1<<0
-#define NOTICE_OP2 1<<1
-#define NOTICE_OP3 1<<2
-#define NOTICE_AX 1<<3
-#define NOTICE_CX 1<<4
-#define NOTICE_DX 1<<5
+#define WORKOUT_OP1 0
+#define WORKOUT_OP2 1
+#define WORKOUT_OP3 2
+#define WORKOUT_AX 3
+#define WORKOUT_CX 4
+#define WORKOUT_DX 5
+
+#define NOTICE_OP1 1<<WORKOUT_OP1
+#define NOTICE_OP2 1<<WORKOUT_OP2
+#define NOTICE_OP3 1<<WORKOUT_OP3
+#define NOTICE_AX 1<<WORKOUT_AX
+#define NOTICE_CX 1<<WORKOUT_CX
+#define NOTICE_DX 1<<WORKOUT_DX
 #define NOTICE_PF 1<<6
 #define NOTICE_SF 1<<7
 #define NOTICE_AF 1<<8

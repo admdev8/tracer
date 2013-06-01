@@ -386,12 +386,12 @@ static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
     L ("%s() begin i=%d\n", __func__, i);
     switch (i)
     {
-        case 0: // NOTICE_OP1:
-        case 2: // NOTICE_OP3:
+        case WORKOUT_OP1:
+        case WORKOUT_OP3:
             Da_op_ToString(da->_op[i], out);
             break;
 
-        case 1: // NOTICE_OP2:
+        case WORKOUT_OP2:
 
             if (da->ins_code==I_LEA && da->_op[i]->type==DA_OP_TYPE_VALUE_IN_MEMORY) // LEA case, op2 -> memory
                 strbuf_addf (out, "op%d", 2);
@@ -399,16 +399,16 @@ static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
                 Da_op_ToString(da->_op[i], out);
             break;
 
-        case 3: // NOTICE_AX:
-            strbuf_addstr (out, "AX");
+        case WORKOUT_AX:
+            strbuf_addstr (out, get_AX_register_name());
             break;
 
-        case 4: // NOTICE_CX:
-            strbuf_addstr (out, "CX");
+        case WORKOUT_CX:
+            strbuf_addstr (out, get_CX_register_name());
             break;
 
-        case 5: // NOTICE_DX:
-            strbuf_addstr (out, "DX");
+        case WORKOUT_DX:
+            strbuf_addstr (out, get_DX_register_name());
             break;
 
         default:
@@ -440,20 +440,21 @@ static bool cc_dump_op (Da *da, PC_info* info, unsigned i, strbuf *out)
         case V_DWORD:
         case V_QWORD: 
             {
-                struct rbtree_node_t *max=rbtree_maximum(op->values);
-                for (struct rbtree_node_t *j=rbtree_minimum(op->values); j; j=rbtree_succ(j))
+                rbtree_node *max=rbtree_maximum(op->values);
+                for (rbtree_node *j=rbtree_minimum(op->values); j; j=rbtree_succ(j))
                 {
                     strbuf_addf (out, "0x" PRI_REG_HEX, (REG)j->key);
-                    if (rbtree_succ(j)!=max)
+                    if (j!=max)
                         strbuf_addstr (out, ", ");
                 };
                 if (rbtree_count(op->ptr_to_string_set)>0)
                 {
-                    struct rbtree_node_t *max=rbtree_maximum(op->ptr_to_string_set);
-                    for (struct rbtree_node_t *j=rbtree_minimum(op->ptr_to_string_set); j; j=rbtree_succ(j))
+                    strbuf_addstr (out, ", ");
+                    rbtree_node *max=rbtree_maximum(op->ptr_to_string_set);
+                    for (rbtree_node *j=rbtree_minimum(op->ptr_to_string_set); j; j=rbtree_succ(j))
                     {
                         strbuf_addstr (out, (char*)j->key);
-                        if (rbtree_succ(j)!=max)
+                        if (j!=max)
                             strbuf_addstr (out, ", ");
                     };
                 };
@@ -482,7 +483,7 @@ void cc_dump(module *m) // for module m
     if (f==NULL)
         die ("Can't open %s for writing\n", sb_filename_txt.buf);
 
-    for (struct rbtree_node_t *i=rbtree_minimum(m->PC_infos); i; i=rbtree_succ(i))
+    for (rbtree_node *i=rbtree_minimum(m->PC_infos); i; i=rbtree_succ(i))
     {
         L ("%s() loop begin\n", __func__);
         address a=(address)i->key;
@@ -597,7 +598,7 @@ static void save_info_about_PC (module *m, const char *comment, unsigned to_noti
     for (unsigned i=0; i<6; i++)
         if (IS_SET(to_notice, 1<<i)) // NOTICE_OP1, OP2, OP3, AX, CX, DX
         {
-            if (i<3)
+            if (i<=WORKOUT_OP3)
             {
                 address adr;
                 s_Value val;
@@ -609,13 +610,13 @@ static void save_info_about_PC (module *m, const char *comment, unsigned to_noti
                 s_Value val;
                 switch (i)
                 {
-                    case 3:
+                    case WORKOUT_AX:
                         X86_register_get_value (R_EAX, ctx, &val);
                         break;
-                    case 4:
+                    case WORKOUT_CX:
                         X86_register_get_value (R_ECX, ctx, &val);
                         break;
-                    case 5:
+                    case WORKOUT_DX:
                         X86_register_get_value (R_EDX, ctx, &val);
                         break;
                     default:
