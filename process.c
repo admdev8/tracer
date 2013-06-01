@@ -19,7 +19,7 @@ void process_free (process *p)
     };
 
     rbtree_foreach(p->threads, NULL, NULL, (void (*)(void*))thread_free);
-    rbtree_foreach(p->modules, NULL, NULL, (void (*)(void*))module_free);
+    rbtree_foreach(p->modules, NULL, NULL, (void (*)(void*))unload_module_and_free);
     rbtree_deinit(p->threads);
     rbtree_deinit(p->modules);
     DFREE (p);

@@ -15,7 +15,7 @@
 #include "BPF.h"
 #include "bp_address.h"
 
-BP* breakpoints[4]={ NULL, NULL, NULL, NULL }; // 0..3 - DR0-3, 4th - OEP bp
+BP* breakpoints[4]={ NULL, NULL, NULL, NULL }; // 0..3 - DR0-3
 dlist* addresses_to_be_resolved=NULL; // list of opaque objects-pointers to bp_address structures. don't free them.
 char* load_filename=NULL;
 char* attach_filename=NULL;
@@ -29,8 +29,8 @@ bp_address* current_BPF_address; // filled while parsing
 bool run_thread_b=true;
 bool dump_all_symbols=false;
 regex_t *dump_all_symbols_re=NULL;
-// from opts.l:
 
+// from opts.l:
 void flex_set_str(char *s);
 void flex_cleanup();
 void flex_restart();

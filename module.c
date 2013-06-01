@@ -15,6 +15,7 @@
 #include "tracer.h"
 #include "bp_address.h"
 #include "utils.h"
+#include "cc.h"
 
 bool module_c_debug=true;
 
@@ -206,7 +207,9 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
 
     if (module_c_debug)
         L ("%s() begin\n", __func__);
-    
+
+    m->parent_process=p;
+
     m->symbols=rbtree_create(true, "symbols", compare_size_t);
 
     set_filename_and_path_for_module(file_hdl, m, &fullpath_filename);
@@ -244,14 +247,8 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
     return m;
 };
 
-void module_free(module *m)
+static void module_free (module *m)
 {
-    if (module_c_debug)
-    {
-        L ("%s() begin\n", __func__);
-        L ("m->filename=%s\n", m->filename);
-        L ("m->symbols count=%d\n", rbtree_count (m->symbols));
-    };
     DFREE(m->filename);
     DFREE(m->filename_without_ext);
     DFREE(m->path);
@@ -272,6 +269,21 @@ void module_free(module *m)
     DFREE(m);
 };
 
+void unload_module_and_free(module *m)
+{
+    if (module_c_debug)
+    {
+        L ("%s() begin\n", __func__);
+        L ("m->filename=%s\n", m->filename);
+        L ("m->symbols count=%d\n", rbtree_count (m->symbols));
+    };
+
+    // call cc...
+    cc_dump(m); 
+
+    module_free(m);
+};
+
 void remove_module (process *p, address img_base)
 {
     if (module_c_debug)
@@ -284,7 +296,7 @@ void remove_module (process *p, address img_base)
         return;
     };
 
-    module_free(m);
+    unload_module_and_free(m);
     rbtree_delete(p->modules, (void*)img_base);
 };
 

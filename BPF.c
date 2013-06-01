@@ -12,6 +12,7 @@
 #include "bitfields.h"
 #include "x86.h"
 #include "symbol.h"
+#include "cc.h"
 
 void dump_BPF(BPF *b)
 {
@@ -167,6 +168,8 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
 {
     bool emulated=false;
     address PC;
+    BP *bp=breakpoints[bp_no];
+    BPF *bpf=bp->u.bpf;
 
     if (tracing_dbg)
     {
@@ -222,6 +225,12 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
             t->tracing_CALLs_executed--;
 */
         // handle all here
+        {
+            Da* da=MC_disas(PC, mc);
+
+            if (bpf->cc)
+                handle_cc(da, p, t, ctx, mc);
+        };
 
     } while (emulated);
     
