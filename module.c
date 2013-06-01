@@ -279,7 +279,7 @@ void unload_module_and_free(module *m)
     };
 
     // call cc...
-    cc_dump(m); 
+    cc_dump_and_free(m); 
 
     module_free(m);
 };

@@ -14,6 +14,7 @@ void thread_free (thread *t)
 {
     if (thread_c_debug)
         L ("%s() begin\n", __func__);
+    DFREE (t->BPF_args);
     DFREE (t);
 };
 

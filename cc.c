@@ -383,7 +383,7 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
 
 static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
 {
-    L ("%s() begin i=%d\n", __func__, i);
+    //L ("%s() begin i=%d\n", __func__, i);
     switch (i)
     {
         case WORKOUT_OP1:
@@ -414,12 +414,25 @@ static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
         default:
             assert(0);
     };
-    L ("%s() end\n", __func__);
+    //L ("%s() end\n", __func__);
 };
 
-static bool cc_dump_op (Da *da, PC_info* info, unsigned i, strbuf *out)
+static void cc_free_op(op_info *op)
 {
-    L ("%s() begin\n", __func__);
+    rbtree_foreach(op->values, NULL, NULL, NULL);
+    rbtree_deinit(op->values);
+    if (op->ptr_to_string_set)
+    {
+        rbtree_foreach(op->ptr_to_string_set, NULL, dfree, NULL);
+        rbtree_deinit(op->ptr_to_string_set);
+    };
+
+    DFREE (op);
+};
+
+static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out)
+{
+    //L ("%s() begin\n", __func__);
     op_info *op=info->op[i];
     enum value_t op_t=info->op_t[i];
 
@@ -465,16 +478,23 @@ static bool cc_dump_op (Da *da, PC_info* info, unsigned i, strbuf *out)
         default:
             assert(0);
     };
-    L ("%s() end\n", __func__);
+   
+    cc_free_op (op);
+
+    //L ("%s() end\n", __func__);
     return true;
 };
 
-void cc_dump(module *m) // for module m
+void cc_dump_and_free(module *m) // for module m
 {
-    if (m->PC_infos==NULL)
-        return; // no collected info for us
+    L ("%s() begin for module %s\n", __func__, get_module_name(m));
 
-    L ("%s() begin\n", __func__);
+    if (m->PC_infos==NULL)
+    {
+        L ("%s() m->PC_infos==NULL, exiting\n", __func__);
+        return; // no collected info for us
+    };
+
     process *p=m->parent_process;
     MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
     strbuf sb_filename_txt=STRBUF_INIT;
@@ -485,7 +505,7 @@ void cc_dump(module *m) // for module m
 
     for (rbtree_node *i=rbtree_minimum(m->PC_infos); i; i=rbtree_succ(i))
     {
-        L ("%s() loop begin\n", __func__);
+        //L ("%s() loop begin\n", __func__);
         address a=(address)i->key;
         PC_info *info=i->value;
 
@@ -506,15 +526,20 @@ void cc_dump(module *m) // for module m
         // add all info
         for (unsigned j=0; j<6; j++)
         {
-            if (cc_dump_op (da, info, j, &sb))
+            if (cc_dump_op_and_free (da, info, j, &sb))
                 strbuf_addc (&sb, ' ');
         };
         // TODO: flags?
         strbuf_addc (&sb, '\n');
         fputs (sb.buf, f);
+        Da_free(da);
         strbuf_deinit(&sb);
-        L ("%s() loop end\n", __func__);
+        DFREE (info->comment);
+        DFREE (info);
+        //L ("%s() loop end\n", __func__);
     };
+
+    rbtree_deinit(m->PC_infos);
 
     fclose (f);
     strbuf_deinit (&sb_filename_txt);
@@ -574,9 +599,9 @@ static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCach
         };
 };
 
-static void save_info_about_PC (module *m, const char *comment, unsigned to_notice, Da* da, CONTEXT *ctx, MemoryCache *mc)
+static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, Da* da, CONTEXT *ctx, MemoryCache *mc)
 {
-    L ("%s() begin\n", __func__);
+    L ("%s(comment=\"%s\") begin\n", __func__, comment->buf);
     address PC=CONTEXT_get_PC(ctx);
 
     // find entry in PC_infos
@@ -587,10 +612,12 @@ static void save_info_about_PC (module *m, const char *comment, unsigned to_noti
     if (info==NULL)
     {
         info=DCALLOC(PC_info, 1, "PC_info");
+        //L ("%s() allocated info=0x%p\n", __func__, info);
         rbtree_insert(m->PC_infos, (void*)PC, info);
     };
 
-    info->comment=DSTRDUP(comment, "char*");
+    if (comment->strlen>0)
+        info->comment=DSTRDUP(comment->buf, "char*");
     info->executed++;
 
     // TODO: add flags
@@ -641,7 +668,7 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
     unsigned to_notice=what_to_notice(p, da, &comment, ctx, mc);
 
     module *m=find_module_for_address (p, PC);
-    save_info_about_PC(m, comment.buf, to_notice, da, ctx, mc);
+    save_info_about_PC(m, &comment, to_notice, da, ctx, mc);
 
     strbuf_deinit(&comment);
     L ("%s() end\n", __func__);

@@ -64,5 +64,5 @@ typedef struct _PC_info
     wyde flags; // FLAG_xF_CAN_BE_xxxx
 } PC_info;
 
-void cc_dump(module *m); // for module m
+void cc_dump_and_free(module *m); // for module m
 void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc);

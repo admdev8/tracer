@@ -22,7 +22,7 @@ typedef struct _module
     rbtree *symbols; // -> address, symbol
     bool skip_all_symbols_in_module_on_trace;
     // cc
-    rbtree *PC_infos;
+    rbtree *PC_infos; // address, PC_info
 } module;
 
 module* add_module (process *p, address img_base, HANDLE file_hdl);

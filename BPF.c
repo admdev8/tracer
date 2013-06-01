@@ -230,6 +230,8 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
 
             if (bpf->cc)
                 handle_cc(da, p, t, ctx, mc);
+
+            Da_free(da);
         };
 
     } while (emulated);
