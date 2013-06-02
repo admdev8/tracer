@@ -21,7 +21,7 @@
 #include "utils.h"
 #include "bp_address.h"
 
-bool cycle_c_debug=true;
+bool cycle_c_debug=false;
 
 void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
@@ -131,7 +131,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
         case EXCEPTION_SINGLE_STEP:
             {
                 strbuf tmp=STRBUF_INIT;
-                process_get_sym (p, adr, &tmp);
+                process_get_sym (p, adr, true, &tmp);
                 CONTEXT ctx;
                 ctx.ContextFlags = CONTEXT_ALL;
                 DWORD tmpd;
@@ -155,7 +155,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
         case EXCEPTION_BREAKPOINT:
             {
                 strbuf tmp=STRBUF_INIT;
-                process_get_sym (p, adr, &tmp);
+                process_get_sym (p, adr, true, &tmp);
                 L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
 
                 if (stricmp(tmp.buf, "ntdll.dll!DbgBreakPoint")==0)
@@ -177,9 +177,18 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
             };
             break;
         case EXCEPTION_ACCESS_VIOLATION:
-            L ("EXCEPTION_ACCESS_VIOLATION at 0x" PRI_ADR_HEX " ExceptionInformation[0]=%d\n",
-                    (address)de->u.Exception.ExceptionRecord.ExceptionAddress,
-                    de->u.Exception.ExceptionRecord.ExceptionInformation[0]);
+            {
+                L ("EXCEPTION_ACCESS_VIOLATION at 0x" PRI_ADR_HEX " ExceptionInformation[0]=%d\n",
+                        (address)de->u.Exception.ExceptionRecord.ExceptionAddress,
+                        de->u.Exception.ExceptionRecord.ExceptionInformation[0]);
+                CONTEXT ctx;
+                ctx.ContextFlags = CONTEXT_ALL;
+                DWORD tmpd;
+                tmpd=GetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);           
+
+                dump_CONTEXT (&cur_fds, &ctx, false, false, false);
+            };
+
             break;
         default:
             L ("unknown ExceptionCode: %ld\n", er->ExceptionCode);

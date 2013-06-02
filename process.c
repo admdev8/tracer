@@ -55,7 +55,7 @@ symbol *process_sym_exist_at (process *p, address a)
     return module_sym_exist_at (m, a);
 };
 
-void process_get_sym (process *p, address a, strbuf *out)
+void process_get_sym (process *p, address a, bool add_module_name, strbuf *out)
 {
     if (0 && process_c_debug)
         L ("%s() a=0x" PRI_ADR_HEX "\n", __func__, a);
@@ -63,8 +63,13 @@ void process_get_sym (process *p, address a, strbuf *out)
     module *m=find_module_for_address (p, a);
     
     if (m)
-        module_get_sym (m, a, out);
+        module_get_sym (m, a, add_module_name, out);
     else
-        strbuf_addstr (out, "<unknown module>!<unknown symbol>");
+    {
+        if (add_module_name)
+            strbuf_addstr (out, "<unknown module>!<unknown symbol>");
+        else
+            strbuf_addstr (out, "<unknown symbol>");
+    };
 };
 

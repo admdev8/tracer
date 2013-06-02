@@ -16,6 +16,8 @@ typedef struct _thread
     BPF_state BPF_states[5]; // for each DRx breakpoint. 0..3 - DR0-3, 4th - OEP bp
     REG* BPF_args;
     address ret_adr; // sometimes present
+    BYTE** BPF_buffers_at_start; // need for dump_args option
+    unsigned BPF_buffers_at_start_cnt;
 
     bool tracing;
     unsigned tracing_bp; // in case of tracing

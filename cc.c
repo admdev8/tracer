@@ -121,12 +121,13 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
 
                 strbuf_addstr (comments, "op1=");
                 if (Da_op_get_value_of_op (da->_op[0], &adr, ctx, mc, __FILE__, __LINE__, &val))
-                    process_get_sym (p, get_as_REG (&val), comments);
+                    process_get_sym (p, get_as_REG (&val), true, comments);
                 else
                     strbuf_addstr (comments, "<can't get value of op1 here>");
                 strbuf_addstr (comments, " ");
-            };
-            SET_BIT (rt, NOTICE_OP1);
+            }
+            else
+                SET_BIT (rt, NOTICE_OP1);
             break;
 
         case I_ADC:
@@ -346,7 +347,7 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
                 if (ins_reported_as_unhandled[da->ins_code]==false)
                 {
                     strbuf sb=STRBUF_INIT;
-                    process_get_sym (p, PC, &sb);
+                    process_get_sym (p, PC, true, &sb);
                     L ("(cc) WARNING: instruction %s (at least at %s) not handled\n", Da_ins_code_ToString(da), sb.buf);
                     strbuf_deinit(&sb);
                     ins_reported_as_unhandled[da->ins_code]=true;
@@ -478,7 +479,7 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out)
         default:
             assert(0);
     };
-   
+
     cc_free_op (op);
 
     //L ("%s() end\n", __func__);
@@ -516,7 +517,7 @@ void cc_dump_and_free(module *m) // for module m
         assert (da); 
 
         strbuf sb=STRBUF_INIT, sb_sym=STRBUF_INIT;
-        process_get_sym(p, a, &sb_sym);
+        process_get_sym(p, a, false, &sb_sym);
         strbuf_addf (&sb, "0x" PRI_ADR_HEX " (%s), e=%8I64d [", a, sb_sym.buf, info->executed);
         strbuf_deinit(&sb_sym);
         Da_ToString(da, &sb); // add disasmed

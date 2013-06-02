@@ -104,6 +104,50 @@ static void load_args(thread *t, address SP, MemoryCache *mc, unsigned args)
     t->BPF_args=NULL;
 };
 
+static void dump_args_if_need(thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args)
+{
+    assert (t->BPF_buffers_at_start==NULL);
+    t->BPF_buffers_at_start=(REG**)DCALLOC(REG*, args_n, "REG*");
+    t->BPF_buffers_at_start_cnt=args_n;
+
+    for (unsigned i=0; i<args_n; i++)
+    {
+        BYTE *buf=DMALLOC(BYTE, size, "buf");
+        if (MC_ReadBuffer (mc, args[i], size, buf))
+        {
+            L ("Argument %d/%d\n", i+1, args_n);
+            L_print_buf_ofs (buf, size, args[i]);
+            t->BPF_buffers_at_start[i]=buf;
+        }
+        else
+            DFREE(buf);
+    };
+};
+
+static void dump_args_diff_if_need(thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args)
+{
+    assert (t->BPF_buffers_at_start);
+
+    for (unsigned i=0; i<args_n; i++)
+    {
+        if (t->BPF_buffers_at_start[i]==NULL)
+            continue;
+
+        BYTE *buf2=DMALLOC(BYTE, size, "buf");
+        bool b=MC_ReadBuffer (mc, args[i], size, buf2);
+        assert (b);
+        if (memcmp (t->BPF_buffers_at_start[i], buf2, size)!=0)
+        {
+            L ("Argument %d/%d difference\n", i+1, args_n);
+            L_print_bufs_diff (t->BPF_buffers_at_start[i], buf2, size);
+        };
+        DFREE(buf2);
+        DFREE(t->BPF_buffers_at_start[i]);
+    };
+    DFREE (t->BPF_buffers_at_start);
+    t->BPF_buffers_at_start=NULL;
+};
+
 static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
     // do function begin things
@@ -119,7 +163,7 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
         // set current DRx to return
         assert(bp_no<4); // be sure we work only with DRx breakpoints
         CONTEXT_setDRx_and_DR7 (ctx, bp_no, t->ret_adr); // set breakpoint at return
-        process_get_sym (p, t->ret_adr, &sb);
+        process_get_sym (p, t->ret_adr, true, &sb);
         got_ret_adr=true;
     }
     else
@@ -137,6 +181,9 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
 
     strbuf_deinit(&sb);
 
+    if (bpf->dump_args)
+        dump_args_if_need(t, mc, bpf->dump_args, bpf->args, t->BPF_args);
+
     if (dash_s)
         dump_stack_EBP_frame (p, t, ctx, mc);
 
@@ -147,6 +194,7 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
 static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
     bp_address *bp_a=bp->a;
+    BPF *bpf=bp->u.bpf;
     strbuf sb_address=STRBUF_INIT;
     address_to_string(bp_a, &sb_address);
     // do function finish things
@@ -155,6 +203,9 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     dump_PID_if_need(p); dump_TID_if_need(p, t);
     L ("(%d) %s () -> " PRI_SIZE_T_DEC " (0x" PRI_REG_HEX ")\n", bp_no, sb_address.buf, accum, accum);
 
+    if (bpf->dump_args)
+        dump_args_diff_if_need(t, mc, bpf->dump_args, bpf->args, t->BPF_args);
+
     DFREE(t->BPF_args); t->BPF_args=NULL;
     // set back current DRx to begin
     assert(bp_no<4); // be sure we work only with DRx breakpoints
@@ -162,7 +213,7 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     strbuf_deinit(&sb_address);
 };
 
-bool tracing_dbg=true;
+bool tracing_dbg=false;
 
 static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 {
@@ -175,7 +226,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
     {
         PC=CONTEXT_get_PC(ctx);
         strbuf sb=STRBUF_INIT;
-        process_get_sym(p, PC, &sb);
+        process_get_sym(p, PC, true, &sb);
 
         L ("%s() PC=%s (0x%x)\n", __func__, sb.buf, PC);
         strbuf_deinit (&sb);
@@ -218,12 +269,12 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
                 return 3;
             };
         };
-/*
-        if (ins==I_CALL)
-            t->tracing_CALLs_executed++;
-        if (ins==I_RETN)
-            t->tracing_CALLs_executed--;
-*/
+        /*
+           if (ins==I_CALL)
+           t->tracing_CALLs_executed++;
+           if (ins==I_RETN)
+           t->tracing_CALLs_executed--;
+           */
         // handle all here
         {
             Da* da=MC_disas(PC, mc);
@@ -235,7 +286,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
         };
 
     } while (emulated);
-    
+
     // continue?
     return 1;
 };

@@ -29,7 +29,7 @@ module* add_module (process *p, address img_base, HANDLE file_hdl);
 void unload_module_and_free(module *m);
 void remove_module (process *p, address img_base);
 bool address_in_module (module *m, address a);
-void module_get_sym (module *m, address a, strbuf *out);
+void module_get_sym (module *m, address a, bool add_module_name, strbuf *out);
 symbol* module_sym_exist_at (module *m, address a);
 char *get_module_name (module *m);
 

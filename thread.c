@@ -15,6 +15,12 @@ void thread_free (thread *t)
     if (thread_c_debug)
         L ("%s() begin\n", __func__);
     DFREE (t->BPF_args);
+    if (t->BPF_buffers_at_start)
+    {
+        for (unsigned i=0; i<t->BPF_buffers_at_start_cnt; i++)
+            DFREE(t->BPF_buffers_at_start[i]);
+        DFREE(t->BPF_buffers_at_start);
+    };
     DFREE (t);
 };
 
@@ -75,7 +81,7 @@ void dump_stack_EBP_frame (process *p, thread *t, CONTEXT * ctx, MemoryCache *me
             break;
 
         strbuf_reinit(&sb, 0);
-        process_get_sym (p, ret_adr, &sb);
+        process_get_sym (p, ret_adr, true, &sb);
 
         L ("return address=0x" PRI_ADR_HEX " (%s)\n", ret_adr, sb.buf);
 

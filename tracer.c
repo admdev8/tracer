@@ -21,7 +21,7 @@
 
 rbtree *processes=NULL; // PID, ptr to process
 
-bool tracer_c_debug=true;
+bool tracer_c_debug=false;
 bool detaching=false;
 
 void help_and_exit()

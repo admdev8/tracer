@@ -314,24 +314,29 @@ symbol* module_sym_exist_at (module *m, address a)
 };
 
 // may return module.dll!symbol+0x1234
-void module_get_sym (module *m, address a, strbuf *out)
+void module_get_sym (module *m, address a, bool add_module_name, strbuf *out)
 {
     assert (address_in_module (m, a));
 
     address prev_k;
     symbol *prev_v;
     
+    if (add_module_name)
+    {
+        strbuf_addstr (out, get_module_name(m));
+        strbuf_addc (out, '!');
+    };
+    
     symbol *first_sym=rbtree_lookup2(m->symbols, (void*)a, (void**)&prev_k, (void**)&prev_v, NULL, NULL);
     if (first_sym)
     {
         // take 'top' symbol
-        symbol *s=first_sym;
-        strbuf_addf (out, "%s!%s", get_module_name (m), s->name);
+        strbuf_addstr (out, first_sym->name);
     }
     else
     {
-        symbol *s=prev_v;
-        strbuf_addf (out, "%s!%s+0x%x", get_module_name (m), s->name, a-prev_k);
+        strbuf_addstr (out, prev_v->name);
+        strbuf_addf (out, "+0x%x", a-prev_k);
     };
 };
 
