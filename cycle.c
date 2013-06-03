@@ -178,9 +178,14 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
             break;
         case EXCEPTION_ACCESS_VIOLATION:
             {
-                L ("EXCEPTION_ACCESS_VIOLATION at 0x" PRI_ADR_HEX " ExceptionInformation[0]=%d\n",
-                        (address)de->u.Exception.ExceptionRecord.ExceptionAddress,
+                strbuf sb_sym=STRBUF_INIT;
+                address a=(address)de->u.Exception.ExceptionRecord.ExceptionAddress;
+                process_get_sym(p, a, true, &sb_sym);
+                L ("EXCEPTION_ACCESS_VIOLATION at %s (0x" PRI_ADR_HEX ") ExceptionInformation[0]=%d\n",
+                        sb_sym.buf,
+                        a,
                         de->u.Exception.ExceptionRecord.ExceptionInformation[0]);
+                strbuf_deinit(&sb_sym);
                 CONTEXT ctx;
                 ctx.ContextFlags = CONTEXT_ALL;
                 DWORD tmpd;
