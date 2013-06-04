@@ -11,6 +11,7 @@
 #include "lisp.h"
 #include "dlist.h"
 #include "X86_register.h"
+#include "stuff.h"
 #include "BP.h"
 #include "BPF.h"
 #include "bp_address.h"

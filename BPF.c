@@ -13,6 +13,7 @@
 #include "x86.h"
 #include "symbol.h"
 #include "cc.h"
+#include "stuff.h"
 
 void dump_BPF(BPF *b)
 {
@@ -87,12 +88,37 @@ static void BPF_dump_args (MemoryCache *mc, REG* args, unsigned args_n, bool uni
     };
 };
 
-static void load_args(thread *t, address SP, MemoryCache *mc, unsigned args)
+static void load_args(thread *t, CONTEXT *ctx, MemoryCache *mc, unsigned args)
 {
+    address SP=CONTEXT_get_SP(ctx);
     t->BPF_args=DMALLOC(REG, args, "REG");
-    if (MC_ReadBuffer(mc, SP+REG_SIZE, args*REG_SIZE, (BYTE*)t->BPF_args))
-        return;
 
+#ifdef _WIN64
+    for (unsigned a=0; a<args; a++)
+    {
+        switch (a)
+        {
+            case 0: t->BPF_args[a]=ctx->Rcx;
+                    break;
+            case 1: t->BPF_args[a]=ctx->Rdx;
+                    break;
+            case 2: t->BPF_args[a]=ctx->R8;
+                    break;
+            case 3: t->BPF_args[a]=ctx->R9;
+                    break;
+            default:
+                    if (MC_ReadOctabyte (mc, SP+(a+1+4)*sizeof(REG), &t->BPF_args[a])==false)
+                        goto read_failed;
+                    break;
+        };
+    };
+#else
+    if (MC_ReadBuffer(mc, SP+REG_SIZE, args*REG_SIZE, (BYTE*)t->BPF_args)==false)
+        goto read_failed;
+#endif
+    return;
+
+read_failed:
     DFREE (t->BPF_args);
     t->BPF_args=NULL;
 };
@@ -156,7 +182,7 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
     else    
         L ("Cannot read a register at SP, so, BPF return will not be handled\n");
 
-    load_args(t, CONTEXT_get_SP(ctx), mc, bpf->args);
+    load_args(t, ctx, mc, bpf->args);
 
     dump_PID_if_need(p); dump_TID_if_need(p, t);
     L ("(%d) %s (", bp_no, sb_address.buf);
@@ -296,6 +322,9 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
         // handle all here
         {
             Da* da=MC_disas(PC, mc);
+
+            //Da_DumpString (&cur_fds, da);
+            //die("");
 
             if (bpf->cc)
                 handle_cc(da, p, t, ctx, mc);
