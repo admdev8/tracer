@@ -195,13 +195,13 @@ BPX_option
  ;
 
 BPF_option
- : BPF_UNICODE                      { current_BPF->unicode=1; }
- | BPF_TRACE                        { current_BPF->trace=1; }
- | BPF_TRACE_COLON BPF_CC           { current_BPF->trace=1; current_BPF->cc=1; }
- | BPF_SKIP                         { current_BPF->skip=1; } 
- | BPF_SKIP_STDCALL                 { current_BPF->skip_stdcall=1; }
+ : BPF_UNICODE                      { current_BPF->unicode=true; }
+ | BPF_TRACE                        { current_BPF->trace=true; }
+ | BPF_TRACE_COLON BPF_CC           { current_BPF->trace=true; current_BPF->cc=true; }
+ | BPF_SKIP                         { current_BPF->skip=true; } 
+ | BPF_SKIP_STDCALL                 { current_BPF->skip_stdcall=true; }
  | BPF_PAUSE DEC_OR_HEX             { current_BPF->pause=$2; }
- | BPF_RT DEC_OR_HEX                { current_BPF->rt=obj_REG($2); }
+ | BPF_RT DEC_OR_HEX                { current_BPF->rt=$2; current_BPF->rt_probability=1.0; }
  | BPF_RT_PROBABILITY float_or_perc { current_BPF->rt_probability=$2; }
  | BPF_ARGS DEC_OR_HEX              { current_BPF->args=$2; }
  | BPF_DUMP_ARGS DEC_OR_HEX         { current_BPF->dump_args=$2; }

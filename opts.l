@@ -16,8 +16,8 @@ DEC            (0|[1-9][[:digit:]]*)
 HEX            0[Xx][[:xdigit:]]+
 FILENAME       [[:alnum:]_]+\.[[:alnum:]_]+
 SYMBOL_NAME    [[:alpha:]][[:alnum:]_@]*
-REGEXP         [[:alnum:]_@\?\.\|\*\^\$]*
-SYMBOL_NAME_RE [[:alpha:]]{REGEXP}
+REGEXP         [[:alnum:]_@.|*^$?\\]*
+SYMBOL_NAME_RE [[:alpha:]\\?]{REGEXP}
 
 %x STATE_BPM STATE_BPX STATE_BPF
 %x STATE_ADDRESS STATE_ADDRESS_OR_REG STATE_BYTEMASK STATE_BYTEMASK_SKIP_OPT STATE_READ_ADR_OFS
@@ -25,7 +25,14 @@ SYMBOL_NAME_RE [[:alpha:]]{REGEXP}
 %%
 
 <INITIAL>bpx=   { BEGIN(STATE_BPX); yy_push_state(STATE_ADDRESS); return BPX_EQ; }
-<INITIAL>bpf=   { assert (current_BPF==NULL); current_BPF=DCALLOC (BPF, 1, "BPF"); current_BPF->rt_probability=1; BEGIN(STATE_BPF); yy_push_state(STATE_ADDRESS); return BPF_EQ; }
+<INITIAL>bpf=   { 
+    assert (current_BPF==NULL); 
+    current_BPF=DCALLOC (BPF, 1, "BPF"); 
+    current_BPF->rt_probability=0; 
+    BEGIN(STATE_BPF); 
+    yy_push_state(STATE_ADDRESS); 
+    return BPF_EQ; 
+    }
 <INITIAL>bpmb=  { yylval.num=1; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
 <INITIAL>bpmw=  { yylval.num=2; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
 <INITIAL>bpmd=  { yylval.num=4; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }

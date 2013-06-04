@@ -22,7 +22,7 @@ typedef struct _BPF
 {
     bool unicode, skip, skip_stdcall, trace, cc;
     // these params may be NULL
-    obj* rt;
+    REG rt;
     double rt_probability;
     unsigned args, dump_args, pause;
     bp_address *when_called_from_address, *when_called_from_func;

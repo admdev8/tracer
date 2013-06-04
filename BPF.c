@@ -27,12 +27,7 @@ void dump_BPF(BPF *b)
         printf ("trace ");
     if (b->cc)
         printf ("cc ");
-    if (b->rt)
-    {
-        printf ("rt: ");
-        obj_dump (b->rt);
-        printf (" ");
-    };
+    printf ("rt: " PRI_REG_HEX " ", b->rt);
 
     if (b->rt_probability!=1)
         printf ("rt_probability: %f ", b->rt_probability);
@@ -63,8 +58,6 @@ void dump_BPF(BPF *b)
 
 void BPF_free(BPF* o)
 {
-    if (o->rt)
-        obj_free (o->rt);
     if (o->when_called_from_address)
         bp_address_free(o->when_called_from_address);
     if (o->when_called_from_func)
@@ -153,20 +146,14 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
     // do function begin things
     BPF *bpf=bp->u.bpf;
     bp_address *bp_a=bp->a;
-    bool got_ret_adr=false;
     strbuf sb=STRBUF_INIT, sb_address=STRBUF_INIT;
     address_to_string(bp_a, &sb_address);
+    bool got_ret_adr=MC_ReadREG(mc, CONTEXT_get_SP(ctx), &t->ret_adr);
+    bool rt;
 
-    if (MC_ReadREG(mc, CONTEXT_get_SP(ctx), &t->ret_adr))
-    {
-        L ("ret_adr=0x" PRI_ADR_HEX "\n", t->ret_adr);
-        // set current DRx to return
-        assert(bp_no<4); // be sure we work only with DRx breakpoints
-        CONTEXT_setDRx_and_DR7 (ctx, bp_no, t->ret_adr); // set breakpoint at return
+    if (got_ret_adr)
         process_get_sym (p, t->ret_adr, true, &sb);
-        got_ret_adr=true;
-    }
-    else
+    else    
         L ("Cannot read a register at SP, so, BPF return will not be handled\n");
 
     load_args(t, CONTEXT_get_SP(ctx), mc, bpf->args);
@@ -179,16 +166,34 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
         L (" (called from %s (0x" PRI_ADR_HEX "))", sb.buf, t->ret_adr);
     L ("\n");
 
-    strbuf_deinit(&sb);
-
     if (bpf->dump_args)
         dump_args_if_need(t, mc, bpf->dump_args, bpf->args, t->BPF_args);
 
     if (dash_s)
         dump_stack_EBP_frame (p, t, ctx, mc);
 
+    if (got_ret_adr)
+    {
+        if (bpf->skip)
+        {
+            L ("(%d) Skipping execution of this function\n", bp_no);
+            CONTEXT_set_PC(ctx, t->ret_adr);
+            CONTEXT_set_SP(ctx, CONTEXT_get_SP(ctx)+sizeof(REG));
+            rt=false;
+        }
+        else
+        {
+            // set current DRx to return
+            CONTEXT_setDRx_and_DR7 (ctx, bp_no, t->ret_adr); // set breakpoint at return
+            rt=true;
+        }
+    }
+    else
+        rt=false;
+
+    strbuf_deinit(&sb);
     strbuf_deinit(&sb_address);
-    return got_ret_adr;
+    return rt;
 };
 
 static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
@@ -207,6 +212,19 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
         dump_args_diff_if_need(t, mc, bpf->dump_args, bpf->args, t->BPF_args);
 
     DFREE(t->BPF_args); t->BPF_args=NULL;
+
+    if (bpf->rt_probability!=0.0 && bpf->rt_probability!=1.0)
+    {
+        assert (!"not implemented");
+    };
+
+    dump_PID_if_need(p); dump_TID_if_need(p, t);
+    if (bpf->rt_probability==1.0)
+    {
+        L ("(%d) Modifying %s register to 0x%x\n", bp_no, get_AX_register_name(), bpf->rt);
+        CONTEXT_set_Accum(ctx, bpf->rt);
+    };
+
     // set back current DRx to begin
     assert(bp_no<4); // be sure we work only with DRx breakpoints
     CONTEXT_setDRx_and_DR7 (ctx, bp_no, bp_a->abs_address);
@@ -302,7 +320,7 @@ void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
     {
         case BPF_state_default:
             if (handle_begin(p, t, bp, bp_no, ctx, mc)==false)
-                goto exit; // got no return address, exit
+                goto handle_finish_and_switch_to_default; // got no return address or function to be skipped, exit
 
             if (bpf->trace)
             {
