@@ -62,6 +62,7 @@ int main()
     do_test("bpf=filename.dll!symbol1,rt_probability:1%,rt:123\0");
     do_test("bpf=filename.dll!symbol1,rt_probability:100%,rt:123\0");
     do_test("bpx=filename.dll!0x12345678,dump(eax,123)\0");
+    do_test("bpf=filename.dll!0x14036FE50,rt:0\0");
 
     dlist_free(addresses_to_be_resolved, NULL);
     DFREE(load_filename);

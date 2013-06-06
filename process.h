@@ -31,4 +31,6 @@ process *find_process(DWORD PID);
 module *find_module_for_address (process *p, address a);
 symbol *process_sym_exist_at (process *p, address a);
 void process_get_sym (process *p, address a, bool add_module_name, strbuf *out);
+bool adr_in_executable_section(process *p, address a);
+
 

@@ -196,7 +196,7 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
         dump_args_if_need(t, mc, bpf->dump_args, bpf->args, t->BPF_args);
 
     if (dash_s)
-        dump_stack_EBP_frame (p, t, ctx, mc);
+        dump_stack (p, t, ctx, mc);
 
     if (got_ret_adr)
     {

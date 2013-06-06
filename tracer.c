@@ -159,7 +159,7 @@ void print_stack_for_all_processes_and_threads()
                 L ("PID=%d\n", p->PID);
             if (rbtree_count(p->threads)>1)
                 L ("TID=%d\n", t->TID);
-            dump_stack_EBP_frame (p, t, &ctx, mc);
+            dump_stack (p, t, &ctx, mc);
 
             MC_MemoryCache_dtor(mc, true);
         };

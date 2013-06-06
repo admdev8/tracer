@@ -40,7 +40,10 @@ module *find_module_for_address (process *p, address a)
         return m;
     else
     {
-        assert (prev_v && "address $a$ is not in limits of any registered module");
+        //assert (prev_v && "address $a$ is not in limits of any registered module");
+        if (prev_v==NULL)
+            return NULL;
+
         if (address_in_module(prev_v, a)) 
             return prev_v;
         return NULL;
@@ -71,5 +74,13 @@ void process_get_sym (process *p, address a, bool add_module_name, strbuf *out)
         else
             strbuf_addstr (out, "<unknown symbol>");
     };
+};
+
+bool adr_in_executable_section(process *p, address a)
+{
+    module *m=find_module_for_address (p, a);
+    if(m==NULL)
+        return false;
+    return module_adr_in_executable_section (m, a);
 };
 

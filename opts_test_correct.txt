@@ -57,25 +57,28 @@ do_test(bpx=filename.dll!symbol1,set(eax,111),set(ebx,222),dump(filename.dll!sym
 bp_address=filename.dll!symbol1. BPX. options: [DUMP filename.dll!symbol3 size: 333][SET reg:EBX value:222][SET reg:EAX value:111]
 
 do_test(bpf=filename.dll!symbol1,args:6,skip,unicode,when_called_from_func:filename.dll!func,rt:123)
-bp_address=filename.dll!symbol1. BPF. options: unicode skip rt: 0x7b args: 6 
+bp_address=filename.dll!symbol1. BPF. options: unicode skip rt: 7b args: 6 
 when_called_from_func: filename.dll!func
 
 do_test(bpf=filename.dll!symbol1,dump_args:6,skip_stdcall,when_called_from_address:filename.dll!func+0x1234,rt_probability:0.17,pause:700)
-bp_address=filename.dll!symbol1. BPF. options: skip_stdcall rt_probability: 0.170000 dump_args: 6 pause: 700 
+bp_address=filename.dll!symbol1. BPF. options: skip_stdcall rt: 0 rt_probability: 0.170000 dump_args: 6 pause: 700 
 when_called_from_address: filename.dll!func+0x1234
 
 do_test(bpf=filename.dll!symbol1,rt_probability:50%,rt:123)
-bp_address=filename.dll!symbol1. BPF. options: rt: 0x7b rt_probability: 0.500000 
+bp_address=filename.dll!symbol1. BPF. options: rt: 7b 
 
 do_test(bpf=filename.dll!symbol1,rt_probability:0%,rt:123)
-bp_address=filename.dll!symbol1. BPF. options: rt: 0x7b rt_probability: 0.000000 
+bp_address=filename.dll!symbol1. BPF. options: rt: 7b 
 
 do_test(bpf=filename.dll!symbol1,rt_probability:1%,rt:123)
-bp_address=filename.dll!symbol1. BPF. options: rt: 0x7b rt_probability: 0.010000 
+bp_address=filename.dll!symbol1. BPF. options: rt: 7b 
 
 do_test(bpf=filename.dll!symbol1,rt_probability:100%,rt:123)
-bp_address=filename.dll!symbol1. BPF. options: rt: 0x7b 
+bp_address=filename.dll!symbol1. BPF. options: rt: 7b 
 
 do_test(bpx=filename.dll!0x12345678,dump(eax,123))
 bp_address=filename.dll!0x12345678. BPX. options: [DUMP reg:EAX size: 123]
+
+do_test(bpf=filename.dll!0x14036FE50,rt:0)
+bp_address=filename.dll!0x14036fe50. BPF. options: rt: 0 
 

@@ -88,12 +88,20 @@ SYMBOL_NAME_RE [[:alpha:]\\?]{REGEXP}
 <STATE_READ_ADR_OFS,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BPM,INITIAL,STATE_BPX,STATE_BPF>{HEX}                     {
     if ((YYSTATE==STATE_ADDRESS) || (YYSTATE==STATE_READ_ADR_OFS))
         yy_pop_state(); /* switch back to what was before STATE_ADDRESS */
+#ifdef _WIN64
+    yylval.num = strtoll(yytext, NULL, 16); 
+#else
     yylval.num = strtol(yytext, NULL, 16); 
+#endif
     return HEX_NUMBER; }
 <STATE_READ_ADR_OFS,INITIAL,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BYTEMASK_SKIP_OPT,STATE_BPX,STATE_BPF>{DEC}   { 
     if (YYSTATE==STATE_READ_ADR_OFS || YYSTATE==STATE_BYTEMASK_SKIP_OPT)
         yy_pop_state(); /* switch back to what was before STATE_ADDRESS */
+#ifdef _WIN64
+    yylval.num = strtoll(yytext, NULL, 10); 
+#else
     yylval.num = strtol(yytext, NULL, 10); 
+#endif
     return DEC_NUMBER; 
 }
 <STATE_BPF>[0-9]+\.([0-9]+)?   { 

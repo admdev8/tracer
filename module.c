@@ -16,6 +16,7 @@
 #include "bp_address.h"
 #include "utils.h"
 #include "cc.h"
+#include "bitfields.h"
 
 bool module_c_debug=true;
 
@@ -39,6 +40,7 @@ static bool search_for_symbol_re_in_module(module *m, regex_t *symbol_re, addres
 static bool try_to_resolve_bytemask(bp_address *a)
 {
     assert(!"not implemented");
+    return false; // TMCH
 };
 
 static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_address *a)
@@ -233,6 +235,10 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
                 };
     };
 
+    m->sections_total=info->sections_total;
+    m->sections=info->sections;
+    info->sections=NULL; // 'tranfer' it to here, so DFREE in PE_info_free() will not free it
+
     PE_info_free(info);
     strbuf_deinit(&fullpath_filename);
     
@@ -253,6 +259,7 @@ static void module_free (module *m)
     DFREE(m->filename_without_ext);
     DFREE(m->path);
     DFREE(m->internal_name);
+    DFREE(m->sections);
 
     for (struct rbtree_node_t *i=rbtree_minimum(m->symbols); i; i=rbtree_succ(i))
     {
@@ -346,5 +353,29 @@ char *get_module_name (module *m)
         return m->internal_name;
     else
         return m->filename;
+};
+
+static IMAGE_SECTION_HEADER* find_section (module *m, address a)
+{
+    for (unsigned i=0; i<m->sections_total; i++)
+    {
+        IMAGE_SECTION_HEADER *s=&m->sections[i];
+        //L ("%s() trying section %s\n", __func__, s->Name);
+        address start=s->VirtualAddress + m->base;
+        if (a>=start && a<(start + s->Misc.VirtualSize))
+            return s;
+    };
+    return NULL;
+};
+
+bool module_adr_in_executable_section (module *m, address a)
+{
+    //L ("%s() module=%s, a=0x" PRI_ADR_HEX "\n", __func__, get_module_name(m), a);
+    // find specific section
+    IMAGE_SECTION_HEADER* s=find_section(m, a);
+    if (s==NULL)
+        return false;
+    return IS_SET (s->Characteristics, IMAGE_SCN_CNT_CODE) ||
+        IS_SET (s->Characteristics, IMAGE_SCN_MEM_EXECUTE);
 };
 

@@ -61,7 +61,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 %union 
 {
     char * str;
-    int num;
+    REG num;
     double dbl;
     struct _obj * o;
     struct _bp_address *a;

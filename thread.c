@@ -49,7 +49,36 @@ void add_thread (process *p, DWORD TID, HANDLE THDL, address start)
         L ("%s() end\n", __func__);
 };
 
-void dump_stack_EBP_frame (process *p, thread *t, CONTEXT * ctx, MemoryCache *mem)
+static void dump_stack_not_using_EBP (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
+{
+    HANDLE THDL=t->THDL;
+    address stack_top=TIB_get_stack_top (THDL, mc);
+    address stack_bottom=TIB_get_stack_bottom (THDL, mc);
+    //strbuf sb=STRBUF_INIT;
+    address SP_at_start=CONTEXT_get_SP(ctx);
+
+    L ("Call stack:\n");
+ 
+    L ("SP_at_start=0x%x, stack_top=0x%x, stack_bottom=0x%x\n", SP_at_start, stack_top, stack_bottom);
+
+    for (address a=SP_at_start; a<stack_top; a=a+sizeof(REG))
+    {
+        REG r;
+        if (MC_ReadREG(mc, a, &r))
+        {
+            //L ("r=0x" PRI_REG_HEX "\n", r);
+            if (adr_in_executable_section(p, r))
+            {
+                strbuf sb=STRBUF_INIT;
+                process_get_sym (p, r, true, &sb);
+                L ("(SP+0x%x) return address=0x" PRI_ADR_HEX " (%s)\n", a-SP_at_start, r, sb.buf);
+                strbuf_deinit(&sb);
+            };
+        };
+    };
+};
+
+static void dump_stack_EBP_frame (process *p, thread *t, CONTEXT * ctx, MemoryCache *mem)
 {
     HANDLE THDL=t->THDL;
     address stack_top=TIB_get_stack_top (THDL, mem);
@@ -93,5 +122,14 @@ void dump_stack_EBP_frame (process *p, thread *t, CONTEXT * ctx, MemoryCache *me
 
 exit:
     strbuf_deinit (&sb);
+};
+
+void dump_stack (process *p, thread *t, CONTEXT * ctx, MemoryCache *mem)
+{
+#ifdef _WIN64
+    dump_stack_not_using_EBP (p, t, ctx, mem);
+#else
+    dump_stack_EBP_frame (p, t, ctx, mem);
+#endif
 };
 
