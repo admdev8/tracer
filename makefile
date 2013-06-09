@@ -36,7 +36,7 @@ $(OUTDIR)/tracer.exe: $(OBJECTS) $(LIBS)
 	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -limagehlp
 
 $(OUTDIR)/opts_test.exe: $(OUTDIR)/opts_test.o $(OUTDIR)/opts.tab.o $(OUTDIR)/opts.lex.o \
-	$(OUTDIR)/BP.o $(OUTDIR)/BPF.o $(OUTDIR)/bp_address.o $(OUTDIR)/process.o \
+	$(OUTDIR)/BP.o $(OUTDIR)/BPF.o $(OUTDIR)/BPX.o $(OUTDIR)/bp_address.o $(OUTDIR)/process.o \
 	$(OUTDIR)/thread.o $(OUTDIR)/module.o $(OUTDIR)/symbol.o $(OUTDIR)/utils.o \
 	$(OUTDIR)/cc.o $(LIBS)
 	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -limagehlp

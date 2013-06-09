@@ -519,7 +519,7 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
 
     fprintf (f_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffdfdf);\n", a);
     strbuf tmp=STRBUF_INIT;
-    strbuf_cvt_to_C_string(&sb_common, &tmp, false);
+    strbuf_cvt_to_C_string(sb_common.buf, &tmp, false);
     fprintf (f_idc, "\tMakeComm (0x" PRI_ADR_HEX ", \"%s\");\n", a, tmp.buf);
     strbuf_deinit(&tmp);
     fprintf (f_clear_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffffff);\n", a);

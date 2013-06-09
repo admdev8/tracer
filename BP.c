@@ -8,27 +8,7 @@
 #include "opts.h"
 #include "bp_address.h"
 #include "BPF.h"
-
-void BPX_option_free(BPX_option *o)
-{
-    bp_address_free (o->a);
-    DFREE (o->copy_string);
-    DFREE (o);
-};
-
-void BPX_free(BPX *o)
-{
-    if (o->opts)
-    {
-        BPX_option *t=o->opts, *t_next=o->opts;
-        for (;t_next;t=t_next)
-        {
-           t_next=t->next;
-           BPX_option_free(t);
-        };
-    };
-    DFREE (o);
-};
+#include "BPX.h"
 
 BPM *create_BPM(unsigned width, enum BPM_type t)
 {
@@ -78,14 +58,6 @@ void BP_free(BP* b)
     DFREE(b);
 };
 
-BPX* create_BPX(BPX_option *opts)
-{
-    BPX* rt=DCALLOC (BPX, 1, "BPX");
-    rt->opts=opts;
-
-    return rt;
-};
-
 BP* create_BP (enum BP_type t, bp_address* a, void* p)
 {
     BP* rt=DCALLOC(BP, 1, "BP");
@@ -94,18 +66,6 @@ BP* create_BP (enum BP_type t, bp_address* a, void* p)
     rt->u.p=p;
     
     return rt;
-};
-
-void dump_BPX(BPX *b)
-{
-    printf ("BPX.");
-    if (b->opts)
-    {
-        printf (" options: ");
-        for (BPX_option *o=b->opts; o; o=o->next)
-            dump_BPX_option(o);
-    };
-    printf ("\n");
 };
 
 void dump_BP (BP* b)
@@ -129,40 +89,4 @@ void dump_BP (BP* b)
             assert(0);
     };
     //printf ("next=0x%p\n", b->next);
-};
-
-void dump_BPX_option(BPX_option *b)
-{
-    switch (b->t)
-    {
-        case BPX_option_DUMP:
-            printf ("[DUMP ");
-            if (b->a)
-                dump_address(b->a);
-            else
-                printf ("reg:%s", X86_register_ToString(b->reg));
-            printf (" size: %d]", b->size_or_value);
-            break;
-
-        case BPX_option_SET:
-            assert (b->a==NULL); // must be always register
-            printf("[SET reg:%s value:%d]", X86_register_ToString(b->reg), b->size_or_value);
-            break;
-
-        case BPX_option_COPY:
-            printf ("[COPY ");
-            if (b->a)
-                dump_address(b->a);
-            else
-                printf ("reg:%s", X86_register_ToString(b->reg));
-            assert(b->copy_string);
-            printf ("[");
-            for (int i=0; i<b->copy_string_len; i++)
-                printf ("0x%02X ", b->copy_string[i]);
-            printf ("]");
-            break;
-
-        default:
-            assert(0);
-    };
 };
