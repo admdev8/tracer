@@ -310,6 +310,27 @@ void handle_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     rbtree_delete (processes, (void*)PID);
 };
 
+DWORD handle_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *de)
+{
+    DWORD PID=de->dwProcessId;
+    process *p=find_process(PID);
+
+    char *buf=DMALLOC(char, de->u.DebugString.nDebugStringLength, "char");
+    assert (de->u.DebugString.fUnicode==0); // TODO
+    MemoryCache* mc=MC_MemoryCache_ctor(p->PHDL, true);
+    bool b=MC_ReadBuffer(mc, (address)de->u.DebugString.lpDebugStringData, de->u.DebugString.nDebugStringLength, (BYTE*)buf);
+    assert (b);
+
+    strbuf tmp=STRBUF_INIT;
+    strbuf_cvt_to_C_string (buf, &tmp, false);
+
+    L ("OUTPUT_DEBUG_STRING_EVENT: [%s]\n", tmp.buf);
+    strbuf_deinit (&tmp);
+    DFREE (buf);
+    MC_MemoryCache_dtor(mc, false);
+    return DBG_CONTINUE;
+};
+
 DWORD handle_debug_event (DEBUG_EVENT *de)
 {
     if (cycle_c_debug)
@@ -346,9 +367,7 @@ DWORD handle_debug_event (DEBUG_EVENT *de)
             break;
 
         case OUTPUT_DEBUG_STRING_EVENT:
-            L ("OUTPUT_DEBUG_STRING_EVENT\n");
-            assert (!"not implemented");
-            break;
+            return handle_OUTPUT_DEBUG_STRING_EVENT(de);
 
         case RIP_EVENT:
             L ("RIP_EVENT\n");

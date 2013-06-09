@@ -395,10 +395,11 @@ static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
             break;
 
         case WORKOUT_OP2:
-
+#if 0
             if (da->ins_code==I_LEA && da->_op[i]->type==DA_OP_TYPE_VALUE_IN_MEMORY) // LEA case, op2 -> memory
                 strbuf_addf (out, "op%d", 2);
             else
+#endif
                 Da_op_ToString(da->_op[i], out);
             break;
 
