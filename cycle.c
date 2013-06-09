@@ -21,7 +21,7 @@
 #include "utils.h"
 #include "bp_address.h"
 
-bool cycle_c_debug=false;
+bool cycle_c_debug=true;
 
 void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {

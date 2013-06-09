@@ -11,6 +11,8 @@
 #include "stuff.h"
 #include "X86_register_helpers.h"
 
+#define IDA_MAX_COMMENT_SIZE 1023
+
 // big enough to hold all instructions till I_MAX_INS
 static bool ins_reported_as_unhandled[512]={ false };
 
@@ -486,23 +488,73 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out)
     return true;
 };
 
+static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCache *mc, 
+        FILE *f_txt, FILE *f_idc, FILE* f_clear_idc)
+{
+    Da* da=MC_disas(a, mc);
+
+    // there shouldn't be entries for instructions we can't disassemble.
+    // (these entries shouldn't be added at all)
+    assert (da); 
+
+    strbuf sb_txt=STRBUF_INIT, sb_common=STRBUF_INIT, sb_sym=STRBUF_INIT;
+    process_get_sym(p, a, false, &sb_sym);
+    strbuf_addf (&sb_txt, "0x" PRI_ADR_HEX " (%s), e=%8I64d [", a, sb_sym.buf, info->executed);
+    strbuf_deinit(&sb_sym);
+    Da_ToString(da, &sb_txt); // add disasmed
+    strbuf_addstr (&sb_txt, "] ");
+    if (info->comment)
+        strbuf_addf (&sb_common, "%s ", info->comment);
+    // add all info
+    for (unsigned j=0; j<6; j++)
+    {
+        if (cc_dump_op_and_free (da, info, j, &sb_common))
+            strbuf_addc (&sb_common, ' ');
+    };
+    // TODO: flags?
+    fputs (sb_txt.buf, f_txt);
+    fputs (sb_common.buf, f_txt);
+    fputs ("\n", f_txt);
+
+    fprintf (f_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffdfdf);\n", a);
+    strbuf tmp=STRBUF_INIT;
+    strbuf_cvt_to_C_string(&sb_common, &tmp, false);
+    fprintf (f_idc, "\tMakeComm (0x" PRI_ADR_HEX ", \"%s\");\n", a, tmp.buf);
+    strbuf_deinit(&tmp);
+    fprintf (f_clear_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffffff);\n", a);
+    fprintf (f_clear_idc, "\tMakeComm (0x" PRI_ADR_HEX ", \"\");\n", a);
+
+    Da_free(da);
+    strbuf_deinit(&sb_txt);
+    strbuf_deinit(&sb_common);
+    DFREE (info->comment);
+    DFREE (info);
+};
+
 void cc_dump_and_free(module *m) // for module m
 {
-    L ("%s() begin for module %s\n", __func__, get_module_name(m));
+    //L ("%s() begin for module %s\n", __func__, get_module_name(m));
 
     if (m->PC_infos==NULL)
     {
-        L ("%s() m->PC_infos==NULL, exiting\n", __func__);
+        //L ("%s() m->PC_infos==NULL, exiting\n", __func__);
         return; // no collected info for us
     };
 
     process *p=m->parent_process;
     MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
-    strbuf sb_filename_txt=STRBUF_INIT;
-    strbuf_addf (&sb_filename_txt, "%s.txt", get_module_name(m));
-    FILE *f=fopen (sb_filename_txt.buf, "w");
-    if (f==NULL)
-        die ("Can't open %s for writing\n", sb_filename_txt.buf);
+    strbuf sb_filename_txt=STRBUF_INIT, sb_filename_idc=STRBUF_INIT, sb_filename_clear_idc=STRBUF_INIT;
+    const char *module_name=get_module_name(m);
+    strbuf_addf (&sb_filename_txt, "%s.txt", module_name);
+    strbuf_addf (&sb_filename_idc, "%s.idc", module_name);
+    strbuf_addf (&sb_filename_clear_idc, "%s_clear.idc", module_name);
+    FILE *f_txt=fopen_or_die (sb_filename_txt.buf, "w");
+    FILE *f_idc=fopen_or_die (sb_filename_idc.buf, "w");
+    FILE *f_clear_idc=fopen_or_die (sb_filename_clear_idc.buf, "w");
+
+    const char *idc_header="#include <idc.idc>\nstatic main()\n{\n";
+    fputs (idc_header, f_idc);
+    fputs (idc_header, f_clear_idc);
 
     for (rbtree_node *i=rbtree_minimum(m->PC_infos); i; i=rbtree_succ(i))
     {
@@ -510,43 +562,24 @@ void cc_dump_and_free(module *m) // for module m
         address a=(address)i->key;
         PC_info *info=i->value;
 
-        Da* da=MC_disas(a, mc);
-
-        // there shouldn't be entries for instructions we can't disassemble.
-        // (these entries shouldn't be added at all)
-        assert (da); 
-
-        strbuf sb=STRBUF_INIT, sb_sym=STRBUF_INIT;
-        process_get_sym(p, a, false, &sb_sym);
-        strbuf_addf (&sb, "0x" PRI_ADR_HEX " (%s), e=%8I64d [", a, sb_sym.buf, info->executed);
-        strbuf_deinit(&sb_sym);
-        Da_ToString(da, &sb); // add disasmed
-        strbuf_addstr (&sb, "] ");
-        if (info->comment)
-            strbuf_addf (&sb, "%s ", info->comment);
-        // add all info
-        for (unsigned j=0; j<6; j++)
-        {
-            if (cc_dump_op_and_free (da, info, j, &sb))
-                strbuf_addc (&sb, ' ');
-        };
-        // TODO: flags?
-        strbuf_addc (&sb, '\n');
-        fputs (sb.buf, f);
-        Da_free(da);
-        strbuf_deinit(&sb);
-        DFREE (info->comment);
-        DFREE (info);
-        //L ("%s() loop end\n", __func__);
+        dump_one_PC_and_free(a, info, p, mc, f_txt, f_idc, f_clear_idc);
     };
 
     rbtree_deinit(m->PC_infos);
+    
+    const char *idc_footer="}\n";
+    fputs (idc_footer, f_idc);
+    fputs (idc_footer, f_clear_idc);
 
-    fclose (f);
+    fclose (f_txt);
+    fclose (f_idc);
+    fclose (f_clear_idc);
     strbuf_deinit (&sb_filename_txt);
+    strbuf_deinit (&sb_filename_idc);
+    strbuf_deinit (&sb_filename_clear_idc);
     MC_Flush (mc);
     MC_MemoryCache_dtor (mc, true);
-    L ("%s() end\n", __func__);
+    //L ("%s() end\n", __func__);
 };
 
 static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCache *mc, PC_info *info)

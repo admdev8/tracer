@@ -18,7 +18,7 @@
 #include "cc.h"
 #include "bitfields.h"
 
-bool module_c_debug=true;
+bool module_c_debug=false;
 
 static address module_translate_adr_to_abs_address(module *m, address original_adr)
 {
