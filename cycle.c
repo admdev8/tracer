@@ -21,11 +21,12 @@
 #include "utils.h"
 #include "bp_address.h"
 
-bool cycle_c_debug=true;
+bool cycle_c_debug=false;
 
 void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
-    L ("%s(bp_no=%d) begin\n", __func__, bp_no);
+    if (cycle_c_debug)
+        L ("%s(bp_no=%d) begin\n", __func__, bp_no);
 
     BP* bp=breakpoints[bp_no];
 
@@ -40,7 +41,8 @@ void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
         default:
             assert(0);
     };
-    L ("%s() end\n", __func__);
+    if (cycle_c_debug)
+        L ("%s() end\n", __func__);
 };
 
 bool handle_OEP_breakpoint (process *p, thread *t)
@@ -76,19 +78,20 @@ bool handle_OEP_breakpoint (process *p, thread *t)
 
 void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 {
-    L ("%s() begin\n", __func__);
+    if (cycle_c_debug)
+        L ("%s() begin\n", __func__);
     if (IS_SET(ctx->Dr6, FLAG_DR6_B0))
     {
         assert (breakpoints[0]);
         handle_BP(p, t, 0, ctx, mc);
     };
-    
+
     if (IS_SET(ctx->Dr6, FLAG_DR6_B1))
     {
         assert (breakpoints[1]);
         handle_BP(p, t, 1, ctx, mc);
     };
-    
+
     if (IS_SET(ctx->Dr6, FLAG_DR6_B2))
     {
         assert (breakpoints[2]);
@@ -106,14 +109,15 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
         assert (t->tracing && "BS flag in DR6, but no breakpoint in tracing mode");
         handle_BP(p, t, t->tracing_bp, ctx, mc);
     };
-/*
-    if (ctx->Dr6==0) // sometimes observed while tracing
-    {
-        assert (t->tracing && "DR6 is zero, but no breakpoint in tracing mode");
-        handle_BP(p, t, t->tracing_bp, ctx, mc);
-    };
-*/
-    L ("%s() end\n", __func__);
+    /*
+       if (ctx->Dr6==0) // sometimes observed while tracing
+       {
+       assert (t->tracing && "DR6 is zero, but no breakpoint in tracing mode");
+       handle_BP(p, t, t->tracing_bp, ctx, mc);
+       };
+       */
+    if (cycle_c_debug)
+        L ("%s() end\n", __func__);
 };
 
 DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
@@ -138,11 +142,14 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 tmpd=GetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);           
                 MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
 
-                L ("EXCEPTION_SINGLE_STEP %s (0x" PRI_ADR_HEX ") DR6=", tmp.buf, adr); 
-                dump_DR6 (&cur_fds, ctx.Dr6); L(" (0x%x)\n", ctx.Dr6);
-                L ("DR7="); dump_DR7 (&cur_fds, ctx.Dr7); L("\n");
-                L ("DR0=0x" PRI_REG_HEX "\n", ctx.Dr0);
-                
+                if (cycle_c_debug)
+                {
+                    L ("EXCEPTION_SINGLE_STEP %s (0x" PRI_ADR_HEX ") DR6=", tmp.buf, adr); 
+                    dump_DR6 (&cur_fds, ctx.Dr6); L(" (0x%x)\n", ctx.Dr6);
+                    L ("DR7="); dump_DR7 (&cur_fds, ctx.Dr7); L("\n");
+                    L ("DR0=0x" PRI_REG_HEX "\n", ctx.Dr0);
+                };
+
                 handle_Bx (p, t, &ctx, mc);
 
                 MC_Flush (mc);
@@ -156,11 +163,14 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
             {
                 strbuf tmp=STRBUF_INIT;
                 process_get_sym (p, adr, true, &tmp);
+
+                if (cycle_c_debug);
                 L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
 
                 if (stricmp(tmp.buf, "ntdll.dll!DbgBreakPoint")==0)
                 {
-                    L ("We handle this\n");
+                    if (cycle_c_debug)
+                        L ("We handle this\n");
                     rt=DBG_CONTINUE;
                 };
 
@@ -205,7 +215,10 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
 void save_OEP_byte_and_set_INT3_breakpoint (MemoryCache *mc, module *m)
 {
     bool b;
-    
+
+    if (cycle_c_debug)
+        L ("Setting INT3 at OEP\n");
+
     b=MC_ReadByte (mc, m->OEP, &m->saved_OEP_byte);
     assert(b && "can't read byte at breakpoint start");
     b=MC_WriteByte (mc, m->OEP, 0xCC);
@@ -224,14 +237,14 @@ void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     p->PHDL=i->hProcess;
     p->file_handle=i->hFile;
     p->base_of_image=(address)i->lpBaseOfImage;
-    
+
     p->modules=rbtree_create(true, "modules", compare_size_t); // compare_REGs?
     p->threads=rbtree_create(true, "threads", compare_tetrabytes);
     add_thread (p, TID, i->hThread, (address)i->lpStartAddress);
     rbtree_insert(processes, (void*)PID, p);
 
     p->executable_module=add_module(p, (address)i->lpBaseOfImage, p->file_handle);
-    L ("(name=%s)\n", p->executable_module->filename);
+    //L ("(name=%s)\n", p->executable_module->filename);
 
     MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
 
@@ -243,7 +256,7 @@ void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
         // there are may be present breakpoints with absolute addresses, so set them
         set_or_update_all_DRx_breakpoints(p);
     };
-    
+
     MC_Flush (mc);
     MC_MemoryCache_dtor (mc, false);
 
@@ -256,8 +269,9 @@ void handle_CREATE_THREAD_DEBUG_EVENT (DEBUG_EVENT *de)
     CREATE_THREAD_DEBUG_INFO *i=&de->u.CreateThread;
     process *p=find_process(de->dwProcessId);
 
-    L ("CREATE_THREAD_DEBUG_EVENT\n");
-    
+    if (cycle_c_debug)
+        L ("CREATE_THREAD_DEBUG_EVENT\n");
+
     add_thread (p, de->dwThreadId, i->hThread, (address)i->lpStartAddress);
 };
 
@@ -271,9 +285,10 @@ void handle_LOAD_DLL_DEBUG_EVENT (DEBUG_EVENT *de)
     bool b=GetFileNameFromHandle(de->u.LoadDll.hFile, &sb);
     assert (b);
 
-    L ("LOAD_DLL_DEBUG_EVENT: %s 0x%x\n", sb.buf, i->lpBaseOfDll);
+    if (cycle_c_debug)
+        L ("LOAD_DLL_DEBUG_EVENT: %s 0x%x\n", sb.buf, i->lpBaseOfDll);
     strbuf_deinit (&sb);
-    
+
     add_module (p, (address)i->lpBaseOfDll, i->hFile);
 };
 
@@ -282,7 +297,10 @@ void handle_UNLOAD_DLL_DEBUG_EVENT (DEBUG_EVENT *de)
     UNLOAD_DLL_DEBUG_INFO *i=&de->u.UnloadDll;
     DWORD PID=de->dwProcessId;
     process *p=find_process(PID);
-    L ("UNLOAD_DLL_DEBUG_EVENT 0x%x\n", i->lpBaseOfDll);
+
+    if (cycle_c_debug)
+        L ("UNLOAD_DLL_DEBUG_EVENT 0x%x\n", i->lpBaseOfDll);
+
     remove_module (p, (address)i->lpBaseOfDll);
 };
 
@@ -294,7 +312,9 @@ void handle_EXIT_THREAD_DEBUG_EVENT(DEBUG_EVENT *de)
 
     p=find_process(PID);
 
-    L ("EXIT_THREAD_DEBUG_EVENT\n");
+    if (cycle_c_debug)
+        L ("EXIT_THREAD_DEBUG_EVENT\n");
+
     thread_free (t);
     rbtree_delete (p->threads, (void*)TID);
 };
@@ -305,7 +325,9 @@ void handle_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     DWORD PID=de->dwProcessId;
     process *p=find_process(PID);
 
-    L ("EXIT_PROCESS_DEBUG_EVENT. ExitCode=%d (0x%x)\n", i->dwExitCode, i->dwExitCode);
+    if (cycle_c_debug)
+        L ("EXIT_PROCESS_DEBUG_EVENT. ExitCode=%d (0x%x)\n", i->dwExitCode, i->dwExitCode);
+
     process_free (p);
     rbtree_delete (processes, (void*)PID);
 };
@@ -324,7 +346,9 @@ DWORD handle_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *de)
     strbuf tmp=STRBUF_INIT;
     strbuf_cvt_to_C_string (buf, &tmp, false);
 
-    L ("OUTPUT_DEBUG_STRING_EVENT: [%s]\n", tmp.buf);
+    if (cycle_c_debug)
+        L ("OUTPUT_DEBUG_STRING_EVENT: [%s]\n", tmp.buf);
+
     strbuf_deinit (&tmp);
     DFREE (buf);
     MC_MemoryCache_dtor(mc, false);

@@ -21,7 +21,7 @@
 
 rbtree *processes=NULL; // PID, ptr to process
 
-bool tracer_c_debug=true;
+bool tracer_c_debug=false;
 bool detaching=false;
 
 void help_and_exit()
@@ -396,8 +396,10 @@ int main(int argc, char *argv[])
 
     set_ORACLE_HOME();
 
+#if 0
     for (int i=0; i<4; i++)
         L ("DRx_breakpoints[%d]=0x%p\n", i, breakpoints[i]);
+#endif
 
     debug_or_attach();
     processes=rbtree_create(true, "processes", compare_tetrabytes);

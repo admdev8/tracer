@@ -18,8 +18,6 @@
 #include "cc.h"
 #include "bitfields.h"
 
-bool module_c_debug=false;
-
 static address module_translate_adr_to_abs_address(module *m, address original_adr)
 {
     return m->base + (original_adr - m->original_base);
@@ -45,9 +43,13 @@ static bool try_to_resolve_bytemask(bp_address *a)
 
 static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_address *a)
 {
-    printf ("%s() a=", __func__);
-    dump_address (a);
-    printf ("\n");
+    if (module_c_debug)
+    {
+        printf ("%s() a=", __func__);
+        dump_address (a);
+        printf ("\n");
+    };
+
     assert (a->resolved==false);
 
     if (a->t==OPTS_ADR_TYPE_BYTEMASK)
@@ -62,7 +64,19 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
         if (a->t==OPTS_ADR_TYPE_FILENAME_ADR)
         {
             a->abs_address=module_translate_adr_to_abs_address(module_just_loaded, a->adr);
-            L ("Symbol %s resolved to 0x" PRI_ADR_HEX "\n", a->symbol, a->abs_address);
+
+            if (module_c_debug)
+            {
+                strbuf tmp=STRBUF_INIT;
+                address_to_string (a, &tmp);
+                L ("Symbol %s resolved to 0x" PRI_ADR_HEX "\n", tmp.buf, a->abs_address);
+                strbuf_deinit(&tmp);
+            };
+#if 0
+            // useful only for BPF, BPX?
+            if (adr_in_executable_section(p, a->abs_address)==false)
+                L ("Warning: address 0x " PRI_ADR_HEX " not in executable section.\n", a->abs_address);
+#endif
             return a->resolved=true;
         };
 
@@ -72,7 +86,15 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
             if (search_for_symbol_re_in_module(module_just_loaded, &a->symbol_re, &found))
             {
                 a->abs_address=found + a->ofs;
-                L ("Symbol %s resolved to 0x" PRI_ADR_HEX "\n", a->symbol, a->abs_address);
+
+                if (module_c_debug)
+                {
+                    strbuf tmp=STRBUF_INIT;
+                    address_to_string (a, &tmp);
+                    L ("Symbol %s resolved to 0x" PRI_ADR_HEX "\n", tmp.buf, a->abs_address);
+                    strbuf_deinit(&tmp);
+                };
+
                 return a->resolved=true;
             }
             else
@@ -118,14 +140,14 @@ static void set_filename_and_path_for_module (HANDLE file_hdl, module *m, strbuf
 
         full_path_and_filename_to_path_only (&sb_path, fullpath_filename->buf);
         full_path_and_filename_to_filename_only (&sb_filename, &sb_filename_without_ext, fullpath_filename->buf);
-        
+
         if (0 && module_c_debug)
         {
             L ("sb_path=%s\n", sb_path.buf);
             L ("sb_filename=%s\n", sb_filename.buf);
             L ("sb_filename_without_ext=%s\n", sb_filename_without_ext.buf);
         };
-        
+
         m->filename=strbuf_detach(&sb_filename, NULL);
         m->filename_without_ext=strbuf_detach(&sb_filename_without_ext, NULL);
         m->path=strbuf_detach(&sb_path, NULL);
@@ -163,9 +185,9 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
     m->PE_timestamp=info->timestamp;
     if (info->internal_name)
         m->internal_name=DSTRDUP(info->internal_name, "internal_name");
-    
+
     //PE_add_symbols(p, m, fullpath_filename->buf, img_base, info);
-   
+
     // add OEP
     params.t=SYM_TYPE_OEP;
     add_symbol(info->OEP, "OEP", &params);
@@ -179,7 +201,7 @@ static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address
 {
     strbuf sb=STRBUF_INIT;
     add_symbol_params params={ p, m, SYM_TYPE_ORACLE_SYM };
-   
+
     strbuf_addf (&sb, "%sRDBMS\\ADMIN\\%s.sym", ORACLE_HOME.buf, m->filename_without_ext);
 
     L ("Looking for %s\n", sb.buf);
@@ -187,7 +209,7 @@ static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address
     if (file_exist(sb.buf))
     {
         L ("Found %s\n", sb.buf);
-        
+
         int err=get_symbols_from_ORACLE_SYM (sb.buf, img_base, info->size, info->timestamp, true, 
                 (void (*)(address,  char *, void *))add_symbol, (void*)&params, oracle_version);
 
@@ -215,11 +237,11 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
     m->symbols=rbtree_create(true, "symbols", compare_size_t);
 
     set_filename_and_path_for_module(file_hdl, m, &fullpath_filename);
-    
+
     PE_info* info=get_all_info_from_PE (p, m, &fullpath_filename, img_base);
     if (ORACLE_HOME.strlen>0)
         add_symbols_from_ORACLE_SYM_if_exist (p, m, img_base, info, get_module_name(m));
-   
+
     // will symbols from this module skipping during tracing?
     int j;
     trace_skip_element * i;
@@ -241,7 +263,7 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
 
     PE_info_free(info);
     strbuf_deinit(&fullpath_filename);
-    
+
     rbtree_insert (p->modules, (void*)img_base, (void*)m);
 
     if (try_to_resolve_bp_addresses_if_need(m))
@@ -327,13 +349,13 @@ void module_get_sym (module *m, address a, bool add_module_name, strbuf *out)
 
     address prev_k;
     symbol *prev_v;
-    
+
     if (add_module_name)
     {
         strbuf_addstr (out, get_module_name(m));
         strbuf_addc (out, '!');
     };
-    
+
     symbol *first_sym=rbtree_lookup2(m->symbols, (void*)a, (void**)&prev_k, (void**)&prev_v, NULL, NULL);
     if (first_sym)
     {

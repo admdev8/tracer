@@ -27,6 +27,7 @@ void dump_TID_if_need(process *p, thread *t)
 void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
 {
     //if (tracer_c_debug)
+    if (0)
     {
         strbuf sb=STRBUF_INIT;
         address_to_string(bp->a, &sb);
@@ -40,14 +41,16 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
 void set_or_update_all_DRx_breakpoints(process *p)
 {
     //if (tracer_c_debug)
-        L ("%s() begin\n", __func__);
+    //    L ("%s() begin\n", __func__);
 
     // enum all breakpoints, pick out a->resolved ones
     for (unsigned DRx_no=0; DRx_no<4; DRx_no++)
     {
         BP *bp=breakpoints[DRx_no];
         if (bp)
-            L ("%s() DRx_breakpoints[%d]=0x%p\n", __func__, DRx_no, bp);
+        {
+            //L ("%s() DRx_breakpoints[%d]=0x%p\n", __func__, DRx_no, bp);
+        }
         else
             continue;
 

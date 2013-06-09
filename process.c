@@ -7,7 +7,7 @@
 #include "logging.h"
 #include "porg_utils.h"
 
-bool process_c_debug=true;
+bool process_c_debug=false;
 
 void process_free (process *p)
 {

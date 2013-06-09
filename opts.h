@@ -34,6 +34,7 @@ extern bool debug_children;
 extern bool dash_s;
 bool dump_all_symbols;
 regex_t *dump_all_symbols_re;
+extern bool module_c_debug;
 
 // you may want to disable thread B while debugging in gdb, because thread B's input
 // interfering with gdb

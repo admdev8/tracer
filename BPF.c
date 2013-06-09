@@ -340,7 +340,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
 
 void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
-    L ("%s() begin\n", __func__);
+    //L ("%s() begin\n", __func__);
     BP *bp=breakpoints[bp_no];
     BPF_state* state=&t->BPF_states[bp_no];
     BPF *bpf=bp->u.bpf;
@@ -406,5 +406,6 @@ handle_finish_and_switch_to_default:
     *state=BPF_state_default;
 
 exit:
-    L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
+    //L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
+    {}; // TMCH
 };

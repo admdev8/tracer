@@ -50,3 +50,4 @@ bool is_address_OEP(bp_address *a);
 bool is_address_fname_OEP(bp_address* a, char *fname);
 void address_to_string (bp_address *a, strbuf *out);
 void dump_address (bp_address *a);
+

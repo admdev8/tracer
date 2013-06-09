@@ -8,7 +8,7 @@
 #include "process.h"
 #include "bolt_stuff.h"
 
-bool thread_c_debug=true;
+bool thread_c_debug=false;
 
 void thread_free (thread *t)
 {
