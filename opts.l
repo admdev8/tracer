@@ -17,7 +17,7 @@ HEX            0[Xx][[:xdigit:]]+
 FILENAME       [[:alnum:]_]+\.[[:alnum:]_]+
 SYMBOL_NAME    [[:alpha:]][[:alnum:]_@]*
 REGEXP         [[:alnum:]_@.|*^$?\\]*
-SYMBOL_NAME_RE [[:alpha:]\\?]{REGEXP}
+SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 
 %x STATE_BPM STATE_BPX STATE_BPF
 %x STATE_ADDRESS STATE_ADDRESS_OR_REG STATE_BYTEMASK STATE_BYTEMASK_SKIP_OPT STATE_READ_ADR_OFS
