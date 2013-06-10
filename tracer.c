@@ -137,7 +137,7 @@ void check_option_constraints()
     };
 };
 
-void print_stack_for_all_processes_and_threads()
+static void print_stack_for_all_processes_and_threads()
 {
     for (struct rbtree_node_t *_p=rbtree_minimum(processes); _p; _p=rbtree_succ(_p))
     {
@@ -166,6 +166,32 @@ void print_stack_for_all_processes_and_threads()
     };
 };
 
+static void print_DRx_values_for_all_processes_and_threads()
+{
+    for (struct rbtree_node_t *_p=rbtree_minimum(processes); _p; _p=rbtree_succ(_p))
+    {
+        process *p=(process*)(_p->value);
+
+        for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
+        {
+            thread *t=(thread*)(_t->value);
+            CONTEXT ctx;
+            ctx.ContextFlags = CONTEXT_ALL;
+            DWORD tmpd;
+            tmpd=GetThreadContext (t->THDL, &ctx); 
+            if (tmpd==FALSE)
+                die_GetLastError ("GetThreadContext() failed\n");
+
+            if (rbtree_count(processes)>1)
+                L ("PID=%d\n", p->PID);
+            if (rbtree_count(p->threads)>1)
+                L ("TID=%d\n", t->TID);
+
+            dump_DRx (&cur_fds, &ctx);
+        };
+    };
+};
+
 static void WINAPI thread_B (DWORD param) 
 {
     HANDLE hConsoleInput=GetStdHandle (STD_INPUT_HANDLE);
@@ -181,14 +207,21 @@ static void WINAPI thread_B (DWORD param)
                 if (inp_record.EventType==KEY_EVENT)
                     if (inp_record.Event.KeyEvent.bKeyDown==FALSE)
                     {
-                        if (inp_record.Event.KeyEvent.wVirtualKeyCode==VK_ESCAPE)
+                        switch (inp_record.Event.KeyEvent.wVirtualKeyCode)
                         {
-                            L ("ESC pressed...\n");
-                            detach();
-                        };
+                            case VK_ESCAPE:
+                                L ("ESC pressed...\n");
+                                detach();
+                                break;
 
-                        if (inp_record.Event.KeyEvent.wVirtualKeyCode==VK_SPACE) // VK_F1/etc also available
-                            print_stack_for_all_processes_and_threads();
+                            case VK_SPACE:
+                                print_stack_for_all_processes_and_threads();
+                                break;
+
+                            case VK_F1:
+                                print_DRx_values_for_all_processes_and_threads();
+                                break;
+                        };
                     };
             }
             else
