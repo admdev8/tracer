@@ -20,9 +20,13 @@ enum BPX_option_type
 typedef struct _BPX_option
 {
     enum BPX_option_type t;
+
     bp_address *a; // if NULL, see reg
     X86_register reg;
+
+    // in case of DUMP or SET
     REG size_or_value;
+    
     // in case of COPY
     byte *copy_string; // may be NULL if absent
     unsigned copy_string_len;
@@ -33,6 +37,12 @@ typedef struct _BPX
 {
     BPX_option* opts; // may be NULL if options absent
 } BPX;
+
+typedef enum _BPX_state
+{
+    BPX_state_default=0,
+    BPX_state_skipping_first_instruction    
+} BPX_state;
 
 void BPX_option_free(BPX_option *);
 void dump_BPX_option(BPX_option *b);

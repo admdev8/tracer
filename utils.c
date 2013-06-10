@@ -35,7 +35,16 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
         strbuf_deinit (&sb);
     };
 
-    CONTEXT_setDRx_and_DR7 (ctx, DRx_no, bp->a->abs_address);
+    if (bp->t==BP_type_BPF || bp->t==BP_type_BPX)
+        CONTEXT_setDRx_and_DR7 (ctx, DRx_no, bp->a->abs_address);
+    else if (bp->t==BP_type_BPM)
+    {
+        assert (!"not implemented");
+    }
+    else
+    {
+        assert(0);
+    };
 };
 
 void set_or_update_all_DRx_breakpoints(process *p)

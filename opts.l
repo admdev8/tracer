@@ -54,7 +54,9 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
         yylval.str=NULL; 
         return ALL_SYMBOLS; 
     }
-<INITIAL>--module-c-debug   { return MODULE_C_DEBUG; };
+<INITIAL>--module-c-debug   { return MODULE_C_DEBUG; }
+<INITIAL>--cycle-c-debug    { return CYCLE_C_DEBUG; }
+<INITIAL>--bpx-c-debug      { return BPX_C_DEBUG; }
 
 <STATE_ADDRESS_OR_REG>eax   { yylval.x86reg=R_EAX; yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>ebx   { yylval.x86reg=R_EBX; yy_pop_state(); return REGISTER; }

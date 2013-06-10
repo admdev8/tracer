@@ -3,6 +3,9 @@
 #include "bp_address.h"
 #include "dmalloc.h"
 #include "BPX.h"
+#include "thread.h"
+#include "opts.h"
+#include "utils.h"
 
 void BPX_option_free(BPX_option *o)
 {
@@ -81,7 +84,58 @@ BPX* create_BPX(BPX_option *opts)
     return rt;
 };
 
-void handle_BPX(process *p, thread *t, int DRx_no /* -1 for OEP */, CONTEXT *ctx, MemoryCache *mc)
+static void handle_BPX_default_state(BP *bp, process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
 {
-    assert (!"not implemented");
+    if (bpx_c_debug)
+        L ("%s() begin\n", __func__);
+    bp_address *bp_a=bp->a;
+    strbuf sb_address=STRBUF_INIT;
+    address_to_string(bp_a, &sb_address);
+
+    dump_PID_if_need(p); dump_TID_if_need(p, t);
+    L ("(%d) %s\n", DRx_no, sb_address.buf);
+    // remove DRx
+    CONTEXT_clear_bp_in_DR7 (ctx, DRx_no);
+    // turn on TF
+    set_TF (ctx);
+    t->tracing=true; t->tracing_bp=DRx_no;        
+    strbuf_deinit(&sb_address);
+    if (bpx_c_debug)
+        L ("%s() end\n", __func__);
+}
+
+static void handle_BPX_skipping_first_instruction(BP *bp, process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
+{
+    if (bpx_c_debug)
+        L ("%s() begin\n", __func__);
+    // set DRx back
+    set_or_update_DRx_breakpoint(bp, ctx, DRx_no);
+    t->tracing=false;
+    if (bpx_c_debug)
+        L ("%s() end\n", __func__);
+};
+
+void handle_BPX(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
+{
+    if (bpx_c_debug)
+        L ("%s() begin\n", __func__);
+    BP *bp=breakpoints[DRx_no];
+    BPX_state* state=&t->BPX_states[DRx_no];
+   
+    if (*state==BPX_state_default)
+    {
+        handle_BPX_default_state(bp, p, t, DRx_no, ctx, mc);
+        *state=BPX_state_skipping_first_instruction;
+    }
+    else if (*state==BPX_state_skipping_first_instruction)
+    {
+        handle_BPX_skipping_first_instruction(bp, p, t, DRx_no, ctx, mc);
+        *state=BPX_state_default;
+    }
+    else
+    {
+        assert(0);
+    };
+    if (bpx_c_debug)
+        L ("%s() end\n", __func__);
 };

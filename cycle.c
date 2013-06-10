@@ -21,8 +21,6 @@
 #include "utils.h"
 #include "bp_address.h"
 
-bool cycle_c_debug=false;
-
 void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
     if (cycle_c_debug)
@@ -109,13 +107,13 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
         assert (t->tracing && "BS flag in DR6, but no breakpoint in tracing mode");
         handle_BP(p, t, t->tracing_bp, ctx, mc);
     };
-    /*
-       if (ctx->Dr6==0) // sometimes observed while tracing
-       {
-       assert (t->tracing && "DR6 is zero, but no breakpoint in tracing mode");
-       handle_BP(p, t, t->tracing_bp, ctx, mc);
-       };
-       */
+
+    if (ctx->Dr6==0) // sometimes observed while tracing
+    {
+        assert (t->tracing && "DR6 is zero, but no breakpoint in tracing mode");
+        handle_BP(p, t, t->tracing_bp, ctx, mc);
+    };
+
     if (cycle_c_debug)
         L ("%s() end\n", __func__);
 };

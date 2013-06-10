@@ -3,6 +3,7 @@
 #include <windows.h>
 #include "address.h"
 #include "BPF.h"
+#include "BPX.h"
 
 typedef struct _process process;
 
@@ -13,15 +14,21 @@ typedef struct _thread
     address start;
 
     // BPF-related info
-    BPF_state BPF_states[5]; // for each DRx breakpoint. 0..3 - DR0-3, 4th - OEP bp
+    BPF_state BPF_states[4]; // for each DRx breakpoint. 0..3 - DR0-3
     REG* BPF_args;
     address ret_adr; // sometimes present
     BYTE** BPF_buffers_at_start; // need for dump_args option
     unsigned BPF_buffers_at_start_cnt;
 
+
+    //int tracing_CALLs_executed; // 0 is default, 1 after first CALL, etc
+    
+    // BPX-related info
+    BPX_state BPX_states[4]; // for each DRx breakpoint. 0..3 - DR0-3
+
+    // BPX and BPF related info
     bool tracing;
     unsigned tracing_bp; // in case of tracing
-    //int tracing_CALLs_executed; // 0 is default, 1 after first CALL, etc
 } thread;
 
 void thread_free (thread *t);
