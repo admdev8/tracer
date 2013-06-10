@@ -26,12 +26,11 @@ void dump_TID_if_need(process *p, thread *t)
 // temporary here!
 void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
 {
-    //if (tracer_c_debug)
-    if (0)
+    if (utils_c_debug)
     {
         strbuf sb=STRBUF_INIT;
         address_to_string(bp->a, &sb);
-        L ("%s(): setting DRx-breakpoint %d for %s\n", __func__, DRx_no, sb.buf);
+        L ("%s(): begin. setting DRx-breakpoint %d for %s\n", __func__, DRx_no, sb.buf);
         strbuf_deinit (&sb);
     };
 
@@ -45,12 +44,14 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
     {
         assert(0);
     };
+    if (utils_c_debug)
+        L ("%s() end\n", __func__);
 };
 
 void set_or_update_all_DRx_breakpoints(process *p)
 {
-    //if (tracer_c_debug)
-    //    L ("%s() begin\n", __func__);
+    if (utils_c_debug)
+        L ("%s() begin\n", __func__);
 
     // enum all breakpoints, pick out a->resolved ones
     for (unsigned DRx_no=0; DRx_no<4; DRx_no++)
@@ -61,15 +62,24 @@ void set_or_update_all_DRx_breakpoints(process *p)
             //L ("%s() DRx_breakpoints[%d]=0x%p\n", __func__, DRx_no, bp);
         }
         else
+        {
+            L ("%s() breakpoints[%d]==NULL\n", __func__, DRx_no);
             continue;
+        };
 
         //dump_BP (bp);
 
         if (bp->a->resolved==false)
+        {
+            L ("%s() breakpoints[%d]->a->resolved==false\n", __func__, DRx_no);
             continue;
+        };
 
-        if (p->we_are_loading_and_OEP_was_executed==false)
+        if (load_filename && p->we_are_loading_and_OEP_was_executed==false)
+        {
+            L ("%s() p->we_are_loading_and_OEP_was_executed==false\n", __func__);
             continue;
+        };
         for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
         {
             thread *t=(thread*)(_t->value);
@@ -83,6 +93,8 @@ void set_or_update_all_DRx_breakpoints(process *p)
             rt=SetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
         };
     };
+    if (utils_c_debug)
+        L ("%s() end\n", __func__);
 };
 
 Da* MC_disas(address a, MemoryCache *mc)

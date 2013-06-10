@@ -57,6 +57,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>--module-c-debug   { return MODULE_C_DEBUG; }
 <INITIAL>--cycle-c-debug    { return CYCLE_C_DEBUG; }
 <INITIAL>--bpx-c-debug      { return BPX_C_DEBUG; }
+<INITIAL>--utils-c-debug    { return UTILS_C_DEBUG; }
 
 <STATE_ADDRESS_OR_REG>eax   { yylval.x86reg=R_EAX; yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>ebx   { yylval.x86reg=R_EBX; yy_pop_state(); return REGISTER; }
@@ -74,6 +75,23 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <STATE_ADDRESS_OR_REG>of    { yylval.x86reg=R_OF;  yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>cf    { yylval.x86reg=R_CF;  yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>df    { yylval.x86reg=R_DF;  yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>rax   { yylval.x86reg=R_RAX; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>rbx   { yylval.x86reg=R_RBX; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>rcx   { yylval.x86reg=R_RCX; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>rdx   { yylval.x86reg=R_RDX; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>rsi   { yylval.x86reg=R_RSI; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>rdi   { yylval.x86reg=R_RDI; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>rsp   { yylval.x86reg=R_RSP; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>rbp   { yylval.x86reg=R_RBP; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>rip   { yylval.x86reg=R_RIP; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r8    { yylval.x86reg=R_R8;  yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r9    { yylval.x86reg=R_R9;  yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r10   { yylval.x86reg=R_R10; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r11   { yylval.x86reg=R_R11; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r12   { yylval.x86reg=R_R12; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r13   { yylval.x86reg=R_R13; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r14   { yylval.x86reg=R_R14; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r15   { yylval.x86reg=R_R15; yy_pop_state(); return REGISTER; }
 
 <STATE_ADDRESS,STATE_ADDRESS_OR_REG>"bytemask:\""             { yy_push_state(STATE_BYTEMASK); return BYTEMASK; }
 <STATE_BYTEMASK>[[:xdigit:]][[:xdigit:]] { yylval.num = strtol(yytext, NULL, 16); return HEX_BYTE; }

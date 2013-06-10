@@ -31,7 +31,7 @@ bp_address* current_BPF_address; // filled while parsing
 bool run_thread_b=true;
 bool dump_all_symbols=false;
 regex_t *dump_all_symbols_re=NULL;
-bool module_c_debug=false, cycle_c_debug=false, bpx_c_debug=false;
+bool module_c_debug=false, cycle_c_debug=false, bpx_c_debug=false, utils_c_debug=false;
 
 // from opts.l:
 void flex_set_str(char *s);
@@ -78,7 +78,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DONT_RUN_THREAD_B
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC
-%token MODULE_C_DEBUG CYCLE_C_DEBUG BPX_C_DEBUG
+%token MODULE_C_DEBUG CYCLE_C_DEBUG BPX_C_DEBUG UTILS_C_DEBUG
 %token <num> DEC_NUMBER HEX_NUMBER HEX_BYTE
 %token <num> BPM_width CSTRING_BYTE ATTACH_PID
 %token <x86reg> REGISTER
@@ -116,6 +116,7 @@ tracer_option
  | MODULE_C_DEBUG  { module_c_debug=true; }
  | CYCLE_C_DEBUG   { cycle_c_debug=true; }
  | BPX_C_DEBUG     { bpx_c_debug=true; }
+ | UTILS_C_DEBUG   { utils_c_debug=true; }
  | ALL_SYMBOLS     { 
     dump_all_symbols=true;
     if ($1)
