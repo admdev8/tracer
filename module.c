@@ -17,6 +17,7 @@
 #include "utils.h"
 #include "cc.h"
 #include "bitfields.h"
+#include "cycle.h"
 
 static address module_translate_adr_to_abs_address(module *m, address original_adr)
 {
@@ -98,8 +99,12 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
                 return a->resolved=true;
             }
             else
-                die ("Error: Module %s was just loaded, but symbol %s was not found in it!\n", 
+            {
+                L ("Error: Module %s was just loaded, but symbol %s was not found in it!\n", 
                         module_just_loaded->internal_name, a->symbol);
+                detach();
+                return false;
+            };
         };
     };
 

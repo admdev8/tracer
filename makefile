@@ -21,7 +21,8 @@ DEP_FILES=$(SOURCES:.c=.d)
 OBJECTS=$(addprefix $(OUTDIR)/,$(SOURCES:.c=.o))
 LIBS=$(OCTOTHORPE_LIBRARY) $(X86_DISASM_LIBRARY) $(PORG_LIBRARY) $(BOLT_LIBRARY)
 
-all:    $(OUTDIR) $(OUTDIR)/tracer.exe $(DEP_FILES) $(OUTDIR)/opts_test.exe
+#all:    $(OUTDIR) $(OUTDIR)/tracer.exe $(DEP_FILES) $(OUTDIR)/opts_test.exe
+all:    $(OUTDIR) $(OUTDIR)/tracer.exe $(DEP_FILES)
 
 $(OUTDIR):
 	mkdir $(OUTDIR)
@@ -38,7 +39,7 @@ $(OUTDIR)/tracer.exe: $(OBJECTS) $(LIBS)
 $(OUTDIR)/opts_test.exe: $(OUTDIR)/opts_test.o $(OUTDIR)/opts.tab.o $(OUTDIR)/opts.lex.o \
 	$(OUTDIR)/BP.o $(OUTDIR)/BPF.o $(OUTDIR)/BPX.o $(OUTDIR)/bp_address.o $(OUTDIR)/process.o \
 	$(OUTDIR)/thread.o $(OUTDIR)/module.o $(OUTDIR)/symbol.o $(OUTDIR)/utils.o \
-	$(OUTDIR)/cc.o $(LIBS)
+	$(OUTDIR)/cc.o $(OUTDIR)/cycle.o $(LIBS)
 	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -limagehlp
 	
 clean:

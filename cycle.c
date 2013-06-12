@@ -21,6 +21,14 @@
 #include "utils.h"
 #include "bp_address.h"
 
+bool detaching=false;
+
+void detach()
+{
+    L ("Detaching...\n");
+    detaching=true;
+};
+
 void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
     if (cycle_c_debug)

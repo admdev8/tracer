@@ -55,6 +55,7 @@ void dump_BPF(BPF *b)
         dump_address (b->when_called_from_func);
         printf ("\n");
     };
+    // NOTE: args_n, arg_types, ret_type, this_type not dumped
 };
 
 void BPF_free(BPF* o)
@@ -63,26 +64,75 @@ void BPF_free(BPF* o)
         bp_address_free(o->when_called_from_address);
     if (o->when_called_from_func)
         bp_address_free(o->when_called_from_func);
+    DFREE (o->arg_types);
     DFREE (o);
 };
 
-static void BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode)
+static void dump_QString (address a, MemoryCache *mc)
 {
-    strbuf sb=STRBUF_INIT;
+    REG r2;
+    L ("QString: ");
+    if (MC_ReadREG(mc, a+sizeof(REG)+sizeof(tetrabyte)*2, &r2))
+    {
+        strbuf sb=STRBUF_INIT;
+        if (MC_GetString (mc, r2, true, &sb))
+            L ("(data=\"%s\")", sb.buf);
+        else
+        {
+            L ("(data=(not a string))");
+            //MC_L_print_buf_in_mem_ofs (mc, r2, 0x20, r2);
+        };
 
-    if (MC_GetString(mc, arg, unicode, &sb))
-        L ("\"%s\"", sb.buf);
+        strbuf_deinit(&sb);
+    }
     else
-        L ("0x" PRI_REG_HEX, arg);
-
-    strbuf_deinit (&sb);
+        L ("(read error)");
 };
 
-static void BPF_dump_args (MemoryCache *mc, REG* args, unsigned args_n, bool unicode)
+// function to be separated
+static void BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type ft)
+{
+    switch (ft)
+    {
+        case TY_UNKNOWN:
+            {
+                strbuf sb=STRBUF_INIT;
+
+                if (MC_GetString(mc, arg, unicode, &sb))
+                    L ("\"%s\"", sb.buf);
+                else
+                    L ("0x" PRI_REG_HEX, arg);
+
+                strbuf_deinit (&sb);
+            };
+            break;
+
+        case TY_QSTRING:
+            dump_QString(arg, mc);
+            break;
+
+        case TY_PTR: // get sym?
+        case TY_REG:
+        case TY_INT:
+            L ("0x" PRI_REG_HEX, arg);
+            break;
+
+        case TY_VOID:
+        case TY_UNINTERESTING:
+            break;
+
+        default:
+            printf ("ft=%d\n", ft);
+            assert(!"not implemented");
+            break;
+    };
+};
+
+static void BPF_dump_args (MemoryCache *mc, REG* args, unsigned args_n, bool unicode, function_type *arg_types)
 {
     for (unsigned i=0; i<args_n; i++)
     {
-        BPF_dump_arg (mc, args[i], unicode);
+        BPF_dump_arg (mc, args[i], unicode, arg_types ? arg_types[i] : TY_UNKNOWN);
         if ((i+1) != args_n)
             L (", ");
     };
@@ -123,7 +173,7 @@ read_failed:
     t->BPF_args=NULL;
 };
 
-static void dump_args_if_need(thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args)
+static void dump_bufs_if_need(thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args)
 {
     assert (t->BPF_buffers_at_start==NULL);
     t->BPF_buffers_at_start=(REG**)DCALLOC(REG*, args_n, "REG*");
@@ -166,6 +216,49 @@ static void dump_args_diff_if_need(thread *t, MemoryCache *mc, unsigned size, un
     DFREE (t->BPF_buffers_at_start);
     t->BPF_buffers_at_start=NULL;
 };
+        
+static void dump_object_info_if_needed(BPF *bpf, MemoryCache *mc, CONTEXT *ctx)
+{
+    if (bpf->this_type==TY_UNKNOWN || bpf->this_type==TY_UNINTERESTING)
+        return;
+
+    L ("this=");
+    REG r;
+    if (MC_ReadREG(mc, CONTEXT_get_xCX(ctx), &r))
+        BPF_dump_arg(mc, r, bpf->unicode, bpf->this_type);
+    else
+        L ("(read error)");
+    L ("\n");
+};
+
+static void is_it_known_function (const char *fn_name, BPF* bpf)
+{
+    L ("%s(fn_name=%s)\n", __func__, fn_name);
+
+    // demangler should be here!
+    if (strstr(fn_name, "?information@QMessageBox@@SAHPEAVQWidget@@AEBVQString@@1111HH@Z"))
+    {
+        bpf->args_n=8;
+        bpf->arg_types=DCALLOC(function_type, bpf->args_n, "function_type");
+        bpf->arg_types[0]=TY_PTR; // QWidget
+        bpf->arg_types[1]=bpf->arg_types[2]=bpf->arg_types[3]=bpf->arg_types[4]=bpf->arg_types[5]=TY_QSTRING;
+        bpf->arg_types[6]=bpf->arg_types[7]=TY_INT;
+        bpf->ret_type=bpf->this_type=TY_UNINTERESTING;
+        bpf->known_function=Fuzzy_True;
+        L ("%s() - True\n", __func__);
+        return;
+    };
+
+    if (strstr(fn_name, "?1QString@@QEAA@XZ")) // in fact: "??1QString@@QEAA@XZ" 
+    {
+        bpf->this_type=TY_QSTRING;
+        bpf->known_function=Fuzzy_True;
+        L ("%s() - True\n", __func__);
+        return;
+    };
+    bpf->known_function=Fuzzy_False;
+    L ("%s() - False\n", __func__);
+};
 
 static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
@@ -173,7 +266,7 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
     BPF *bpf=bp->u.bpf;
     bp_address *bp_a=bp->a;
     strbuf sb=STRBUF_INIT, sb_address=STRBUF_INIT;
-    address_to_string(bp_a, &sb_address);
+    address_to_string(bp_a, &sb_address); // sb_address in form module!regexp
     bool got_ret_adr=MC_ReadREG(mc, CONTEXT_get_SP(ctx), &t->ret_adr);
     bool rt;
 
@@ -182,18 +275,33 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
     else    
         L ("Cannot read a register at SP, so, BPF return will not be handled\n");
 
-    load_args(t, ctx, mc, bpf->args);
+    if (bpf->known_function==Fuzzy_Undefined)
+    {
+        strbuf sb_symbol_name=STRBUF_INIT;
+        //process_get_sym (p, bp_a->abs_address, false /* do not add module name*/, &sb_symbol_name);
+        //is_it_known_function(sb_symbol_name.buf, bpf); // FIXME: all symbols at $bp_a->abs_address$ should be enumerated!
+        is_it_known_function(sb_address.buf, bpf);
+        if (bpf->known_function==Fuzzy_True)
+            L ("This is known (to us) function\n");
+        strbuf_deinit(&sb_symbol_name);
+    };
+
+    unsigned args=bpf->known_function==Fuzzy_True ? bpf->args_n : bpf->args;
+
+    load_args(t, ctx, mc, args);
 
     dump_PID_if_need(p); dump_TID_if_need(p, t);
     L ("(%d) %s (", bp_no, sb_address.buf);
-    BPF_dump_args (mc, t->BPF_args, bpf->args, bpf->unicode);
+    BPF_dump_args (mc, t->BPF_args, args, bpf->unicode, bpf->arg_types);
     L (")");
     if (got_ret_adr)
         L (" (called from %s (0x" PRI_ADR_HEX "))", sb.buf, t->ret_adr);
     L ("\n");
 
+    dump_object_info_if_needed(bpf, mc, ctx);
+
     if (bpf->dump_args)
-        dump_args_if_need(t, mc, bpf->dump_args, bpf->args, t->BPF_args);
+        dump_bufs_if_need(t, mc, args, bpf->args, t->BPF_args);
 
     if (dash_s)
         dump_stack (p, t, ctx, mc);
@@ -232,7 +340,9 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     REG accum=CONTEXT_get_Accum (ctx);
 
     dump_PID_if_need(p); dump_TID_if_need(p, t);
-    L ("(%d) %s () -> " PRI_SIZE_T_DEC " (0x" PRI_REG_HEX ")\n", bp_no, sb_address.buf, accum, accum);
+    L ("(%d) %s () -> ", bp_no, sb_address.buf);
+    BPF_dump_arg(mc, accum, bpf->unicode, bpf->ret_type);
+    L (" (0x" PRI_REG_HEX ")\n", accum);
 
     if (bpf->dump_args)
         dump_args_diff_if_need(t, mc, bpf->dump_args, bpf->args, t->BPF_args);
@@ -303,7 +413,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
             // should it be skipped?
             if (symbol_skip_on_tracing(m, s))
             {
-                DWORD ret_adr;
+                REG ret_adr;
                 L ("symbol to be skipped\n");
                 if (MC_ReadREG(mc, CONTEXT_get_SP(ctx), &ret_adr)==false)
                 {

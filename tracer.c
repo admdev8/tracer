@@ -22,7 +22,6 @@
 rbtree *processes=NULL; // PID, ptr to process
 
 bool tracer_c_debug=false;
-bool detaching=false;
 
 void help_and_exit()
 {
@@ -92,12 +91,6 @@ void clean_all_DRx()
             tmpd=SetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);
         };
     };
-};
-
-void detach()
-{
-    L ("Detaching...\n");
-    detaching=true;
 };
 
 void debug_or_attach()

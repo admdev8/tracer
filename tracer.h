@@ -19,5 +19,4 @@ typedef struct _trace_skip_element
 
 trace_skip_element *trace_skip_options;
 
-extern bool detaching;
 void clean_all_DRx();

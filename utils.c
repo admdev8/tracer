@@ -63,7 +63,8 @@ void set_or_update_all_DRx_breakpoints(process *p)
         }
         else
         {
-            L ("%s() breakpoints[%d]==NULL\n", __func__, DRx_no);
+            if (utils_c_debug)
+                L ("%s() breakpoints[%d]==NULL\n", __func__, DRx_no);
             continue;
         };
 
@@ -71,13 +72,15 @@ void set_or_update_all_DRx_breakpoints(process *p)
 
         if (bp->a->resolved==false)
         {
-            L ("%s() breakpoints[%d]->a->resolved==false\n", __func__, DRx_no);
+            if (utils_c_debug)
+                L ("%s() breakpoints[%d]->a->resolved==false\n", __func__, DRx_no);
             continue;
         };
 
         if (load_filename && p->we_are_loading_and_OEP_was_executed==false)
         {
-            L ("%s() p->we_are_loading_and_OEP_was_executed==false\n", __func__);
+            if (utils_c_debug)
+                L ("%s() p->we_are_loading_and_OEP_was_executed==false\n", __func__);
             continue;
         };
         for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
@@ -106,3 +109,24 @@ Da* MC_disas(address a, MemoryCache *mc)
             (callback_read_oword)MC_ReadOctabyte, 
             (void *)mc);
 };
+
+void dump_buf_as_array_of_strings(MemoryCache *mc, address a, size_t size)
+{
+    strbuf sb=STRBUF_INIT;
+    BYTE *buf=DMALLOC (BYTE, size, "BYTE*");
+    if (MC_ReadBuffer (mc, a, size, buf)==false)
+        goto exit;
+    for (unsigned i=0; i<size; i+=sizeof(REG))
+    {
+        address a2=*(REG*)&buf[i];
+        if (MC_get_any_string(mc, a2, &sb))
+        {
+            L ("0x" PRI_ADR_HEX "+0x%x: ptr to %s\n", a, i, sb.buf);
+            strbuf_reinit(&sb, 0);
+        };
+    };
+exit:
+    DFREE (buf);
+    strbuf_deinit(&sb);
+};
+
