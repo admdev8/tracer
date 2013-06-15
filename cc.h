@@ -7,6 +7,7 @@
 typedef struct _process process;
 typedef struct _thread thread;
 typedef struct _module module;
+typedef struct _Da Da;
 
 // order matters!
 #define WORKOUT_OP1 0
@@ -57,6 +58,7 @@ typedef struct _op_info
 
 typedef struct _PC_info
 {
+    Da *da;
     op_info *op[6]; // OP1/2/3/AX/CX/DX
     enum value_t op_t[6]; // type for OP1/2/3/AX/CX/DX
     octabyte executed; // how many times we've been here?

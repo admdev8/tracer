@@ -31,7 +31,7 @@ bp_address* current_BPF_address; // filled while parsing
 bool run_thread_b=true;
 bool dump_all_symbols=false;
 regex_t *dump_all_symbols_re=NULL;
-bool module_c_debug=false, cycle_c_debug=false, bpx_c_debug=false, utils_c_debug=false;
+bool module_c_debug=false, cycle_c_debug=false, bpx_c_debug=false, utils_c_debug=false, cc_c_debug=false;
 
 // from opts.l:
 void flex_set_str(char *s);
@@ -78,9 +78,9 @@ void add_new_address_to_be_resolved (bp_address *a)
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DONT_RUN_THREAD_B
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC
-%token MODULE_C_DEBUG CYCLE_C_DEBUG BPX_C_DEBUG UTILS_C_DEBUG
+%token MODULE_C_DEBUG CYCLE_C_DEBUG BPX_C_DEBUG UTILS_C_DEBUG CC_C_DEBUG
 %token <num> DEC_NUMBER HEX_NUMBER HEX_BYTE
-%token <num> BPM_width CSTRING_BYTE ATTACH_PID
+%token <num> BPM_width CSTRING_BYTE ATTACH_PID DMALLOC_BREAK_ON
 %token <x86reg> REGISTER
 %token <dbl> FLOAT_NUMBER
 %token <str> FILENAME_EXCLAMATION SYMBOL_NAME_RE SYMBOL_NAME_RE_PLUS LOAD_FILENAME ATTACH_FILENAME CMDLINE
@@ -106,17 +106,19 @@ tracer_option
    current_BPF=NULL;
    current_BPF_address=NULL;
  }
- | LOAD_FILENAME   { load_filename=$1; }
- | ATTACH_FILENAME { attach_filename=$1; }
- | ATTACH_PID      { attach_PID=$1; }
- | CHILD           { debug_children=true; }
- | DASH_S          { dash_s=true; }
+ | LOAD_FILENAME      { load_filename=$1; }
+ | ATTACH_FILENAME    { attach_filename=$1; }
+ | ATTACH_PID         { attach_PID=$1; }
+ | CHILD              { debug_children=true; }
+ | DASH_S             { dash_s=true; }
  | DONT_RUN_THREAD_B  { run_thread_b=false; }
- | CMDLINE         { load_command_line=$1; }
- | MODULE_C_DEBUG  { module_c_debug=true; }
- | CYCLE_C_DEBUG   { cycle_c_debug=true; }
- | BPX_C_DEBUG     { bpx_c_debug=true; }
- | UTILS_C_DEBUG   { utils_c_debug=true; }
+ | CMDLINE            { load_command_line=$1; }
+ | MODULE_C_DEBUG     { module_c_debug=true; }
+ | CYCLE_C_DEBUG      { cycle_c_debug=true; }
+ | BPX_C_DEBUG        { bpx_c_debug=true; }
+ | UTILS_C_DEBUG      { utils_c_debug=true; }
+ | CC_C_DEBUG         { cc_c_debug=true; }
+ | DMALLOC_BREAK_ON   { dmalloc_break_at_seq_n ($1); }
  | ALL_SYMBOLS     { 
     dump_all_symbols=true;
     if ($1)

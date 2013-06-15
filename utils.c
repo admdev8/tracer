@@ -10,6 +10,7 @@
 #include "opts.h"
 #include "bitfields.h"
 #include "x86.h"
+#include "stuff.h"
 
 void dump_PID_if_need(process *p)
 {

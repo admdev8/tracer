@@ -396,9 +396,6 @@ void free_trace_skip_options(trace_skip_element *i)
 
 int main(int argc, char *argv[])
 {
-    //dmalloc_break_at_seq_n (50013);
-    //run_thread_b=false;
-    
     printf ("tracer 0.7 %s by Dennis Yurichev\n", 
 #ifdef _WIN64
             "WIN64"

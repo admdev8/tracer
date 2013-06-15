@@ -70,6 +70,21 @@ void BPF_free(BPF* o)
 
 static void dump_QString (address a, MemoryCache *mc)
 {
+    /*
+       struct Data {
+       QBasicAtomicInt ref;
+       int alloc, size;
+       ushort *data; // QT5: put that after the bit field to fill alignment gap; don't use sizeof any more then
+       ushort clean : 1;
+       ushort simpletext : 1;
+       ushort righttoleft : 1;
+       ushort asciiCache : 1;
+       ushort capacity : 1;
+       ushort reserved : 11;
+    // ### Qt5: try to ensure that "array" is aligned to 16 bytes on both 32- and 64-bit
+    ushort array[1];
+    };
+    */
     REG r2;
     L ("QString: ");
     if (MC_ReadREG(mc, a+sizeof(REG)+sizeof(tetrabyte)*2, &r2))
@@ -79,14 +94,17 @@ static void dump_QString (address a, MemoryCache *mc)
             L ("(data=\"%s\")", sb.buf);
         else
         {
-            L ("(data=(not a string))");
-            //MC_L_print_buf_in_mem_ofs (mc, r2, 0x20, r2);
+            BYTE buf[4];
+            if (MC_ReadBuffer (mc, r2, 4, buf))
+                L ("(data=(0x%x 0x%x 0x%x 0x%x ... ))", buf[0], buf[1], buf[2], buf[3]);
+            else
+                L ("(data=(read error))");
         };
 
         strbuf_deinit(&sb);
     }
     else
-        L ("(read error)");
+        L ("(object read error)");
 };
 
 // function to be separated
@@ -354,9 +372,9 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
         assert (!"not implemented");
     };
 
-    dump_PID_if_need(p); dump_TID_if_need(p, t);
     if (bpf->rt_probability==1.0)
     {
+        dump_PID_if_need(p); dump_TID_if_need(p, t);
         L ("(%d) Modifying %s register to 0x%x\n", bp_no, get_AX_register_name(), bpf->rt);
         CONTEXT_set_Accum(ctx, bpf->rt);
     };
@@ -414,7 +432,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
             if (symbol_skip_on_tracing(m, s))
             {
                 REG ret_adr;
-                L ("symbol to be skipped\n");
+                //L ("symbol to be skipped\n");
                 if (MC_ReadREG(mc, CONTEXT_get_SP(ctx), &ret_adr)==false)
                 {
                     assert(0);
@@ -436,10 +454,20 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
             //Da_DumpString (&cur_fds, da);
             //die("");
 
-            if (bpf->cc)
-                handle_cc(da, p, t, ctx, mc);
+            if (da)
+            {
+                if (bpf->cc)
+                    handle_cc(da, p, t, ctx, mc);
+                Da_free(da);
+            }
+            else
+            {
+                strbuf sb=STRBUF_INIT;
+                process_get_sym(p, PC, true, &sb);
 
-            Da_free(da);
+                L ("%s() disassemble failed for PC=%s (0x" PRI_ADR_HEX ")\n", __func__, sb.buf, PC);
+                strbuf_deinit (&sb);
+            };
         };
 
     } while (emulated);
@@ -494,17 +522,17 @@ call_handle_tracing_etc:
     switch (handle_tracing(bp_no, p, t, ctx, mc))
     {
         case 1: // go on
-            L ("handle_tracing() -> 1\n");
+            //L ("handle_tracing() -> 1\n");
             set_TF (ctx);
             break;
         case 2: // finished
-            L ("handle_tracing() -> 2\n");
+            //L ("handle_tracing() -> 2\n");
             t->tracing=false;
             clear_TF(ctx);
             REMOVE_BIT(ctx->Dr6, FLAG_DR6_BS);
             goto handle_finish_and_switch_to_default;
         case 3: // need to skip something
-            L ("handle_tracing() -> 3\n");
+            //L ("handle_tracing() -> 3\n");
             clear_TF(ctx);
             *state=BPF_state_tracing_skipping;
             break;

@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include "datatypes.h"
+#include "rbtree.h"
 
 typedef struct _process process;
 typedef struct _thread thread;

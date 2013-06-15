@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "stuff.h"
 #include "X86_register_helpers.h"
+#include "set.h"
 
 #define IDA_MAX_COMMENT_SIZE 1023
 
@@ -18,11 +19,13 @@ static bool ins_reported_as_unhandled[512]={ false };
 
 unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, MemoryCache *mc)
 {
-    L ("%s() begin\n", __func__);
+    if (cc_c_debug)
+        L ("%s() begin\n", __func__);
     unsigned rt=0;
 
     address PC=CONTEXT_get_PC(ctx);
 
+    assert(da);
     if (Da_ins_is_FPU(da))
         return 0; // do nothing (yet)
 
@@ -380,7 +383,8 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
                 REMOVE_BIT(rt, 1<<i); // these are always NOTICE_OP1, _OP2, _OP3 at lower bits
         };
 
-    L ("%s() end\n", __func__);
+    if (cc_c_debug)
+        L ("%s() end\n", __func__);
     return rt;
 };
 
@@ -421,7 +425,7 @@ static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
     //L ("%s() end\n", __func__);
 };
 
-static void cc_free_op(op_info *op)
+static void cc_free_op(op_info *op, unsigned tmp_i, address tmp_a)
 {
     rbtree_foreach(op->values, NULL, NULL, NULL);
     rbtree_deinit(op->values);
@@ -434,9 +438,10 @@ static void cc_free_op(op_info *op)
     DFREE (op);
 };
 
-static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out)
+static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out, address tmp_a)
 {
     //L ("%s() begin\n", __func__);
+    assert(da);
     op_info *op=info->op[i];
     enum value_t op_t=info->op_t[i];
 
@@ -457,23 +462,12 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out)
         case V_DWORD:
         case V_QWORD: 
             {
-                rbtree_node *max=rbtree_maximum(op->values);
-                for (rbtree_node *j=rbtree_minimum(op->values); j; j=rbtree_succ(j))
-                {
-                    strbuf_addf (out, "0x" PRI_REG_HEX, (REG)j->key);
-                    if (j!=max)
-                        strbuf_addstr (out, ", ");
-                };
+                set_of_REG_to_string (op->values, out, 10);
+
                 if (rbtree_count(op->ptr_to_string_set)>0)
                 {
                     strbuf_addstr (out, ", ");
-                    rbtree_node *max=rbtree_maximum(op->ptr_to_string_set);
-                    for (rbtree_node *j=rbtree_minimum(op->ptr_to_string_set); j; j=rbtree_succ(j))
-                    {
-                        strbuf_addstr (out, (char*)j->key);
-                        if (j!=max)
-                            strbuf_addstr (out, ", ");
-                    };
+                    set_of_string_to_string (op->ptr_to_string_set, out, 5);
                 };
             };
             break;
@@ -483,7 +477,7 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out)
             assert(0);
     };
 
-    cc_free_op (op);
+    cc_free_op (op, i, tmp_a);
 
     //L ("%s() end\n", __func__);
     return true;
@@ -492,24 +486,18 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out)
 static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCache *mc, 
         FILE *f_txt, FILE *f_idc, FILE* f_clear_idc)
 {
-    Da* da=MC_disas(a, mc);
-
-    // there shouldn't be entries for instructions we can't disassemble.
-    // (these entries shouldn't be added at all)
-    assert (da); 
-
     strbuf sb_txt=STRBUF_INIT, sb_common=STRBUF_INIT, sb_sym=STRBUF_INIT;
     process_get_sym(p, a, false, &sb_sym);
     strbuf_addf (&sb_txt, "0x" PRI_ADR_HEX " (%s), e=%8I64d [", a, sb_sym.buf, info->executed);
     strbuf_deinit(&sb_sym);
-    Da_ToString(da, &sb_txt); // add disasmed
+    Da_ToString(info->da, &sb_txt); // add disasmed
     strbuf_addstr (&sb_txt, "] ");
     if (info->comment)
         strbuf_addf (&sb_common, "%s ", info->comment);
     // add all info
     for (unsigned j=0; j<6; j++)
     {
-        if (cc_dump_op_and_free (da, info, j, &sb_common))
+        if (cc_dump_op_and_free (info->da, info, j, &sb_common, a))
             strbuf_addc (&sb_common, ' ');
     };
     // TODO: flags?
@@ -525,16 +513,17 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
     fprintf (f_clear_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffffff);\n", a);
     fprintf (f_clear_idc, "\tMakeComm (0x" PRI_ADR_HEX ", \"\");\n", a);
 
-    Da_free(da);
     strbuf_deinit(&sb_txt);
     strbuf_deinit(&sb_common);
+    Da_free(info->da);
     DFREE (info->comment);
     DFREE (info);
 };
 
 void cc_dump_and_free(module *m) // for module m
 {
-    //L ("%s() begin for module %s\n", __func__, get_module_name(m));
+    if (cc_c_debug)
+        L ("%s() begin for module %s\n", __func__, get_module_name(m));
 
     if (m->PC_infos==NULL)
     {
@@ -557,6 +546,7 @@ void cc_dump_and_free(module *m) // for module m
     fputs (idc_header, f_idc);
     fputs (idc_header, f_clear_idc);
 
+    unsigned dumped=0;
     for (rbtree_node *i=rbtree_minimum(m->PC_infos); i; i=rbtree_succ(i))
     {
         //L ("%s() loop begin\n", __func__);
@@ -564,10 +554,11 @@ void cc_dump_and_free(module *m) // for module m
         PC_info *info=i->value;
 
         dump_one_PC_and_free(a, info, p, mc, f_txt, f_idc, f_clear_idc);
+        dumped++;
     };
 
     rbtree_deinit(m->PC_infos);
-    
+
     const char *idc_footer="}\n";
     fputs (idc_footer, f_idc);
     fputs (idc_footer, f_clear_idc);
@@ -575,12 +566,16 @@ void cc_dump_and_free(module *m) // for module m
     fclose (f_txt);
     fclose (f_idc);
     fclose (f_clear_idc);
+
+    L ("(cc) saved to %s.(idc/txt/idc_clear): %d PCs\n", module_name, dumped);
+
     strbuf_deinit (&sb_filename_txt);
     strbuf_deinit (&sb_filename_idc);
     strbuf_deinit (&sb_filename_clear_idc);
     MC_Flush (mc);
     MC_MemoryCache_dtor (mc, true);
-    //L ("%s() end\n", __func__);
+    if (cc_c_debug)
+        L ("%s() end\n", __func__);
 };
 
 static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCache *mc, PC_info *info)
@@ -622,21 +617,24 @@ static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCach
 
     info->op_t[i]=val->t;
 
+    if (val->t==
 #ifdef _WIN64
-    if (val->t==V_QWORD)
+            V_QWORD
 #else
-        if (val->t==V_DWORD)
+            V_DWORD
 #endif
-        {
-            strbuf sb=STRBUF_INIT;
-            if (MC_get_any_string (mc, get_as_REG(val), &sb)) // unicode string too
-                rbtree_insert(op->ptr_to_string_set, (void*)strbuf_detach(&sb, NULL), NULL);
-        };
+       )
+    {
+        strbuf sb=STRBUF_INIT;
+        if (MC_get_any_string (mc, get_as_REG(val), &sb)) // unicode string too
+            set_add_string_or_free (op->ptr_to_string_set, strbuf_detach(&sb, NULL));
+    };
 };
 
 static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, Da* da, CONTEXT *ctx, MemoryCache *mc)
 {
-    L ("%s(comment=\"%s\") begin\n", __func__, comment->buf);
+    if (cc_c_debug)
+        L ("%s(comment=\"%s\") begin\n", __func__, comment->buf);
     address PC=CONTEXT_get_PC(ctx);
 
     // find entry in PC_infos
@@ -655,6 +653,9 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
         info->comment=DSTRDUP(comment->buf, "char*");
     info->executed++;
 
+    if (info->da==NULL)
+        info->da=Da_copy (da);
+
     // TODO: add flags
 
     for (unsigned i=0; i<6; i++)
@@ -665,7 +666,10 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
                 address adr;
                 s_Value val;
                 if (Da_op_get_value_of_op (da->_op[i], &adr, ctx, mc, __FILE__, __LINE__, &val))
+                {
                     save_info_about_op (PC, i, &val, mc, info);
+                    assert (info->op_t[i]!=V_INVALID);
+                };
             }
             else
             {
@@ -687,14 +691,18 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
                 save_info_about_op (PC, i, &val, mc, info);
             };
         };
-    L ("%s() end\n", __func__);
+    if (cc_c_debug)
+        L ("%s() end\n", __func__);
 };
 
 void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 {
     //printf ("sizeof(ins_reported_as_unhandled)/sizeof(bool)=%d\n", sizeof(ins_reported_as_unhandled)/sizeof(bool));
     //printf ("I_MAX_INS=%d\n", I_MAX_INS);
-    L ("%s() begin\n", __func__);
+    if (cc_c_debug)
+        L ("%s() begin\n", __func__);
+
+    assert(da);
     assert (sizeof(ins_reported_as_unhandled)/sizeof(bool) > I_MAX_INS);
 
     strbuf comment=STRBUF_INIT;
@@ -706,6 +714,7 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
     save_info_about_PC(m, &comment, to_notice, da, ctx, mc);
 
     strbuf_deinit(&comment);
-    L ("%s() end\n", __func__);
+    if (cc_c_debug)
+        L ("%s() end\n", __func__);
 };
 
