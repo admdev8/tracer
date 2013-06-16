@@ -209,11 +209,11 @@ static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address
 
     strbuf_addf (&sb, "%sRDBMS\\ADMIN\\%s.sym", ORACLE_HOME.buf, m->filename_without_ext);
 
-    L ("Looking for %s\n", sb.buf);
+    //L ("Looking for %s\n", sb.buf);
 
     if (file_exist(sb.buf))
     {
-        L ("Found %s\n", sb.buf);
+        //L ("Found %s\n", sb.buf);
 
         int err=get_symbols_from_ORACLE_SYM (sb.buf, img_base, info->size, info->timestamp, true, 
                 (void (*)(address,  char *, void *))add_symbol, (void*)&params, oracle_version);

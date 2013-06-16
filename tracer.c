@@ -465,6 +465,8 @@ int main(int argc, char *argv[])
 
     strbuf_deinit(&ORACLE_HOME);
 
+    L_deinit();
+
     dump_unfreed_blocks();
     return 0;
 };

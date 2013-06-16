@@ -13,6 +13,7 @@
 #include "set.h"
 
 #define IDA_MAX_COMMENT_SIZE 1023
+#define STRING_LEN 4
 
 // big enough to hold all instructions till I_MAX_INS
 static bool ins_reported_as_unhandled[512]={ false };
@@ -25,7 +26,9 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
 
     address PC=CONTEXT_get_PC(ctx);
 
-    assert(da);
+    if (da==NULL)
+        return 0; // wasn't disassembled: do nothing
+
     if (Da_ins_is_FPU(da))
         return 0; // do nothing (yet)
 
@@ -490,16 +493,22 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
     process_get_sym(p, a, false, &sb_sym);
     strbuf_addf (&sb_txt, "0x" PRI_ADR_HEX " (%s), e=%8I64d [", a, sb_sym.buf, info->executed);
     strbuf_deinit(&sb_sym);
-    Da_ToString(info->da, &sb_txt); // add disasmed
+
+    if (info->da)
+        Da_ToString(info->da, &sb_txt); // add disasmed
+    else
+        strbuf_addstr (&sb_txt, "not disasmed");
+
     strbuf_addstr (&sb_txt, "] ");
     if (info->comment)
         strbuf_addf (&sb_common, "%s ", info->comment);
     // add all info
-    for (unsigned j=0; j<6; j++)
-    {
-        if (cc_dump_op_and_free (info->da, info, j, &sb_common, a))
-            strbuf_addc (&sb_common, ' ');
-    };
+    if (info->da)
+        for (unsigned j=0; j<6; j++)
+        {
+            if (cc_dump_op_and_free (info->da, info, j, &sb_common, a))
+                strbuf_addc (&sb_common, ' ');
+        };
     // TODO: flags?
     fputs (sb_txt.buf, f_txt);
     fputs (sb_common.buf, f_txt);
@@ -508,6 +517,7 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
     fprintf (f_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffdfdf);\n", a);
     strbuf tmp=STRBUF_INIT;
     strbuf_cvt_to_C_string(sb_common.buf, &tmp, false);
+    strbuf_trim_string_with_comment (&tmp, IDA_MAX_COMMENT_SIZE, " <too long part of comment skipped>");
     fprintf (f_idc, "\tMakeComm (0x" PRI_ADR_HEX ", \"%s\");\n", a, tmp.buf);
     strbuf_deinit(&tmp);
     fprintf (f_clear_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffffff);\n", a);
@@ -627,7 +637,11 @@ static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCach
     {
         strbuf sb=STRBUF_INIT;
         if (MC_get_any_string (mc, get_as_REG(val), &sb)) // unicode string too
-            set_add_string_or_free (op->ptr_to_string_set, strbuf_detach(&sb, NULL));
+        {
+            if (sb.strlen>1+1+STRING_LEN)
+                set_add_string_or_free (op->ptr_to_string_set, strbuf_detach(&sb, NULL));
+        };
+        strbuf_deinit(&sb);
     };
 };
 
@@ -649,11 +663,11 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
         rbtree_insert(m->PC_infos, (void*)PC, info);
     };
 
-    if (comment->strlen>0)
+    if (comment->strlen>0 && info->comment==NULL)
         info->comment=DSTRDUP(comment->buf, "char*");
     info->executed++;
 
-    if (info->da==NULL)
+    if (info->da==NULL && da)
         info->da=Da_copy (da);
 
     // TODO: add flags
@@ -702,7 +716,6 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
     if (cc_c_debug)
         L ("%s() begin\n", __func__);
 
-    assert(da);
     assert (sizeof(ins_reported_as_unhandled)/sizeof(bool) > I_MAX_INS);
 
     strbuf comment=STRBUF_INIT;
@@ -711,6 +724,8 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
     unsigned to_notice=what_to_notice(p, da, &comment, ctx, mc);
 
     module *m=find_module_for_address (p, PC);
+    if (da==NULL)
+        strbuf_addstr (&comment, "instruction wasn't disassembled");
     save_info_about_PC(m, &comment, to_notice, da, ctx, mc);
 
     strbuf_deinit(&comment);

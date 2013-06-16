@@ -448,27 +448,24 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
            t->tracing_CALLs_executed--;
            */
         // handle all here
+
+        Da* da=MC_disas(PC, mc);
+
+        //Da_DumpString (&cur_fds, da);
+        //die("");
+
+        if (da==NULL)
         {
-            Da* da=MC_disas(PC, mc);
+            strbuf sb=STRBUF_INIT;
+            process_get_sym(p, PC, true, &sb);
 
-            //Da_DumpString (&cur_fds, da);
-            //die("");
-
-            if (da)
-            {
-                if (bpf->cc)
-                    handle_cc(da, p, t, ctx, mc);
-                Da_free(da);
-            }
-            else
-            {
-                strbuf sb=STRBUF_INIT;
-                process_get_sym(p, PC, true, &sb);
-
-                L ("%s() disassemble failed for PC=%s (0x" PRI_ADR_HEX ")\n", __func__, sb.buf, PC);
-                strbuf_deinit (&sb);
-            };
+            L_once ("%s() disassemble failed for PC=%s (0x" PRI_ADR_HEX ")\n", __func__, sb.buf, PC);
+            strbuf_deinit (&sb);
         };
+
+        if (bpf->cc)
+            handle_cc(da, p, t, ctx, mc);
+        Da_free(da);
 
     } while (emulated);
 
