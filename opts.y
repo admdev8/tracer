@@ -15,6 +15,7 @@
 #include "BP.h"
 #include "BPF.h"
 #include "BPX.h"
+#include "BPM.h"
 #include "bp_address.h"
 
 BP* breakpoints[4]={ NULL, NULL, NULL, NULL }; // 0..3 - DR0-3

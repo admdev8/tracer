@@ -17,6 +17,7 @@
 #include "stuff.h"
 #include "BPF.h"
 #include "BPX.h"
+#include "BPM.h"
 #include "x86.h"
 #include "utils.h"
 #include "bp_address.h"
@@ -43,6 +44,9 @@ void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
             break;
         case BP_type_BPX:
             handle_BPX(p, t, bp_no, ctx, mc);
+            break;
+        case BP_type_BPM:
+            handle_BPM(p, t, bp_no, ctx, mc);
             break;
         default:
             assert(0);

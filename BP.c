@@ -9,31 +9,7 @@
 #include "bp_address.h"
 #include "BPF.h"
 #include "BPX.h"
-
-BPM *create_BPM(unsigned width, enum BPM_type t)
-{
-    BPM *rt=DCALLOC (BPM, 1, "BPM");
-
-    rt->width=width;
-    rt->t=t;
-
-    return rt;
-};
-
-void dump_BPM(BPM *bpm)
-{
-    printf ("BPM. width=%d, ", bpm->width);
-    if (bpm->t==BPM_type_RW)
-        printf ("type=RW");
-    else
-        printf ("type=W");
-    printf ("\n");
-};
-
-void BPM_free(BPM *o)
-{
-    DFREE (o);
-};
+#include "BPM.h"
 
 void BP_free(BP* b)
 {

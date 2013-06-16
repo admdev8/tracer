@@ -6,6 +6,7 @@
 #include "process.h"
 #include "thread.h"
 #include "BP.h"
+#include "BPM.h"
 #include "bp_address.h"
 #include "opts.h"
 #include "bitfields.h"
@@ -24,9 +25,10 @@ void dump_TID_if_need(process *p, thread *t)
        L ("TID=%d|", t->TID);
 };
 
-// temporary here!
+// temporary in this file!
 void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
 {
+    assert (bp->a->resolved);
     if (utils_c_debug)
     {
         strbuf sb=STRBUF_INIT;
@@ -38,9 +40,7 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
     if (bp->t==BP_type_BPF || bp->t==BP_type_BPX)
         CONTEXT_setDRx_and_DR7 (ctx, DRx_no, bp->a->abs_address);
     else if (bp->t==BP_type_BPM)
-    {
-        assert (!"not implemented");
-    }
+        BPM_set_or_update_DRx_breakpoint(bp->u.bpm, bp->a->abs_address, DRx_no, ctx);
     else
     {
         assert(0);
