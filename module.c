@@ -348,7 +348,7 @@ symbol* module_sym_exist_at (module *m, address a)
 };
 
 // may return module.dll!symbol+0x1234
-void module_get_sym (module *m, address a, bool add_module_name, strbuf *out)
+void module_get_sym (module *m, address a, bool add_module_name, bool add_offset, strbuf *out)
 {
     assert (address_in_module (m, a));
 
@@ -370,7 +370,8 @@ void module_get_sym (module *m, address a, bool add_module_name, strbuf *out)
     else
     {
         strbuf_addstr (out, prev_v->name);
-        strbuf_addf (out, "+0x%x", a-prev_k);
+        if (add_offset)
+            strbuf_addf (out, "+0x%x", a-prev_k);
     };
 };
 
@@ -404,5 +405,21 @@ bool module_adr_in_executable_section (module *m, address a)
         return false;
     return IS_SET (s->Characteristics, IMAGE_SCN_CNT_CODE) ||
         IS_SET (s->Characteristics, IMAGE_SCN_MEM_EXECUTE);
+};
+
+address get_module_end(module *m)
+{
+    return m->base + m->size;
+};
+
+address module_get_next_sym_address_after (module *m, address a)
+{
+    address rt=0;
+    void *tmp;
+    tmp=rbtree_lookup2(m->symbols, (void*)a, NULL, NULL, (void**)&rt, NULL); 
+    assert (tmp && "module_get_next_sym_address_after(): address should be symbol start!");
+    //printf ("%s(a=0x" PRI_ADR_HEX ") rt=0x" PRI_ADR_HEX "\n", __func__, a, rt);
+    //printf ("(module %s, tmp=0x%p)\n", get_module_name(m), tmp);
+    return rt;
 };
 

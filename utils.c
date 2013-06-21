@@ -49,6 +49,20 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
         L ("%s() end\n", __func__);
 };
 
+void set_or_update_DRx_for_thread(thread *t, BP *bp, unsigned DRx_no)
+{
+    CONTEXT ctx;
+    ctx.ContextFlags = CONTEXT_ALL;
+    DWORD rt;
+    rt=GetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);      
+
+    if (utils_c_debug)
+        L ("%s() going to call set_or_update_DRx_breakpoint for TID %d\n", __func__, t->TID);
+    set_or_update_DRx_breakpoint(bp, &ctx, DRx_no);
+
+    rt=SetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
+};
+
 void set_or_update_all_DRx_breakpoints(process *p)
 {
     if (utils_c_debug)
@@ -87,14 +101,7 @@ void set_or_update_all_DRx_breakpoints(process *p)
         for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
         {
             thread *t=(thread*)(_t->value);
-            CONTEXT ctx;
-            ctx.ContextFlags = CONTEXT_ALL;
-            DWORD rt;
-            rt=GetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);      
-
-            set_or_update_DRx_breakpoint(bp, &ctx, DRx_no);
-
-            rt=SetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
+            set_or_update_DRx_for_thread (t, bp, DRx_no);
         };
     };
     if (utils_c_debug)

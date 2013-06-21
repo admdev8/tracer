@@ -30,7 +30,8 @@ void process_free (process *p);
 process *find_process(DWORD PID);
 module *find_module_for_address (process *p, address a);
 symbol *process_sym_exist_at (process *p, address a);
-void process_get_sym (process *p, address a, bool add_module_name, strbuf *out);
+void process_get_sym (process *p, address a, bool add_module_name, bool add_offset, strbuf *out);
 bool adr_in_executable_section(process *p, address a);
+address process_get_next_sym_address_after (process *p, address a);
 
 

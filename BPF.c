@@ -251,7 +251,7 @@ static void dump_object_info_if_needed(BPF *bpf, MemoryCache *mc, CONTEXT *ctx)
 
 static void is_it_known_function (const char *fn_name, BPF* bpf)
 {
-    L ("%s(fn_name=%s)\n", __func__, fn_name);
+    //L ("%s(fn_name=%s)\n", __func__, fn_name);
 
     // demangler should be here!
     if (strstr(fn_name, "?information@QMessageBox@@SAHPEAVQWidget@@AEBVQString@@1111HH@Z"))
@@ -263,7 +263,7 @@ static void is_it_known_function (const char *fn_name, BPF* bpf)
         bpf->arg_types[6]=bpf->arg_types[7]=TY_INT;
         bpf->ret_type=bpf->this_type=TY_UNINTERESTING;
         bpf->known_function=Fuzzy_True;
-        L ("%s() - True\n", __func__);
+        //L ("%s() - True\n", __func__);
         return;
     };
 
@@ -271,11 +271,45 @@ static void is_it_known_function (const char *fn_name, BPF* bpf)
     {
         bpf->this_type=TY_QSTRING;
         bpf->known_function=Fuzzy_True;
-        L ("%s() - True\n", __func__);
+        //L ("%s() - True\n", __func__);
         return;
     };
     bpf->known_function=Fuzzy_False;
-    L ("%s() - False\n", __func__);
+    //L ("%s() - False\n", __func__);
+};
+
+// return - should this call skipped?
+static bool handle_when_called_from_func(process *p, thread *t, BPF *bpf, bool got_ret_adr)
+{
+    assert (bpf->when_called_from_func);
+
+    if (bpf->when_called_from_func->resolved==false || got_ret_adr==false)
+        return true;
+
+    if (bpf->when_called_from_func_next_func_adr_present==false)
+    {
+        // be sure (once), we work with symbol start
+        if (process_sym_exist_at (p, bpf->when_called_from_func->abs_address)==NULL)
+            die ("The address set in when_called_from_func should be symbol start!\n");
+
+        address a=process_get_next_sym_address_after (p, bpf->when_called_from_func->abs_address);
+        if (a)
+        {
+            bpf->when_called_from_func_next_func_adr=a;
+            //L ("(case 1) bpf->when_called_from_func_next_func_adr=0x" PRI_ADR_HEX "\n", bpf->when_called_from_func_next_func_adr);
+        }
+        else
+        {
+            bpf->when_called_from_func_next_func_adr=get_module_end(find_module_for_address (p, bpf->when_called_from_func->abs_address));
+            //L ("(case 2) bpf->when_called_from_func_next_func_adr=0x" PRI_ADR_HEX "\n", bpf->when_called_from_func_next_func_adr);
+        };
+        bpf->when_called_from_func_next_func_adr_present=true;
+    };
+
+    if (t->ret_adr>=bpf->when_called_from_func->abs_address && t->ret_adr<bpf->when_called_from_func_next_func_adr)
+        return false;
+
+    return true;
 };
 
 static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
@@ -288,17 +322,24 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
     bool got_ret_adr=MC_ReadREG(mc, CONTEXT_get_SP(ctx), &t->ret_adr);
     bool rt;
 
+    if (bpf->when_called_from_func && handle_when_called_from_func(p, t, bpf, got_ret_adr))
+    {
+        rt=false;
+        goto exit;
+    };
+
     if (got_ret_adr)
-        process_get_sym (p, t->ret_adr, true, &sb);
+        process_get_sym (p, t->ret_adr, true, true, &sb);
     else    
         L ("Cannot read a register at SP, so, BPF return will not be handled\n");
 
     if (bpf->known_function==Fuzzy_Undefined)
     {
         strbuf sb_symbol_name=STRBUF_INIT;
-        //process_get_sym (p, bp_a->abs_address, false /* do not add module name*/, &sb_symbol_name);
-        //is_it_known_function(sb_symbol_name.buf, bpf); // FIXME: all symbols at $bp_a->abs_address$ should be enumerated!
+        
+        // FIXME: all symbols at $bp_a->abs_address$ should be enumerated!
         is_it_known_function(sb_address.buf, bpf);
+
         if (bpf->known_function==Fuzzy_True)
             L ("This is known (to us) function\n");
         strbuf_deinit(&sb_symbol_name);
@@ -342,7 +383,7 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
     }
     else
         rt=false;
-
+exit:
     strbuf_deinit(&sb);
     strbuf_deinit(&sb_address);
     return rt;
@@ -398,7 +439,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
     {
         PC=CONTEXT_get_PC(ctx);
         strbuf sb=STRBUF_INIT;
-        process_get_sym(p, PC, true, &sb);
+        process_get_sym(p, PC, true, true, &sb);
 
         L ("%s() PC=%s (0x%x)\n", __func__, sb.buf, PC);
         strbuf_deinit (&sb);
@@ -457,7 +498,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
         if (da==NULL)
         {
             strbuf sb=STRBUF_INIT;
-            process_get_sym(p, PC, true, &sb);
+            process_get_sym(p, PC, true, true, &sb);
 
             L_once ("%s() disassemble failed for PC=%s (0x" PRI_ADR_HEX ")\n", __func__, sb.buf, PC);
             strbuf_deinit (&sb);
@@ -484,7 +525,8 @@ void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
     {
         case BPF_state_default:
             if (handle_begin(p, t, bp, bp_no, ctx, mc)==false)
-                goto handle_finish_and_switch_to_default; // got no return address or function to be skipped, exit
+                // got no return address or function to be skipped or when_called_from_func isn't we need - exit
+                goto switch_to_default;
 
             if (bpf->trace)
             {
@@ -538,6 +580,7 @@ call_handle_tracing_etc:
 
 handle_finish_and_switch_to_default:
     handle_finish(p, t, bp, bp_no, ctx, mc);
+switch_to_default:
     *state=BPF_state_default;
 
 exit:

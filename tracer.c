@@ -424,6 +424,8 @@ int main(int argc, char *argv[])
         L ("DRx_breakpoints[%d]=0x%p\n", i, breakpoints[i]);
 #endif
 
+    EnableDebugPrivilege (TRUE);
+
     debug_or_attach();
     processes=rbtree_create(true, "processes", compare_tetrabytes);
    
@@ -435,9 +437,6 @@ int main(int argc, char *argv[])
     };
     signal(SIGINT, &signal_handler);
     
-    if (EnableDebugPrivilege (TRUE)==FALSE)
-        die_GetLastError ("EnableDebugPrivilege() failed\n");
-   
     DebugActiveProcessStop_ptr=(BOOL (WINAPI *)(DWORD))(GetProcAddress (LoadLibrary ("kernel32.dll"), "DebugActiveProcessStop"));
     if (DebugActiveProcessStop_ptr==NULL)
         L ("DebugActiveProcessStop() was not found in your kernel32.dll. Detach wouldn't be possible.\n");

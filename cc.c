@@ -129,7 +129,7 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
 
                 strbuf_addstr (comments, "op1=");
                 if (Da_op_get_value_of_op (da->_op[0], &adr, ctx, mc, __FILE__, __LINE__, &val))
-                    process_get_sym (p, get_as_REG (&val), true, comments);
+                    process_get_sym (p, get_as_REG (&val), true, true, comments);
                 else
                     strbuf_addstr (comments, "<can't get value of op1 here>");
                 strbuf_addstr (comments, " ");
@@ -355,7 +355,7 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
                 if (ins_reported_as_unhandled[da->ins_code]==false)
                 {
                     strbuf sb=STRBUF_INIT;
-                    process_get_sym (p, PC, true, &sb);
+                    process_get_sym (p, PC, true, true, &sb);
                     L ("(cc) WARNING: instruction %s (at least at %s) not handled\n", Da_ins_code_ToString(da), sb.buf);
                     strbuf_deinit(&sb);
                     ins_reported_as_unhandled[da->ins_code]=true;
@@ -490,7 +490,7 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
         FILE *f_txt, FILE *f_idc, FILE* f_clear_idc)
 {
     strbuf sb_txt=STRBUF_INIT, sb_common=STRBUF_INIT, sb_sym=STRBUF_INIT;
-    process_get_sym(p, a, false, &sb_sym);
+    process_get_sym(p, a, false, true, &sb_sym);
     strbuf_addf (&sb_txt, "0x" PRI_ADR_HEX " (%s), e=%8I64d [", a, sb_sym.buf, info->executed);
     strbuf_deinit(&sb_sym);
 

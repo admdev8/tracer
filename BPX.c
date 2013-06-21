@@ -6,6 +6,7 @@
 #include "thread.h"
 #include "opts.h"
 #include "utils.h"
+#include "X86_register_helpers.h"
 
 void BPX_option_free(BPX_option *o)
 {
@@ -119,6 +120,14 @@ static void handle_BPX_option (process *p, thread *t, CONTEXT *ctx, MemoryCache 
             break;
 
         case BPX_option_SET:
+            assert (o->a==NULL); // only reg allowed (yet)
+            s_Value val;
+            X86_register_get_value(o->reg, ctx, &val); // so to create s_Value with right type. FIXME!
+            val.u.v=o->size_or_value;
+            X86_register_set_value(o->reg, ctx, &val);
+            L ("Set %s register to 0x" PRI_REG_HEX "\n", X86_register_ToString(o->reg), o->size_or_value);
+            break;
+
         case BPX_option_COPY:
             assert (!"not implemented");
             break;
@@ -164,6 +173,7 @@ static void handle_BPX_skipping_first_instruction(BP *bp, process *p, thread *t,
     // set DRx back
     set_or_update_DRx_breakpoint(bp, ctx, DRx_no);
     t->tracing=false;
+    clear_TF (ctx);
     if (bpx_c_debug)
         L ("%s() end\n", __func__);
 };

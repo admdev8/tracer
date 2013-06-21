@@ -70,7 +70,7 @@ static void dump_stack_not_using_EBP (process *p, thread *t, CONTEXT *ctx, Memor
             if (adr_in_executable_section(p, r))
             {
                 strbuf sb=STRBUF_INIT;
-                process_get_sym (p, r, true, &sb);
+                process_get_sym (p, r, true, true, &sb);
                 L ("(SP+0x%x) return address=0x" PRI_ADR_HEX " (%s)\n", a-SP_at_start, r, sb.buf);
                 strbuf_deinit(&sb);
             };
@@ -110,7 +110,7 @@ static void dump_stack_EBP_frame (process *p, thread *t, CONTEXT * ctx, MemoryCa
             break;
 
         strbuf_reinit(&sb, 0);
-        process_get_sym (p, ret_adr, true, &sb);
+        process_get_sym (p, ret_adr, true, true, &sb);
 
         L ("return address=0x" PRI_ADR_HEX " (%s)\n", ret_adr, sb.buf);
 

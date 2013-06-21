@@ -40,11 +40,14 @@ typedef struct _BPF
     double rt_probability;
     unsigned args, dump_args, pause;
     bp_address *when_called_from_address, *when_called_from_func;
-    // params filled by is_it_known_function
+    // variables filled by is_it_known_function
     TrueFalseUndefined known_function;
     unsigned args_n;
     function_type ret_type, this_type;
     function_type *arg_types;
+    // variables filled if when_called_from_func
+    bool when_called_from_func_next_func_adr_present;
+    address when_called_from_func_next_func_adr;
 } BPF;
 
 void BPF_free(BPF*);

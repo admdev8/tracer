@@ -145,7 +145,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
         case EXCEPTION_SINGLE_STEP:
             {
                 strbuf tmp=STRBUF_INIT;
-                process_get_sym (p, adr, true, &tmp);
+                process_get_sym (p, adr, true, true, &tmp);
                 CONTEXT ctx;
                 ctx.ContextFlags = CONTEXT_ALL;
                 DWORD tmpd;
@@ -172,7 +172,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
         case EXCEPTION_BREAKPOINT:
             {
                 strbuf tmp=STRBUF_INIT;
-                process_get_sym (p, adr, true, &tmp);
+                process_get_sym (p, adr, true, true, &tmp);
 
                 if (cycle_c_debug);
                 L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
@@ -200,7 +200,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
             {
                 strbuf sb_sym=STRBUF_INIT;
                 address a=(address)de->u.Exception.ExceptionRecord.ExceptionAddress;
-                process_get_sym(p, a, true, &sb_sym);
+                process_get_sym(p, a, true, true, &sb_sym);
                 L ("EXCEPTION_ACCESS_VIOLATION at %s (0x" PRI_ADR_HEX ") ExceptionInformation[0]=%d\n",
                         sb_sym.buf,
                         a,
@@ -216,7 +216,8 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
 
             break;
         default:
-            L ("unknown ExceptionCode: %ld\n", er->ExceptionCode);
+            if (cycle_c_debug)
+                L ("unknown ExceptionCode: %ld (0x%08X)\n", er->ExceptionCode, er->ExceptionCode);
             break;
     };
     return rt;
@@ -254,7 +255,7 @@ void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     rbtree_insert(processes, (void*)PID, p);
 
     p->executable_module=add_module(p, (address)i->lpBaseOfImage, p->file_handle);
-    //L ("(name=%s)\n", p->executable_module->filename);
+    L ("PID=%d|New process %s\n", PID, get_module_name (p->executable_module));
 
     MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
 
@@ -283,6 +284,7 @@ void handle_CREATE_THREAD_DEBUG_EVENT (DEBUG_EVENT *de)
         L ("CREATE_THREAD_DEBUG_EVENT\n");
 
     add_thread (p, de->dwThreadId, i->hThread, (address)i->lpStartAddress);
+    set_or_update_all_DRx_breakpoints(p); // overkill...
 };
 
 void handle_LOAD_DLL_DEBUG_EVENT (DEBUG_EVENT *de)
@@ -335,8 +337,8 @@ void handle_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     DWORD PID=de->dwProcessId;
     process *p=find_process(PID);
 
-    if (cycle_c_debug)
-        L ("EXIT_PROCESS_DEBUG_EVENT. ExitCode=%d (0x%x)\n", i->dwExitCode, i->dwExitCode);
+    L ("PID=%d|Process %s exited. ExitCode=%d (0x%x)\n", PID, get_module_name(p->executable_module), 
+            i->dwExitCode, i->dwExitCode);
 
     process_free (p);
     rbtree_delete (processes, (void*)PID);
