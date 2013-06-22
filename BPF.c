@@ -482,13 +482,6 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
                 return 3;
             };
         };
-        /*
-           if (ins==I_CALL)
-           t->tracing_CALLs_executed++;
-           if (ins==I_RETN)
-           t->tracing_CALLs_executed--;
-           */
-        // handle all here
 
         Da* da=MC_disas(PC, mc);
 
@@ -502,10 +495,31 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
 
             L_once ("%s() disassemble failed for PC=%s (0x" PRI_ADR_HEX ")\n", __func__, sb.buf, PC);
             strbuf_deinit (&sb);
+        }
+
+        if (da && da->ins_code==I_CALL)
+        {
+            if (t->tracing_CALLs_executed+1 >= limit_trace_nestedness)
+            {
+                // this call is to be skipped!
+                L ("t->tracing_CALLs_executed=%d, limit_trace_nestedness=%d, skipping this CALL!\n",
+                        t->tracing_CALLs_executed, limit_trace_nestedness);
+                address new_adr=CONTEXT_get_PC(ctx) + da->len;
+                CONTEXT_setDRx_and_DR7 (ctx, bp_no, new_adr);
+                if (bpf->cc)                            // redundant
+                    handle_cc(da, p, t, ctx, mc, true); // redundant
+                Da_free(da);
+                return 3;
+            }
+            else
+                t->tracing_CALLs_executed++;
         };
 
+        if (da && da->ins_code==I_RETN && t->tracing_CALLs_executed>0)
+            t->tracing_CALLs_executed--;
+
         if (bpf->cc)
-            handle_cc(da, p, t, ctx, mc);
+            handle_cc(da, p, t, ctx, mc, false);
         Da_free(da);
 
     } while (emulated);

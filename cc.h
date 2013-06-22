@@ -67,4 +67,5 @@ typedef struct _PC_info
 } PC_info;
 
 void cc_dump_and_free(module *m); // for module m
-void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc);
+void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, bool CALL_to_be_skipped);
+

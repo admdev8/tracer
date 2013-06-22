@@ -709,7 +709,7 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
         L ("%s() end\n", __func__);
 };
 
-void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
+void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, bool CALL_to_be_skipped)
 {
     //printf ("sizeof(ins_reported_as_unhandled)/sizeof(bool)=%d\n", sizeof(ins_reported_as_unhandled)/sizeof(bool));
     //printf ("I_MAX_INS=%d\n", I_MAX_INS);
@@ -726,6 +726,14 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
     module *m=find_module_for_address (p, PC);
     if (da==NULL)
         strbuf_addstr (&comment, "instruction wasn't disassembled");
+
+    if (CALL_to_be_skipped)
+    {
+        assert (da && da->ins_code==I_CALL);
+        strbuf_addf (&comment, "tracing nested maximum level (%d) reached, skipping this CALL",
+                limit_trace_nestedness);
+    };
+
     save_info_about_PC(m, &comment, to_notice, da, ctx, mc);
 
     strbuf_deinit(&comment);

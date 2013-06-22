@@ -58,6 +58,10 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
         yylval.num=strtol(yytext+19, NULL, 10); 
         return DMALLOC_BREAK_ON;
     }
+<INITIAL>--limit-trace-nestedness:{DEC} {
+        yylval.num=strtol(yytext+25, NULL, 10); 
+        return LIMIT_TRACE_NESTEDNESS;
+    }
 <INITIAL>--module-c-debug   { return MODULE_C_DEBUG; }
 <INITIAL>--cycle-c-debug    { return CYCLE_C_DEBUG; }
 <INITIAL>--bpx-c-debug      { return BPX_C_DEBUG; }
