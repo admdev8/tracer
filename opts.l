@@ -67,6 +67,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>--bpx-c-debug      { return BPX_C_DEBUG; }
 <INITIAL>--utils-c-debug    { return UTILS_C_DEBUG; }
 <INITIAL>--cc-c-debug       { return CC_C_DEBUG; }
+<INITIAL>--BPF-c-debug      { return BPF_C_DEBUG; }
 
 <STATE_ADDRESS_OR_REG>eax   { yylval.x86reg=R_EAX; yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>ebx   { yylval.x86reg=R_EBX; yy_pop_state(); return REGISTER; }
@@ -162,9 +163,13 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <STATE_BPM>rw                            { return RW; }
 
 <STATE_BPX>"dump("  { yy_push_state(STATE_ADDRESS_OR_REG); return DUMP_OP; }
-<STATE_BPX>"set("  { yy_push_state(STATE_ADDRESS_OR_REG); return SET_OP; }
+<STATE_BPX>"set("   { yy_push_state(STATE_ADDRESS_OR_REG); return SET_OP; }
 <STATE_BPX>"copy("  { yy_push_state(STATE_ADDRESS_OR_REG); return COPY_OP; }
-<STATE_BPX>")"     { return CP; }
+<STATE_BPF>"\*"               { return ASTERISK; }
+<STATE_BPF>"\+"               { return PLUS; }
+<STATE_BPF>"="               { return EQ; }
+<STATE_BPF>"("               { return OP; }
+<STATE_BPX,STATE_BPF>")"     { return CP; }
 <STATE_BPX>"\""     { return QUOTE; }
 <STATE_BPX>"\\x"[[:xdigit:]][[:xdigit:]]   { yylval.num = strtol(yytext+2, NULL, 16); return CSTRING_BYTE ; }
 <STATE_BPX>[^\\\"]                         { yylval.num = yytext[0]; return CSTRING_BYTE ; }
@@ -182,6 +187,16 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <STATE_BPF>dump_args:                { return BPF_DUMP_ARGS; }
 <STATE_BPF>when_called_from_address: { yy_push_state(STATE_ADDRESS); return WHEN_CALLED_FROM_ADDRESS; }
 <STATE_BPF>when_called_from_func:    { yy_push_state(STATE_ADDRESS); return WHEN_CALLED_FROM_FUNC; }
+<STATE_BPF>set                       { return SET; }
+<STATE_BPF>(byte|word|dword|dword64) { 
+    if (stricmp(yytext, "byte")==0) { yylval.num=1; return BYTE_WORD_DWORD_DWORD64; };
+    if (stricmp(yytext, "word")==0) { yylval.num=2; return BYTE_WORD_DWORD_DWORD64; };
+    if (stricmp(yytext, "dword")==0) { yylval.num=4; return BYTE_WORD_DWORD_DWORD64; };
+    if (stricmp(yytext, "dword64")==0) { yylval.num=8; return BYTE_WORD_DWORD_DWORD64; };
+    }
+<STATE_BPF>arg_                     { return ARG_; }
+
+
 <STATE_BPM,STATE_BPX,STATE_BPF,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BYTEMASK,STATE_BYTEMASK_SKIP_OPT,STATE_READ_ADR_OFS>.                        { fprintf (stderr, "Unrecognized symbol: '%c'\n", yytext[0]); return yytext[0]; }
 %%
 

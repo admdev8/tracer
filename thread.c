@@ -14,12 +14,16 @@ void thread_free (thread *t)
 {
     if (thread_c_debug)
         L ("%s() begin\n", __func__);
-    DFREE (t->BPF_args);
-    if (t->BPF_buffers_at_start)
+    for (unsigned b=0; b<4; b++)
     {
-        for (unsigned i=0; i<t->BPF_buffers_at_start_cnt; i++)
-            DFREE(t->BPF_buffers_at_start[i]);
-        DFREE(t->BPF_buffers_at_start);
+        DFREE (t->_BPF_args[b]);
+
+        if (t->_BPF_buffers_at_start[b])
+        {
+            for (unsigned i=0; i<t->_BPF_buffers_at_start_cnt[b]; i++)
+                DFREE(t->_BPF_buffers_at_start[b][i]);
+            DFREE(t->_BPF_buffers_at_start[b]);
+        };
     };
     DFREE (t);
 };

@@ -18,6 +18,9 @@
 #include "BPM.h"
 #include "bp_address.h"
 
+// ,set(byte,*arg_0=0x123)
+// ,set(byte,*(arg_0+0x150)=0x123)
+
 BP* breakpoints[4]={ NULL, NULL, NULL, NULL }; // 0..3 - DR0-3
 dlist* addresses_to_be_resolved=NULL; // list of opaque objects-pointers to bp_address structures. don't free them.
 char* load_filename=NULL;
@@ -32,7 +35,7 @@ bp_address* current_BPF_address; // filled while parsing
 bool run_thread_b=true;
 bool dump_all_symbols=false;
 regex_t *dump_all_symbols_re=NULL;
-bool module_c_debug=false, cycle_c_debug=false, bpx_c_debug=false, utils_c_debug=false, cc_c_debug=false;
+bool module_c_debug=false, cycle_c_debug=false, bpx_c_debug=false, utils_c_debug=false, cc_c_debug=false, BPF_c_debug=false;
 int limit_trace_nestedness=1; // default value
 
 // from opts.l:
@@ -75,14 +78,15 @@ void add_new_address_to_be_resolved (bp_address *a)
     X86_register x86reg;
 }
 
-%token COMMA PLUS TWO_POINTS R_SQUARE_BRACKET SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
-%token W RW _EOF DUMP_OP SET_OP COPY_OP CP QUOTE PERCENT BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
+%token COMMA PLUS ASTERISK EQ OP TWO_POINTS R_SQUARE_BRACKET SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
+%token W RW _EOF DUMP_OP SET SET_OP COPY_OP CP QUOTE PERCENT BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DONT_RUN_THREAD_B
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
-%token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC
-%token MODULE_C_DEBUG CYCLE_C_DEBUG BPX_C_DEBUG UTILS_C_DEBUG CC_C_DEBUG
+%token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_
+%token MODULE_C_DEBUG CYCLE_C_DEBUG BPX_C_DEBUG UTILS_C_DEBUG CC_C_DEBUG BPF_C_DEBUG
 %token <num> DEC_NUMBER HEX_NUMBER HEX_BYTE
 %token <num> BPM_width CSTRING_BYTE ATTACH_PID DMALLOC_BREAK_ON LIMIT_TRACE_NESTEDNESS
+%token <num> BYTE_WORD_DWORD_DWORD64
 %token <x86reg> REGISTER
 %token <dbl> FLOAT_NUMBER
 %token <str> FILENAME_EXCLAMATION SYMBOL_NAME_RE SYMBOL_NAME_RE_PLUS LOAD_FILENAME ATTACH_FILENAME CMDLINE
@@ -90,7 +94,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 
 %type <a> address
 %type <o> bytemask bytemask_element cstring
-%type <num> skip_n DEC_OR_HEX abs_address
+%type <num> skip_n DEC_OR_HEX abs_address ARGUMENT_N
 %type <bp> bpm bpx
 %type <bpx_option> BPX_option
 %type <dbl> float_or_perc
@@ -120,6 +124,7 @@ tracer_option
  | BPX_C_DEBUG             { bpx_c_debug=true; }
  | UTILS_C_DEBUG           { utils_c_debug=true; }
  | CC_C_DEBUG              { cc_c_debug=true; }
+ | BPF_C_DEBUG             { BPF_c_debug=true; }
  | DMALLOC_BREAK_ON        { dmalloc_break_at_seq_n ($1); }
  | LIMIT_TRACE_NESTEDNESS  { limit_trace_nestedness=$1; }
  | ALL_SYMBOLS     { 
@@ -220,6 +225,18 @@ BPF_option
  | BPF_DUMP_ARGS DEC_OR_HEX         { current_BPF->dump_args=$2; }
  | WHEN_CALLED_FROM_ADDRESS address { current_BPF->when_called_from_address=$2; }
  | WHEN_CALLED_FROM_FUNC address    { current_BPF->when_called_from_func=$2; }
+ | SET OP BYTE_WORD_DWORD_DWORD64 COMMA ASTERISK OP ARGUMENT_N PLUS DEC_OR_HEX CP EQ DEC_OR_HEX CP {
+    // FIXME: there should be support of multiple SET options!
+    current_BPF->set_present=true;
+    current_BPF->set_width=$3;
+    current_BPF->set_arg_n=$7;
+    current_BPF->set_ofs=$9;
+    current_BPF->set_val=$12;
+ }
+ ;
+
+ARGUMENT_N
+ : ARG_ DEC_NUMBER { $$=$2; }
  ;
 
 float_or_perc

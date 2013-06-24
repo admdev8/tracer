@@ -15,11 +15,10 @@ typedef struct _thread
 
     // BPF-related info
     BPF_state BPF_states[4]; // for each DRx breakpoint. 0..3 - DR0-3
-    REG* BPF_args;
-    address ret_adr; // sometimes present
-    BYTE** BPF_buffers_at_start; // need for dump_args option
-    unsigned BPF_buffers_at_start_cnt;
-
+    REG* _BPF_args[4];
+    address _ret_adr[4]; // sometimes present
+    BYTE** _BPF_buffers_at_start[4]; // need for dump_args option
+    unsigned _BPF_buffers_at_start_cnt[4];
     
     // BPX-related info
     BPX_state BPX_states[4]; // for each DRx breakpoint. 0..3 - DR0-3

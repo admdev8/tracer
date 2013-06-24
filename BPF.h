@@ -48,6 +48,11 @@ typedef struct _BPF
     // variables filled if when_called_from_func
     bool when_called_from_func_next_func_adr_present;
     address when_called_from_func_next_func_adr;
+    // ... if SET option is present
+    bool set_present;
+    unsigned set_width;
+    unsigned set_arg_n;
+    REG set_ofs, set_val;
 } BPF;
 
 void BPF_free(BPF*);

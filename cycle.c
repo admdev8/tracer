@@ -52,7 +52,7 @@ void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
             assert(0);
     };
     if (cycle_c_debug)
-        L ("%s() end\n", __func__);
+        L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
 };
 
 bool handle_OEP_breakpoint (process *p, thread *t)
@@ -116,8 +116,10 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 
     if (IS_SET(ctx->Dr6, FLAG_DR6_BS))
     {
-        assert (t->tracing && "BS flag in DR6, but no breakpoint in tracing mode");
-        handle_BP(p, t, t->tracing_bp, ctx, mc);
+        if (t->tracing==false)
+            L ("[!] BS flag in DR6, but no breakpoint in tracing mode\n");
+        else
+            handle_BP(p, t, t->tracing_bp, ctx, mc);
     };
 
     if (ctx->Dr6==0) // sometimes observed while tracing
@@ -127,7 +129,7 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
     };
 
     if (cycle_c_debug)
-        L ("%s() end\n", __func__);
+        L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
 };
 
 DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
@@ -156,8 +158,8 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 {
                     L ("EXCEPTION_SINGLE_STEP %s (0x" PRI_ADR_HEX ") DR6=", tmp.buf, adr); 
                     dump_DR6 (&cur_fds, ctx.Dr6); L(" (0x%x)\n", ctx.Dr6);
-                    L ("DR7="); dump_DR7 (&cur_fds, ctx.Dr7); L("\n");
-                    L ("DR0=0x" PRI_REG_HEX "\n", ctx.Dr0);
+                    //L ("DR7="); dump_DR7 (&cur_fds, ctx.Dr7); L("\n");
+                    //L ("DR0=0x" PRI_REG_HEX "\n", ctx.Dr0);
                 };
 
                 handle_Bx (p, t, &ctx, mc);

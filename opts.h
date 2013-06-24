@@ -39,6 +39,7 @@ extern bool cycle_c_debug;
 extern bool bpx_c_debug;
 extern bool utils_c_debug;
 extern bool cc_c_debug;
+extern bool BPF_c_debug;
 extern int limit_trace_nestedness;
 
 // you may want to disable thread B while debugging in gdb, because thread B's input

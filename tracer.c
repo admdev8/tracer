@@ -394,6 +394,10 @@ void free_trace_skip_options(trace_skip_element *i)
     DFREE(i);
 };
 
+#ifdef _DEBUG
+int opts_test(); // opts_test.c
+#endif
+
 int main(int argc, char *argv[])
 {
     printf ("tracer 0.7 %s by Dennis Yurichev\n", 
@@ -406,6 +410,14 @@ int main(int argc, char *argv[])
 
     if (argc==1)
         help_and_exit();
+
+#ifdef _DEBUG
+    if (argc==2 && stricmp (argv[1], "opts_test")==0)
+    {
+        opts_test();
+        return 0;
+    };
+#endif
 
     for (int i=1; i<argc; i++)
         parse_option(argv[i]);
