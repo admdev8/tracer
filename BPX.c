@@ -159,8 +159,8 @@ static void handle_BPX_default_state(BP *bp, process *p, thread *t, int DRx_no, 
     // remove DRx
     CONTEXT_clear_bp_in_DR7 (ctx, DRx_no);
     // turn on TF
-    set_TF (ctx);
-    t->tracing=true; t->tracing_bp=DRx_no;
+    //set_TF (ctx);
+    t->BP_dynamic_info[DRx_no].tracing=true;
     strbuf_deinit(&sb_address);
     if (bpx_c_debug)
         L ("%s() end\n", __func__);
@@ -172,8 +172,8 @@ static void handle_BPX_skipping_first_instruction(BP *bp, process *p, thread *t,
         L ("%s() begin\n", __func__);
     // set DRx back
     set_or_update_DRx_breakpoint(bp, ctx, DRx_no);
-    t->tracing=false;
-    clear_TF (ctx);
+    t->BP_dynamic_info[DRx_no].tracing=false;
+    //clear_TF (ctx);
     if (bpx_c_debug)
         L ("%s() end\n", __func__);
 };
@@ -183,7 +183,7 @@ void handle_BPX(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc
     if (bpx_c_debug)
         L ("%s() begin\n", __func__);
     BP *bp=breakpoints[DRx_no];
-    BPX_state* state=&t->BPX_states[DRx_no];
+    BPX_state* state=&t->BP_dynamic_info[DRx_no].BPX_states;
    
     if (*state==BPX_state_default)
     {

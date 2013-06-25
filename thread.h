@@ -7,26 +7,31 @@
 
 typedef struct _process process;
 
+typedef struct _BP_thread_specific_dynamic_info
+{
+    // BPF-related info
+    BPF_state BPF_states; // for each DRx breakpoint. 0..3 - DR0-3
+    REG* BPF_args;
+    address ret_adr; // sometimes present
+    BYTE** BPF_buffers_at_start; // need for dump_args option
+    unsigned BPF_buffers_at_start_cnt;
+    unsigned tracing_CALLs_executed; // 0 is default, 1 after first CALL, etc
+    
+    // BPX-related info
+    BPX_state BPX_states; // for each DRx breakpoint. 0..3 - DR0-3
+
+    // BPX and BPF related info
+    bool tracing;
+
+} BP_thread_specific_dynamic_info;
+
 typedef struct _thread
 {
     DWORD TID;
     HANDLE THDL;
     address start;
 
-    // BPF-related info
-    BPF_state BPF_states[4]; // for each DRx breakpoint. 0..3 - DR0-3
-    REG* _BPF_args[4];
-    address _ret_adr[4]; // sometimes present
-    BYTE** _BPF_buffers_at_start[4]; // need for dump_args option
-    unsigned _BPF_buffers_at_start_cnt[4];
-    
-    // BPX-related info
-    BPX_state BPX_states[4]; // for each DRx breakpoint. 0..3 - DR0-3
-
-    // BPX and BPF related info
-    bool tracing;
-    unsigned tracing_bp; // in case of tracing
-    unsigned tracing_CALLs_executed; // 0 is default, 1 after first CALL, etc
+    BP_thread_specific_dynamic_info BP_dynamic_info[4];
 } thread;
 
 void thread_free (thread *t);

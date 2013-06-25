@@ -16,13 +16,15 @@ void thread_free (thread *t)
         L ("%s() begin\n", __func__);
     for (unsigned b=0; b<4; b++)
     {
-        DFREE (t->_BPF_args[b]);
+        BP_thread_specific_dynamic_info *bp=&t->BP_dynamic_info[b];
+        
+        DFREE (bp->BPF_args);
 
-        if (t->_BPF_buffers_at_start[b])
+        if (bp->BPF_buffers_at_start)
         {
-            for (unsigned i=0; i<t->_BPF_buffers_at_start_cnt[b]; i++)
-                DFREE(t->_BPF_buffers_at_start[b][i]);
-            DFREE(t->_BPF_buffers_at_start[b]);
+            for (unsigned i=0; i<bp->BPF_buffers_at_start_cnt; i++)
+                DFREE(bp->BPF_buffers_at_start[i]);
+            DFREE(bp->BPF_buffers_at_start);
         };
     };
     DFREE (t);

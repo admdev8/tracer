@@ -90,6 +90,22 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 {
     if (cycle_c_debug)
         L ("%s() begin\n", __func__);
+
+    if (IS_SET(ctx->Dr6, FLAG_DR6_BS) || ctx->Dr6==0) // DR6=0 sometimes observed while tracing
+    {
+        bool tracing_handled=false;
+
+        for (unsigned b=0; b<4; b++)
+            if (t->BP_dynamic_info[b].tracing)
+            {
+                handle_BP(p, t, b, ctx, mc);
+                tracing_handled=true;
+            }
+
+        if (tracing_handled==false && cycle_c_debug)
+            L ("[!] BS flag in DR6 (or DR6 is zero), but no breakpoint in tracing mode\n");
+    };
+
     if (IS_SET(ctx->Dr6, FLAG_DR6_B0))
     {
         assert (breakpoints[0]);
@@ -113,20 +129,15 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
         assert (breakpoints[3]);
         handle_BP(p, t, 3, ctx, mc);
     };
-
-    if (IS_SET(ctx->Dr6, FLAG_DR6_BS))
-    {
-        if (t->tracing==false)
-            L ("[!] BS flag in DR6, but no breakpoint in tracing mode\n");
-        else
-            handle_BP(p, t, t->tracing_bp, ctx, mc);
-    };
-
-    if (ctx->Dr6==0) // sometimes observed while tracing
-    {
-        assert (t->tracing && "DR6 is zero, but no breakpoint in tracing mode");
-        handle_BP(p, t, t->tracing_bp, ctx, mc);
-    };
+    
+    clear_TF(ctx);
+    for (unsigned b=0; b<4; b++)
+        if (t->BP_dynamic_info[b].tracing)
+        {
+            if (cycle_c_debug)
+                L ("%s() setting TF because %d is in tracing mode\n", __func__, b);
+            set_TF(ctx);
+        };
 
     if (cycle_c_debug)
         L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");

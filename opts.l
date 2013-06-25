@@ -64,7 +64,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
     }
 <INITIAL>--module-c-debug   { return MODULE_C_DEBUG; }
 <INITIAL>--cycle-c-debug    { return CYCLE_C_DEBUG; }
-<INITIAL>--bpx-c-debug      { return BPX_C_DEBUG; }
+<INITIAL>--BPX-c-debug      { return BPX_C_DEBUG; }
 <INITIAL>--utils-c-debug    { return UTILS_C_DEBUG; }
 <INITIAL>--cc-c-debug       { return CC_C_DEBUG; }
 <INITIAL>--BPF-c-debug      { return BPF_C_DEBUG; }

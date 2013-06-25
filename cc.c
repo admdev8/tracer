@@ -609,8 +609,9 @@ static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCach
             break;
 #endif
         default:
-            assert(!"unknown val->t type");
-            break;
+            // unknown val->t type
+            // wont' save (yet!)
+            return;
     };
 
     if (info->op[i]==NULL)
@@ -682,7 +683,7 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
                 if (Da_op_get_value_of_op (da->_op[i], &adr, ctx, mc, __FILE__, __LINE__, &val))
                 {
                     save_info_about_op (PC, i, &val, mc, info);
-                    assert (info->op_t[i]!=V_INVALID);
+                    //assert (info->op_t[i]!=V_INVALID);
                 };
             }
             else
