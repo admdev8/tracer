@@ -32,8 +32,21 @@ void add_symbol (address a, char *name, add_symbol_params *params)
     module *m=params->m;
     rbtree *symtbl=m->symbols;
 
-    if ((dump_all_symbols_re && (regexec (dump_all_symbols_re, name, 0, NULL, 0)==0)) ||
-            (dump_all_symbols_re==NULL && dump_all_symbols))
+    bool dump_symbol=false;
+    if (dump_all_symbols_re)
+    {
+        strbuf sb=STRBUF_INIT;
+        strbuf_addstr (&sb, get_module_name(m));
+        strbuf_addc (&sb, '!');
+        strbuf_addstr (&sb, name);
+
+        if (regexec (dump_all_symbols_re, sb.buf, 0, NULL, 0)==0)
+            dump_symbol=true;
+
+        strbuf_deinit (&sb);
+    };
+
+    if (dump_symbol || (dump_all_symbols_re==NULL && dump_all_symbols))
     {
         dump_PID_if_need(params->p);
         L("New symbol. Module=[%s], address=[0x" PRI_ADR_HEX "], name=[%s]\n", get_module_name(m), a, name);

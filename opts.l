@@ -33,6 +33,7 @@ HEX            0[Xx][[:xdigit:]]+
 FILENAME       [[:alnum:]_]+\.[[:alnum:]_]+
 SYMBOL_NAME    [[:alpha:]][[:alnum:]_@]*
 REGEXP         [[:alnum:]_@.|*^$?\\]*
+REGEXP_EXCL    [[:alnum:]_@.|*^$?\\!]*
 SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 
 %x STATE_BPM STATE_BPX STATE_BPF
@@ -61,7 +62,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>--child       { return CHILD; }
 <INITIAL>-s            { return DASH_S; }
 <INITIAL>-dont-run-thread-b { return DONT_RUN_THREAD_B; }
-<INITIAL>--allsymbols:{REGEXP}  {
+<INITIAL>--allsymbols:{REGEXP_EXCL}  {
         yylval.str=DSTRDUP(yytext+strlen("--allsymbols:"), "yytext"); 
         //printf ("--allsymbols: [%s]\n", yylval.str);
         return ALL_SYMBOLS; 
