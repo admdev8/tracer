@@ -18,7 +18,7 @@ tracer.exe -l:rar.exe "-c:a archive.rar *"
 
 \TT{-a:<fname.exe|PID>}: \IFRU{присоединение к запущенному процессу по его имени или PID}{attach to running process by file name or PID number}.
 
-\IFRU{Процесс с таким именем должен быть загружен. Если процессов с таким имененем загружено несколько, tracer присоеденяется ко всем сразу одновременно.}{Process with that filename should be already loaded. If there're several processes with the same name, gt will attach to all of them simultaneously.}
+\IFRU{Процесс с таким именем должен быть загружен. Если процессов с таким имененем загружено несколько, tracer присоеденяется ко всем сразу одновременно.}{Process with that filename should be already loaded. If there're several processes with the same name, tracer will attach to all of them simultaneously.}
 
 \TT{--loading}: \IFRU{вывод имен файлов и базовых адресов для всех загружаемых модулей (обычно, это DLL-файлы).}{dump all module filenames and base addresses while loading (it's DLL files often).}
 
@@ -50,7 +50,7 @@ New symbol. Module=[msvcrt.dll], address=[0x756C3D68], name=[wprintf]
 \IFRU{Мы увидим}{We will see}:
 
 \begin{lstlisting}
-23B4 (0) KERNEL32.dll!WriteFile (7, "hello to gt!\r\n", 0x0000000E, 0x0017E3A4, 0) (called from 0x7317754E (MSVCR90.dll!_lseeki64+0x56b))
+23B4 (0) KERNEL32.dll!WriteFile (7, "hello to tracer!\r\n", 0x0000000E, 0x0017E3A4, 0) (called from 0x7317754E (MSVCR90.dll!_lseeki64+0x56b))
 Call stack of thread 0x23B4
 return address=731778D8 (MSVCR90.dll!_write+0x9f)
 return address=7313FB4A (MSVCR90.dll!_fdopen+0x1c0)
@@ -98,6 +98,6 @@ tracer.exe @filename
 \IFRU{Опция \TT{@} также может использоваться с любыми другими опциями:}{\TT{@} option can be used along with any other options:}
 
 \begin{lstlisting}
-tracer.exe -l:filename.exe @additional\_options @even\_more\_options
+tracer.exe -l:filename.exe @additional_options @even_more_options
 \end{lstlisting}
 

@@ -159,7 +159,7 @@ tracer.exe/tracer64.exe -a:oracle.exe bpf=oracle.exe!_?rpisplu,args:8 bpf=oracle
 \begin{lstlisting}
 TID=1140|(2) oracle.exe!opiprs (0x13f029d0, "select 1 from obj$ where name='DBA_QUEUE_SCHEDULES'", 0x34, 0x10ae7f50, 0x840082, 0xd9f7a10) (called from 0x6ba3bf (oracle.exe!__PGOSF423_kksParseChildCursor+0x2dd))
 TID=1140|(2) oracle.exe!opiprs -> 0
-TID=1140|(2) oracle.exe!opiprs (0x13f029d0, "select 1 from sys.aq$_subscriber_table where rownum < 2 and subscriber_id %lt;%gt; 0 and table_objno %lt;%gt; 0", 0x64, 0x10ad5de8, 0, 0x13f007e0) (called from 0x6ba3bf (oracle.exe!__PGOSF423_kksParseChildCursor+0x2dd))
+TID=1140|(2) oracle.exe!opiprs (0x13f029d0, "select 1 from sys.aq$_subscriber_table where rownum < 2 and subscriber_id <> 0 and table_objno <> 0", 0x64, 0x10ad5de8, 0, 0x13f007e0) (called from 0x6ba3bf (oracle.exe!__PGOSF423_kksParseChildCursor+0x2dd))
 TID=1140|(2) oracle.exe!opiprs -> 0
 TID=1140|(0) oracle.exe!rpisplu (3, 0, 0, 0, 0, 0x14430ac0, 0, 0) (called from 0x250b33c (oracle.exe!kqdGetCursor+0x106))
 TID=1140|(0) oracle.exe!rpisplu -> 0

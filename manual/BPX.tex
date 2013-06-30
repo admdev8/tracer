@@ -14,13 +14,13 @@
 
 \IFRU{\TT{DUMP(ADDRESS|REGISTER|SYMBOL[+OFFSET],SIZE)}: вывод содержимого памяти. Определить адрес в памяти можно в виде шестнадцатиричного значения или в виде \TT{REGISTER+OFFSET}. \TT{SIZE} --- это размер дампа.}{\TT{DUMP(ADDRESS|REGISTER[+OFFSET],SIZE)}: dump contents of memory. Define memory address by hexadecimal address or in form \TT{REGISTER+OFFSET}. \TT{SIZE} is memory dump size.}
 
-\IFRU{Если перед адресом или регистром поставить символ \TT{*}, то gt вначале прочитает DWORD (или QWORD в x64-версии), примет его за адрес и выдаст дамп по нему. Например: \TT{dump(*ebx,0x100)} --- взять адрес из ячейки памяти на которую указывает регистр ebx и выдать дамп размером 0x100 байт.}{If an asteriks symbol \TT{*} is set before address or register value, then tracer will read DWORD (or QWORD in x64 version), treat it as address and dump a buffer here. For example: \TT{dump(*ebx,0x100)} --- take address on a memory cell EBX register pointing on and dump buffer with size of 0x100 bytes.}
+\IFRU{Если перед адресом или регистром поставить символ \TT{*}, то tracer вначале прочитает DWORD (или QWORD в x64-версии), примет его за адрес и выдаст дамп по нему. Например: \TT{dump(*ebx,0x100)} --- взять адрес из ячейки памяти на которую указывает регистр ebx и выдать дамп размером 0x100 байт.}{If an asteriks symbol \TT{*} is set before address or register value, then tracer will read DWORD (or QWORD in x64 version), treat it as address and dump a buffer here. For example: \TT{dump(*ebx,0x100)} --- take address on a memory cell EBX register pointing on and dump buffer with size of 0x100 bytes.}
 
 \IFRU{\TT{COPY(ADDRESS|REGISTER|SYMBOL[+OFFSET],C-string)}: скопировать Си-строку по указанному адресу. Си-строка может быть как ASCII-строкой, так и содержать последовательности \TT{\textbackslash{}xXX}, где \TT{XX} --- шестнадцатиричное число. Например: \TT{COPY(EAX,a\textbackslash{}x34\textbackslash{}x56)} --- скопирует три байта 'a', 0x34, и 0x56 по адресу который содержится в EAX.}{\TT{COPY(ADDRESS|REGISTER|SYMBOL[+OFFSET],C-string)}: copy C-string to that address. C-string can be just ASCII-string, but also may contain such sequences like \TT{\textbackslash{}xXX}, where \TT{XX} --- hexadecimal number. For example: \TT{COPY(EAX,a\textbackslash{}x34\textbackslash{}x56)} --- copy 3 bytes 'a', 0x34, and 0x56 to address from EAX register.}
 
 \IFRU{\TT{SET (REGISTER,VALUE)}: записать значение в регистр. EIP/RIP, регистры FPU ST0..ST7 и флаги (PF, SF, AF, ZF, OF, CF, DF) можно модифицировать. Значение трактуется как десятичное число или как число с плавающей запятой, если только не указан префикс 0x.}{\TT{SET (REGISTER,VALUE)}: set register to value. EIP/RIP, FPU registers ST0..ST7 and flags (PF, SF, AF, ZF, OF, CF, DF) are allowed. Value will be treated as decimal or floating point, unless prefix 0x is present.}
 
-\IFRU{Замечание: tracer не модифицирует tag word register в FPU, также он не модифицирует регистр TOP, таким образом, если какой-то регистр FPU маркирован как "пустой" и tracer запишет туда какое-то значение, он останется маркированным как "пустой".}{Note: tracer never modify FPU tag word register as well as not modify TOP register, so, if some FPU register was marked as "empty" and gt set some value there, it will remain marked "empty".}
+\IFRU{Замечание: tracer не модифицирует tag word register в FPU, также он не модифицирует регистр TOP, таким образом, если какой-то регистр FPU маркирован как "пустой" и tracer запишет туда какое-то значение, он останется маркированным как "пустой".}{Note: tracer never modify FPU tag word register as well as not modify TOP register, so, if some FPU register was marked as "empty" and tracer set some value there, it will remain marked "empty".}
 
 \IFRU{Изменение значения регистра EIP/RIP иными словами это передача исполнения в другое место. Это удобно для того чтобы пропускать некоторые куски кода.}{Changing EIP/RIP is on other words is code flow altering. This is useful to bypass some code pieces.}
 
@@ -109,7 +109,7 @@ Dumping memory at EDX
 tracer64.exe -l:flags.exe bpx=0x140001014,set(zf,1)
 \end{lstlisting}
 
-\IFRU{Замечание: момент когда tracer меняет состояние регистров это момент \IT{перед} тем как текущая инструкция будет исполнена. Изменение флагов \IT{перед} инструкциями TEST или CMP бессмысленно.}{Note: the moment when gt can change registers state is the moment \IT{before} current instruction is executed. Changing flags \IT{before} TEST or CMP instructions is useless.}
+\IFRU{Замечание: момент когда tracer меняет состояние регистров это момент \IT{перед} тем как текущая инструкция будет исполнена. Изменение флагов \IT{перед} инструкциями TEST или CMP бессмысленно.}{Note: the moment when tracer can change registers state is the moment \IT{before} current instruction is executed. Changing flags \IT{before} TEST or CMP instructions is useless.}
 
 \subsection{\IFRU{Шутка в Microsoft Excel}{Microsoft Excel practical joke}}
 
