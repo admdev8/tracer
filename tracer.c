@@ -487,7 +487,10 @@ int main(int argc, char *argv[])
     DFREE(attach_filename);
     DFREE(load_command_line);
     if (dump_all_symbols_re)
+    {
         regfree (dump_all_symbols_re);
+        DFREE(dump_all_symbols_re);
+    };
 
     strbuf_deinit(&ORACLE_HOME);
 
