@@ -217,6 +217,91 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
     return info;
 };
 
+static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_base, PE_info *info, const char* short_PE_name)
+{
+#ifdef _WIN64
+    const char *MAP_get_all_PAT="^ ([0-9A-F]{8}):([0-9A-F]{16})       (.*)$";
+#else
+    const char *MAP_get_all_PAT="^ ([0-9A-F]{4}):([0-9A-F]{8})       (.*)$";
+#endif // _WIN64
+    regex_t PAT_compiled;
+    int rc;
+    // TODO: func: regcomp_or_die_with_error
+    if ((rc=regcomp(&PAT_compiled, MAP_get_all_PAT, REG_EXTENDED | REG_ICASE | REG_NEWLINE))!=0)
+    {
+        char buffer[100];   
+        regerror(rc, &PAT_compiled, buffer, 100);
+        die("failed regcomp() for pattern '%s' (%s)", MAP_get_all_PAT, buffer);
+    };
+    
+    add_symbol_params params={ p, m, SYM_TYPE_MAP };
+    
+    strbuf sb_mapfilename=STRBUF_INIT;
+    strbuf_addf (&sb_mapfilename, "%s.map", m->filename_without_ext);
+    if (file_exist(sb_mapfilename.buf)==false)
+        goto exit;
+
+    char buf[1024];
+    unsigned loaded=0;
+
+    FILE *f=fopen (sb_mapfilename.buf, "rb");
+    if (f==NULL)
+    {
+        L ("Unable to open file [%s]\n", sb_mapfilename.buf);
+        goto exit;
+    };
+
+    while (fgets(buf, sizeof(buf), f))
+    {
+        if (buf[strlen(buf)-1]==0x0a)
+            buf[strlen(buf)-1]=0;
+
+        if (buf[strlen(buf)-1]==0x0d)
+            buf[strlen(buf)-1]=0;
+
+        DWORD sect=0;
+        address addr=0;
+        regmatch_t matches[3];
+
+        if (regexec(&PAT_compiled, buf, 4, matches, 0)==0)
+        {
+            char *v1=strdup_range (buf, matches[1].rm_so, matches[1].rm_eo);
+            char *v2=strdup_range (buf, matches[2].rm_so, matches[2].rm_eo);
+            char *v3=strdup_range (buf, matches[3].rm_so, matches[3].rm_eo);
+            unsigned t_i;
+
+
+            t_i=sscanf (v1, "%X", &sect); // DWORD
+            assert (t_i==1);
+            sect--;
+            t_i=sscanf (v2, "%X", &addr); // REG
+            assert (t_i==1);
+            
+            //L ("v1=[%s] v2=[%s] v3=[%s]\n", v1, v2, v3);
+
+            if (sect < m->sections_total)
+            {
+                add_symbol (m->sections[sect].VirtualAddress + img_base + addr, v3, &params);
+                loaded++;
+            }
+            else
+                L ("%s: Symbol %s skipped because section %d is not present in %s\n", 
+                        sb_mapfilename.buf, v3, sect+1, get_module_name(m));
+
+            DFREE (v1); DFREE (v2); DFREE (v3);
+        };
+    };
+
+    fclose (f);
+    
+    if (loaded>0)
+        L ("%d symbols loaded from %s\n", loaded, sb_mapfilename.buf);
+
+exit:
+    regfree (&PAT_compiled);   
+    strbuf_deinit(&sb_mapfilename);
+};
+
 static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address img_base, PE_info *info, const char* short_PE_name)
 {
     strbuf sb=STRBUF_INIT;
@@ -226,21 +311,22 @@ static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address
 
     //L ("Looking for %s\n", sb.buf);
 
-    if (file_exist(sb.buf))
-    {
-        //L ("Found %s\n", sb.buf);
+    if (file_exist(sb.buf)==false)
+        goto exit;
 
-        int err=get_symbols_from_ORACLE_SYM (sb.buf, img_base, info->size, info->timestamp, true, 
-                (void (*)(address,  char *, void *))add_symbol, (void*)&params, oracle_version);
+    //L ("Found %s\n", sb.buf);
 
-        if (err==ORACLE_SYM_IMPORTER_ERROR_FILE_OPENING_ERROR)
-            die ("Can't open %s\n", sb.buf);
-        if (err==ORACLE_SYM_IMPORTER_ERROR_SIGNATURE_MISMATCH)
-            L ("%s: signature mismatch\n", sb.buf);
-        if (err==ORACLE_SYM_IMPORTER_ERROR_PE_FILE_MISMATCH)
-            L ("%s is not related to %s PE file!\n", sb.buf, short_PE_name);
-    };
+    int err=get_symbols_from_ORACLE_SYM (sb.buf, img_base, info->size, info->timestamp, true, 
+            (void (*)(address,  char *, void *))add_symbol, (void*)&params, oracle_version);
 
+    if (err==ORACLE_SYM_IMPORTER_ERROR_FILE_OPENING_ERROR)
+        die ("Can't open %s\n", sb.buf);
+    if (err==ORACLE_SYM_IMPORTER_ERROR_SIGNATURE_MISMATCH)
+        L ("%s: signature mismatch\n", sb.buf);
+    if (err==ORACLE_SYM_IMPORTER_ERROR_PE_FILE_MISMATCH)
+        L ("%s is not related to %s PE file!\n", sb.buf, short_PE_name);
+
+exit:
     strbuf_deinit(&sb);
 };
 
@@ -280,6 +366,9 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
     m->sections_total=info->sections_total;
     m->sections=info->sections;
     info->sections=NULL; // 'tranfer' it to here, so DFREE in PE_info_free() will not free it
+    
+    // this function uses PE sections info!
+    add_symbols_from_MAP_if_exist (p, m, img_base, info, get_module_name(m));
 
     PE_info_free(info);
     strbuf_deinit(&fullpath_filename);
