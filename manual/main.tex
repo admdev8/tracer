@@ -1,0 +1,151 @@
+\documentclass[11pt,a4paper,oneside]{book}
+
+\usepackage{cmap}
+
+\ifdefined\RUSSIAN
+\usepackage[english,russian]{babel}
+\usepackage[T2A]{fontenc}
+\else
+\usepackage[russian,english]{babel}
+\usepackage[T2A]{fontenc}
+\usepackage[default]{sourcesanspro}
+\fi
+
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{ulem}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage{listingsutf8}
+\usepackage[cm]{fullpage}
+\usepackage{color}
+\usepackage{fancyvrb}
+\usepackage{xspace}
+\usepackage{framed}
+\usepackage{ccicons}
+\usepackage{amsmath}
+\usepackage[table]{xcolor}% http://ctan.org/pkg/xcolor
+\usepackage[]{hyperref} % should be last
+
+\definecolor{lstbgcolor}{rgb}{0.94,0.94,0.94}
+\include{macros}
+
+\newcommand{\TITLE}{\IFRU{Tracer: руководство пользователя}
+{Tracer: users' manual}}
+\newcommand{\AUTHOR}{\IFRU{Денис Юричев}{Dennis Yurichev}}
+\newcommand{\EMAIL}{dennis@yurichev.com}
+
+\hypersetup{
+    pdftex,
+    colorlinks=true,
+    allcolors=blue,
+    pdfauthor={\AUTHOR},
+    pdftitle={\TITLE}
+    }
+
+\selectlanguage{english}
+
+\lstset{
+    backgroundcolor=\color{lstbgcolor},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    frame=single,
+    inputencoding=cp1251,
+    columns=fullflexible,keepspaces,
+}
+
+\begin{document}
+
+\VerbatimFootnotes
+
+\frontmatter
+
+\begin{titlepage}
+\begin{center}
+\vspace*{\fill}
+\LARGE \TITLE
+
+\vspace*{\fill}
+
+\large \AUTHOR
+
+\large \TT{<\EMAIL>}
+\vspace*{\fill}
+\vfill
+
+\ccbyncnd
+
+\textcopyright 2013, \AUTHOR. 
+
+\IFRU{Это произведение доступно по лицензии Creative Commons «Attribution-NonCommercial-NoDerivs» 
+(«Атрибуция — Некоммерческое использование — Без производных произведений») 3.0 Непортированная. 
+Чтобы увидеть копию этой лицензии, посетите}
+{This work is licensed under the Creative Commons Attribution-NonCommercial-NoDerivs 3.0 Unported License. 
+To view a copy of this license, visit} \url{http://creativecommons.org/licenses/by-nc-nd/3.0/}.
+
+\IFRU{Дата компиляции этой PDF}{This PDF compilation date}: {\large \today}.
+
+\IFRU{Англоязычная версия текста (а также сам tracer) также доступна по ссылке}{Russian language version of this text (as well as tracer itself) is also accessible at} \url{http://yurichev.com/tracer}
+\end{center}
+\end{titlepage}
+
+\tableofcontents
+\cleardoublepage
+
+\include{preface}
+
+\mainmatter
+
+\include{general_options}
+
+\include{addresses}
+
+\include{BPF}
+
+\include{BPX}
+
+\include{BPM}
+
+\chapter{\IFRU{Взаимодействие во время работы}{Interacting while running}}
+
+1) \IFRU{Нажмите ESC или Ctrl-C для отсоединения от запущенного процесса.}{Press ESC or Ctrl-C to detach from the running process.}
+
+2) \IFRU{Нажмите пробел чтобы увидеть стеки вызовов для каждого треда и процесса.}{Press SPACE to see current call stacks for each thread of each process.}
+
+\IFRU{Например: присоеденитесь к какой-нибудь запущенной программе с открытым окном с сообщением (Message Box), нажмите пробел и возможно вы увидите, что привело к появлению этого окна.}{For example: attach to some running application with opened Message Box, press SPACE and see what probably caused it.}
+
+\IFRU{Замечание: вывод стека вызовов пока плохо работает в tracer64.}{Note: dump call stack feature is not very well working in tracer64.}
+
+\chapter{\IFRU{Отсоединение от процесса}{Detaching}}
+
+\IFRU{tracer использует функцию DebugActiveProcessStop() для отсоединения от запущенного процесса. Эта функция присутствует во всех современных ОС базирующихся на NT, возможно, кроме Windows NT и Windows 2000. Так что всё что tracer может сделать в этих ОС это убить процесс --- извините!}{tracer uses DebugActiveProcessStop() function to detach from the running process. It is present in all modern NT-based operation systems, probably, except Windows NT and Windows 2000. So all gt can do is just to kill the running process --- sorry!}
+
+\chapter{\IFRU{Некоторые технические заметки}{Some other technical notes}}
+
+\IFRU{Архитектура x86 позволяет использовать до четырех прерываний одновременно. Таким образом, опции \TT{BPF/BPX/BPM} могут комбинироваться в любом порядке до четырех раз.}{x86 architecture allow to use up to 4 breakpoints simultaneously. So, \TT{BPF/BPX/BPM} features can be combined in any order up to 4 times.}
+
+\IFRU{Возможность вывода стека вызовов предпологает что фреймы в стеке "разделены" указателем в регистре EBP:}{Stack dumping feature consider stack frames "divided" with EBP base pointer:}
+
+\IFRU{Смотрите также}{See laos}: \href{http://en.wikibooks.org/wiki/X86_Disassembly/Functions_and_Stack_Frames}{Functions and Stack Frames}
+
+\IFRU{Это означает что любая функция которая не использует эту схему, будет исключена их стека вызовов --- непреднамеренно.}{This means that any function which doesnt use this scheme will be excluded from stack dump --- unintentionally.}
+
+\IFRU{Замечание: эта возможность отсутствует в tracer64.}{Note: this feature absent in tracer64.}
+
+\IFRU{Вся информация выводится в stdout а также записывается в файл tracer.log. Файл создается снова при каждом запуске.}{All information dumped to stdout is also written to gt.log file. This file is created at each start.}
+
+\IFRU{При загрузке или присоеденению к процессу, tracer проверяет все модули: главный исполняемый файл и все файлы DLL загружаемые после. Он извлекает все символы из модуля включая эксплорты DLL. Он также ищует файл FileName.MAP и пытается его парсить. Файл MAP имеет такой же формат как то что делает IDA. tracer также ищет файл FileName.SYM и пытается загрузить символы из него, трактуя его как файл символов из Oracle RDBMS: переменная окружения ORACLE\_HOME должна быть установлена для этого. tracer также ищет файл FileName.PDB (компилируйте вашу программу в MSVC с ключом \TT{/Zi} и вы получите отладочный файл PDB для нее).}{While loading or attaching, gt will inspect all modules: main executable and all DLL files loaded after. It will fetch all present symbols, incuding export entries of DLL files. It will also look for FileName.MAP file and try to parse information from it. MAP file has the same format as that produced by IDA disassembler. gt will also look for FileName.SYM file and try to load symbols from it, treating those as Oracle RDBMS SYM file format: ORACLE\_HOME environment value should be set for this. gt will also look for FileName.PDB file (compile your program in MSVC with \TT{/Zi} option and get debug PDB file for it).}
+
+\IFRU{Если DLL содержит экспорты только по ординалам, т.е., без имен (например, DLL-файлы MFC), имя символа будет получено из ординала в таком формате: \TT{ordinal\_<number>}, например, \TT{ordinal\_12}.}{If DLL contain only exports by ordinals, e.g., without names (MFC DLLs, for example), the name of ordinal will be generated in compliance with \TT{ordinal\_<number>} format, for example, \TT{ordinal\_12}.}
+
+\chapter{\IFRU{Заключение}{Conclusion}}
+
+\IFRU{Эта версия еще не была протестирована как следует. Так что будьте готовы к неожиданным падениям. Я очень рекомендую проводить все эксперименты в виртуальной машине.}{This release is not tested properly yet. So please be prepared for any possible crash. I strongly advice to do all experimentation in virtual machine.}
+
+\IFRU{Если вы нашли ошибку, пожалуйста напишите мне:}{If you find any bug, please drop me a line:} \href{mailto:dennis@conus.info}{dennis@conus.info}. \IFRU{Пришлите также файл tracer.log и/или скриншот того что вывел tracer.}{Please attach tracer.log file and screenshot of the last tracer output.}
+
+\IFRU{Я буду также благодарен любому комментарию или предложению насчет tracer.}{I'll also be thankful for any comments and suggestions related to tracer tool.}
+
+\IFRU{Если вы чувствуете что ваш вклад в код стоит того чтобы быть включенным в мою версию, пожалуйста присылайте ваш патч.}{If you feel your contribution to source code is worth enough, please send me your patch.}
+
+\end{document}

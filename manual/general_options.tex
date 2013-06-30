@@ -1,0 +1,103 @@
+\chapter{\IFRU{Общие опции}{General options}}
+
+\TT{-l:<fname.exe>}: \IFRU{загрузка процесса}{load process}.
+
+\TT{-c:<cmd\_line>}: \IFRU{задание командной строки для загружаемого процесса}{define command line for loading process}.
+
+\forexample{}
+
+\begin{lstlisting}
+tracer.exe -l:bzip2.exe -c:--help
+\end{lstlisting}
+
+\IFRU{Если командная строка содержит пробелы}{If command line contain spaces:}:
+
+\begin{lstlisting}
+tracer.exe -l:rar.exe "-c:a archive.rar *"
+\end{lstlisting}
+
+\TT{-a:<fname.exe|PID>}: \IFRU{присоединение к запущенному процессу по его имени или PID}{attach to running process by file name or PID number}.
+
+\IFRU{Процесс с таким именем должен быть загружен. Если процессов с таким имененем загружено несколько, tracer присоеденяется ко всем сразу одновременно.}{Process with that filename should be already loaded. If there're several processes with the same name, gt will attach to all of them simultaneously.}
+
+\TT{--loading}: \IFRU{вывод имен файлов и базовых адресов для всех загружаемых модулей (обычно, это DLL-файлы).}{dump all module filenames and base addresses while loading (it's DLL files often).}
+
+\TT{--child}: \IFRU{присоеденяться в том числе и к процессам порождаемых главным процессом}{attach to all child processes too}.
+
+\IFRU{Например, вы можете запустить \TT{tracer.exe --child -l:cmd.exe}, откроется консольное окно cmd.exe и tracer будет присоеденятся к каждому процессу запущенному внутри командного интерпретатора.}{For example, you could run \TT{tracer.exe --child -l:cmd.exe}, this will open console cmd.exe window and every process running inside command interpreter will be handled by tracer.}
+
+\TT{--allsymbols[:<regexp>]}: \IFRU{вывод всех символов в процессе загрузки по регулярному выражению}{dump all symbols during load or by regular expression}:
+
+\TT{--allsymbols:somedll.dll!.*} \IFRU{опция может быть использована для вывода всех символов в некоторой DLL}{can be used for dumping all symbols in some DLL}.
+
+\TT{--allsymbols:.*printf} \IFRU{выведет что-то вроде}{will print something like this}:
+
+\begin{lstlisting}
+New symbol. Module=[ntdll.dll], address=[0x77C004BC], name=[_snprintf]
+New symbol. Module=[ntdll.dll], address=[0x77B8E61F], name=[_snwprintf]
+...
+New symbol. Module=[msvcrt.dll], address=[0x75725F37], name=[vswprintf]
+New symbol. Module=[msvcrt.dll], address=[0x75726649], name=[vwprintf]
+New symbol. Module=[msvcrt.dll], address=[0x756C3D68], name=[wprintf]
+\end{lstlisting}
+
+\TT{-s}: \IFRU{вывод стека вызовов перед каждым прерыванием}{dump call stack before each breakpoint}.
+
+\forexample{}
+
+\TT{tracer.exe -l:hello.exe -s bpf=kernel32.dll!WriteFile,args:5}
+
+\IFRU{Мы увидим}{We will see}:
+
+\begin{lstlisting}
+23B4 (0) KERNEL32.dll!WriteFile (7, "hello to gt!\r\n", 0x0000000E, 0x0017E3A4, 0) (called from 0x7317754E (MSVCR90.dll!_lseeki64+0x56b))
+Call stack of thread 0x23B4
+return address=731778D8 (MSVCR90.dll!_write+0x9f)
+return address=7313FB4A (MSVCR90.dll!_fdopen+0x1c0)
+return address=7313F70C (MSVCR90.dll!_flsbuf+0x6e1)
+return address=73141E50 (MSVCR90.dll!printf+0x84)
+return address=0040100E (hello.exe!BASE+0x100e)
+return address=0040116F (hello.exe!BASE+0x116f)
+return address=76FCE4A5 (KERNEL32.dll!BaseThreadInitThunk+0xe)
+return address=77C9CFED (ntdll.dll!RtlCreateUserProcess+0x8c)
+return address=77C9D1FF (ntdll.dll!RtlCreateProcessParameters+0x4e)
+23B4 (0) KERNEL32.dll!WriteFile -> 1
+\end{lstlisting}
+
+\IFRU{Вывод стека вызова очень удобен, например, мы имеем программу показывающую окно с сообщением и перехватывая вызов \TT{USER32.DLL!MessageBoxA} мы можем увидеть путь к этому вызову.}{Stack dump can be very handy, for example, we have a program showing Message Box once and by intercepting \TT{USER32.DLL!MessageBoxA} call we can see a path to this call.}
+
+\IFRU{Возможность вывода стека доступна для всех типов прерываний BPF/BPX/BPM.}{Stack dump feature available for all BPF/BPX/BPM features.}
+
+\IFRU{Замечание: эта возможность пока не очень хорошо работает в x64.}{Note: this feature doesn't working in x64 version very well (yet).}
+
+\TT{-t}: \IFRU{записывать дату и время перед каждой строкой в лог:}{write timestamp at each log line:}
+
+\forexample{}
+
+\begin{lstlisting}
+tracer.exe -l:bzip2.exe bpf=kernel32.dll!writefile,args:4 -t
+\end{lstlisting}
+
+\begin{lstlisting}
+[2009-12-05 04:55:50:747] TID=6356|(0) KERNEL32.dll!WriteFile (0x1b, " --help'.p, type: `pressed data to a terminal.", 9, 0x286c54)
+[2009-12-05 04:55:50:749] TID=6356|(0) KERNEL32.dll!WriteFile -> 1
+\end{lstlisting}
+
+\TT{--help}: \IFRU{помощь.}{print help.}
+
+\TT{-q}: \IFRU{запрет любого вывода в консоль и лог.}{be quiet, no output to console and log file.}
+
+\TT{@}: \IFRU{опция позволяет сохранить все опции в текстовом файле и использовать их многократно:}{option can be used along with any other options:}
+
+\begin{lstlisting}
+tracer.exe @filename
+\end{lstlisting}
+
+\IFRU{Каждая строка файла представляет опцию. Это очень удобно для длинных и/или часто используемых опций, как байтмаски (смотрите ниже).}{Each line in the profile represents an option. This can be handy for lengthy and/or often used options, like bytemasks (see below).}
+
+\IFRU{Опция \TT{@} также может использоваться с любыми другими опциями:}{\TT{@} option can be used along with any other options:}
+
+\begin{lstlisting}
+tracer.exe -l:filename.exe @additional\_options @even\_more\_options
+\end{lstlisting}
+

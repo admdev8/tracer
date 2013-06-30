@@ -1,0 +1,63 @@
+\chapter{\IFRU{BPM: установка прерывания на обращение к ячейке памяти}{BPM: set breakpoint on memory access}}
+
+\IFRU{Архитектура x86 позволяет устанавливать прерывания на обращение к ячейкам памяти.}{x86 architecture allows to set breakpoints on a memory value access.}
+
+\IFRU{Таким образом, если кто-то или что-то модифицирует в памяти какое-то значение, tracer тут же будет об этом знать.}{That is, if someone or something modifies some value, gt will be instantly notified.}
+
+\IFRU{Следует также заметить, что это практично только для глобальных переменных а не локальных (размещаемых в стеке).}{It is also should be noted that these breakpoints only practical for global variables, not local ones (stored in stack).}
+
+\TT{BPMB=<address>,<option>}: \IFRU{установить прерывание на обращение к байту.}{set breakpoint on byte value access.}
+\TT{BPMW=<address>,<option>}: \IFRU{установить прерывание на обращение к 16-битному слову (word).}{set breakpoint on 16-bit word value access.}
+
+\TT{BPMD=<address>,<option>}: \IFRU{установить прерывание на обращение к 32-битному слову (dword).}{set breakpoint on 32-bit dword value access.}
+
+\TT{BPMQ=<address>,<option>}: \IFRU{установить прерывание на обращение к 64-битному слову (qword) (доступно только в tracer64).}{set breakpoint on 62-bit qword value access (available only in tracer64).}
+
+\TT{W}: \IFRU{установить прерывание только на запись в ячейку памяти.}{set breakpoint only on memory value write.}
+
+\TT{RW}: \IFRU{установить прерывание на запись и чтение из ячейки памяти.}{set breakpoint on both memory value read/write.}
+
+\IFRU{Замечание: по какой-то неизвестной причине, архитектура Intel предоставляет только две эти возможности.}{Note: because of some unknown reason, Intel achitecture offers only these two opportunities.}
+
+\section{\IFRU{Примеры}{Examples}}
+
+\subsection{\IFRU{Слежение за обращением к переменным в Oracle RDBMS}{Tracing value access in Oracle RDBMS}}
+
+\IFRU{Давайте попробуем следить за всеми чтениями и записями в глобальную переменную ktsmgd и видеть стек вызовов:}{Let's trace read-write access to ktsmgd global variable and see call stack:}
+
+\begin{lstlisting}
+tracer.exe -a:oracle.exe -s bpmd=oracle.exe!_?ktsmgd_,rw
+\end{lstlisting}
+
+\IFRU{Запустите в консоли SQL*Plus (залогиньтесь перед этим как SYS):}{Run in SQL*Plus console (login as SYS before):}
+
+\begin{lstlisting}
+ALTER SYSTEM SET "_disable_txn_alert"=1;
+\end{lstlisting}
+
+\IFRU{Получим:}{We got:}
+
+\begin{lstlisting}
+TID=2852|(0) oracle.exe!_ktsmgdcb+0x18: some code reading or writting DWORD variable at oracle.exe!_ktsmgd_ (now it contain 0x1)
+Call stack of thread TID=2852
+return address=0x4682f0 (oracle.exe!_kspptval+0x704)
+return address=0x4674b0 (oracle.exe!_kspset0+0x928)
+return address=0x8f23c6 (oracle.exe!_kkyasy+0x3cda)
+return address=0x92ba1d (oracle.exe!_kksExecuteCommand+0x475)
+return address=0x1f75e02 (oracle.exe!_opiexe+0x4bda)
+return address=0x1e98390 (oracle.exe!_kpoal8+0x900)
+return address=0x9df597 (oracle.exe!_opiodr+0x4cb)
+return address=0x6102eb00 (oracommon11.dll!_ttcpip+0xab0)
+return address=0x9de77e (oracle.exe!_opitsk+0x4fe)
+return address=0x1fdf128 (oracle.exe!_opiino+0x430)
+return address=0x9df597 (oracle.exe!_opiodr+0x4cb)
+return address=0x450b1c (oracle.exe!_opidrv+0x32c)
+return address=0x451352 (oracle.exe!_sou2o+0x32)
+return address=0x401197 (oracle.exe!_opimai_real+0x87)
+return address=0x401061 (oracle.exe!_opimai+0x61)
+return address=0x401c55 (oracle.exe!_OracleThreadStart@4+0x301)
+return address=0x77e66063 (KERNEL32.dll!GetModuleFileNameA+0xeb)
+\end{lstlisting}
+
+\IFRU{Читайте больше тут: \url{http://blog.yurichev.com/node/3} о параметре \TT{\_disable\_txn\_alert} и значении переменной \TT{ktsmgd}.}{Visit \url{http://blog.yurichev.com/node/3} for more information about \TT{\_disable\_txn\_alert} parameter and \TT{ktsmgd} value.}
+

@@ -1,0 +1,47 @@
+\chapter{\IFRU{Как в tracer задается адрес}{How address is defined in tracer}}
+
+\IFRU{Имеется три возможности задать адрес прерывания.}{There're 3 ways to define breakpoint address.}
+
+\begin{itemize}
+
+\item \IFRU{Используя шестнадцатиричный адрес}{By hexadecimal address}: \TT{0x00400000}.
+
+\item \IFRU{Используя символ}{By symbol}.
+
+\forexample{} \TT{kernel32.dll!writefile}
+
+\IFRU{Регулярные выражения можно использовать. Например: \TT{.*!printf</i>}: tracer будет искать символ \TT{printf} в каждом загружаемом модуле. Если этот символ имеется в разных модулях, tracer будет использовать только из того модуля, который был загружен раньше всех.}{Regular expressions can be used here. For example: \TT{.*!printf}: tracer will look for \TT{printf} symbol in each loading module. If the same name occurs in different modules, tracer will use only the first occurence.}
+
+\IFRU{Для регулярных выражений используется синтаксис ...?}{...? syntax is used here for regular expressions}.
+
+\IFRU{Смещение также можно использовать. Например: \TT{file.exe!BASE+0x1234} (BASE это предопределенный символ, он равен базовому адресу PE-модуля) либо \TT{file.exe!label+0xa}.}{Offset is allowed here. For example: \TT{file.exe!BASE+0x1234} (base is predefined symbol equals to PE file base) or \TT{file.exe!label+0xa}.}
+
+\item \IFRU{Используя байтмаску}{By bytemask}.
+
+\IFRU{Иногда нужна возможность установить прерывание внутри модуля по шаблону, например такому, какие используются в сигнатурах IDA.}{Sometimes, we would like to define breakpoint inside of an executable by byte pattern, just like IDA signature.}
+
+\forexample{}
+
+\begin{lstlisting}
+tracer.exe -l:cycle.exe bpf=558BEC8B45085068........FF15........83C4085DC3,args:1
+\end{lstlisting}
+
+\IFRU{tracer будет искать этот шаблон во всех исполняемых секциях каждого загружаемого модуля и будет выводить:}{tracer will look for this pattern in each executable section of each loading module and will print:}
+
+\begin{lstlisting}
+===============================================================================
+cycle.exe: searching for bytemask_0 in .text section...
+bytemask_0 is resolved to address 0x00401000 (cycle.exe)
+===============================================================================
+\end{lstlisting}
+
+\IFRU{Две точки вместо двух шестнадцатиричных цифр означают \IT{любой байт}. Это очень удобно для пропуска FIXUP-ов, итд.}{Two dots instead of two hexadecimal digits mean \IT{any byte}. This can be useful for skipping FIXUPs, etc.}
+
+\IFRU{Возможно также указать \TT{[skip:n]} для пропуска нескольких байт внутри байтмаски, например: \TT{55[skip:10]1100} эквивалентно \TT{bpf=55....................1100}.}{It is also possible to mention \TT{[skip:n]} to skip several bytes during bytemask search, for example: \TT{55[skip:10]1100} --- this is equivalent to \TT{bpf=55....................1100}.}
+
+\IFRU{Замечание: обычно, если байтмаской задается функция, то достаточно определить только начало функции.}{Note: if some function is defined by bytemask, only bytes from the beginning of function are enough.}
+
+\IFRU{Замечание: байтмаска может встречаться много раз в одном и том же модуле. tracer предупредит об этом, но будет использовать только первую найденную. Это значит что байтмаска для функции должна задаваться аккуратно.}{Note: bytemask can appear more than once in one module. tracer will warn us on, and use only the first occurence by default. This means that function byte pattern is to be constructed accurately.}
+
+\end{itemize}
+
