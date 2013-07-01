@@ -116,7 +116,7 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
             else
             {
                 L ("Error: Module %s was just loaded, but symbol %s was not found in it!\n", 
-                        module_just_loaded->internal_name, a->symbol);
+                        get_module_name(module_just_loaded), a->symbol);
                 detach();
                 return false; // FIXME: crashing after this
             };

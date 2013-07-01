@@ -61,9 +61,12 @@ BP* create_BP (enum BP_type t, bp_address* a, void* p)
 
 void dump_BP (BP* b)
 {
-    printf ("bp_address=");
-    dump_address (b->a);
-    printf (". ");
+    if (b->a)
+    {
+        printf ("bp_address=");
+        dump_address (b->a);
+        printf (". ");
+    };
 
     switch (b->t)
     {

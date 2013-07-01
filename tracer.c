@@ -480,7 +480,7 @@ int main(int argc, char *argv[])
     free_trace_skip_options(trace_skip_options);
 
     dlist_free(addresses_to_be_resolved, NULL);
-    for (unsigned i=0; i<5; i++)
+    for (unsigned i=0; i<4; i++)
         BP_free(breakpoints[i]);
 
     DFREE(load_filename);
