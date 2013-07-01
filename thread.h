@@ -27,7 +27,7 @@ typedef struct _BP_thread_specific_dynamic_info
     // BPF-related info
     BPF_state BPF_states; // for each DRx breakpoint. 0..3 - DR0-3
     REG* BPF_args;
-    address ret_adr; // sometimes present
+    address ret_adr, SP_at_ret_adr; // sometimes present
     BYTE** BPF_buffers_at_start; // need for dump_args option
     unsigned BPF_buffers_at_start_cnt;
     unsigned tracing_CALLs_executed; // 0 is default, 1 after first CALL, etc
