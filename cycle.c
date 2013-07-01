@@ -241,7 +241,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 DWORD tmpd;
                 tmpd=GetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);           
 
-                dump_CONTEXT (&cur_fds, &ctx, false, false, false);
+                dump_CONTEXT (&cur_fds, &ctx, false, false);
             };
 
             break;

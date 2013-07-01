@@ -1,7 +1,13 @@
+OUTDIR=$(MSYSTEM)_debug
 CC=gcc
 
-test1_BPF.exe: test1_BPF.c
-	$(CC) $< -std=gnu99  -Xlinker -Map=test1_BPF.map -o $@
+all:    $(OUTDIR) $(OUTDIR)/test1.exe
+
+$(OUTDIR):
+	mkdir $(OUTDIR)
+
+$(OUTDIR)/test1.exe: test1.c
+	$(CC) $< -std=gnu99 -o $@
 
 clean:
-	$(RM) *.exe
+	$(RM) $(OUTDIR)/*.exe

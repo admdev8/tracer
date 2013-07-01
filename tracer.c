@@ -364,9 +364,7 @@ bool load_cfg(const char *fname)
             tmp=DCALLOC(trace_skip_element, 1, "trace_skip_element");
 
             regcomp_or_die(&tmp->re_path, opt1.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
-
             regcomp_or_die(&tmp->re_module, opt2.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
-
             regcomp_or_die(&tmp->re_function, opt3.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
 
             if (strcmp (opt3.buf, ".*")==0)

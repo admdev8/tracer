@@ -126,9 +126,11 @@ static void dump_QString (address a, MemoryCache *mc)
         L ("(object read error)");
 };
 
-// function to be separated
-static void BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type ft)
+// function to be separated?
+// return true if hexadecimal number dumped
+static bool BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type ft)
 {
+    bool rt=false;
     switch (ft)
     {
         case TY_UNKNOWN:
@@ -138,7 +140,10 @@ static void BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type 
                 if (MC_GetString(mc, arg, unicode, &sb))
                     L ("\"%s\"", sb.buf);
                 else
+                {
                     L ("0x" PRI_REG_HEX, arg);
+                    rt=true;
+                };
 
                 strbuf_deinit (&sb);
             };
@@ -163,6 +168,7 @@ static void BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type 
             assert(!"not implemented");
             break;
     };
+    return rt;
 };
 
 static void BPF_dump_args (MemoryCache *mc, REG* args, unsigned args_n, bool unicode, function_type *arg_types)
@@ -453,10 +459,16 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     // do function finish things
     REG accum=CONTEXT_get_Accum (ctx);
 
+    // dump all info in one line:
     dump_PID_if_need(p); dump_TID_if_need(p, t);
     L ("(%d) %s () -> ", bp_no, sb_address.buf);
-    BPF_dump_arg(mc, accum, bpf->unicode, bpf->ret_type);
-    L (" (0x" PRI_REG_HEX ")\n", accum);
+
+    if (BPF_dump_arg(mc, accum, bpf->unicode, bpf->ret_type)==false)
+        L (" (0x" PRI_REG_HEX ")", accum);
+    
+    if (IS_SET(ctx->FloatSave.TagWord, 1)) // ST0 present?
+        L (", ST0=%.1f\n", (double)*(long double*)&ctx->FloatSave.RegisterArea[0]);
+    L ("\n");
 
     if (bpf->dump_args)
         dump_args_diff_if_need(t, mc, bpf->dump_args, bpf->args, di->BPF_args, bp_no);

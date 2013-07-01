@@ -33,6 +33,23 @@
 // big enough to hold all instructions till I_MAX_INS
 static bool ins_reported_as_unhandled[512]={ false };
 
+static int compare_doubles(void* leftp, void* rightp)
+{
+    double left = *(double*)leftp, right = *(double*)rightp;
+    //printf ("%s() left=%f right=%f\n", __func__, left, right);
+    
+    if (left==right)
+        return 0;
+    
+    if (left < right)
+        return -1;
+    
+    if (left > right)
+        return 1;
+
+    return 1; // eh...
+};
+
 unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, MemoryCache *mc)
 {
     if (cc_c_debug)
@@ -44,8 +61,8 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
     if (da==NULL)
         return 0; // wasn't disassembled: do nothing
 
-    if (Da_ins_is_FPU(da))
-        return 0; // do nothing (yet)
+    //if (Da_ins_is_FPU(da))
+    //    return 0; // do nothing (yet)
 
     bool op_present[3];
 
@@ -365,6 +382,21 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
         case I_POPA:
             break;
 
+        case I_FLD:
+        case I_FILD:
+            // do nothing - yet
+            //SET_BIT (rt, NOTICE_OP1);
+            break;
+        
+        case I_FSTP:
+            SET_BIT (rt, NOTICE_ST0);
+            break;
+
+        case I_FMULP:
+            SET_BIT (rt, NOTICE_OP1);
+            SET_BIT (rt, NOTICE_OP2);
+            break;
+
         default:
             {
                 if (ins_reported_as_unhandled[da->ins_code]==false)
@@ -436,6 +468,10 @@ static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
         case WORKOUT_DX:
             strbuf_addstr (out, get_DX_register_name());
             break;
+        
+        case WORKOUT_ST0:
+            strbuf_addstr (out, "ST0");
+            break;
 
         default:
             assert(0);
@@ -447,6 +483,8 @@ static void cc_free_op(op_info *op, unsigned tmp_i, address tmp_a)
 {
     rbtree_foreach(op->values, NULL, NULL, NULL);
     rbtree_deinit(op->values);
+    rbtree_foreach(op->FPU_values, NULL, dfree, NULL);
+    rbtree_deinit(op->FPU_values);
     if (op->ptr_to_string_set)
     {
         rbtree_foreach(op->ptr_to_string_set, NULL, dfree, NULL);
@@ -490,9 +528,17 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out,
             };
             break;
 
-            //case V_FPU: ?
+        case V_DOUBLE:
+            set_of_doubles_to_string (op->FPU_values, out, 10);
+            break;
+        
+        case V_INVALID:
+            assert("op_t==V_INVALID");
+            break;
+
         default:
             assert(0);
+            break;
     };
 
     cc_free_op (op, i, tmp_a);
@@ -519,7 +565,7 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
         strbuf_addf (&sb_common, "%s ", info->comment);
     // add all info
     if (info->da)
-        for (unsigned j=0; j<6; j++)
+        for (unsigned j=0; j<7; j++)
         {
             if (cc_dump_op_and_free (info->da, info, j, &sb_common, a))
                 strbuf_addc (&sb_common, ' ');
@@ -605,41 +651,45 @@ void cc_dump_and_free(module *m) // for module m
 
 static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCache *mc, PC_info *info)
 {
-    REG v;
-    // FIXME: XMM? FPU?
+    
+    if (info->op[i]==NULL)
+    {
+        info->op[i]=DCALLOC(op_info, 1, "op_info");
+        info->op[i]->values=rbtree_create(true, "op_info:values", compare_size_t);
+        info->op[i]->FPU_values=rbtree_create(true, "op_info:FPU_values", compare_doubles);
+        info->op[i]->ptr_to_string_set=rbtree_create(true, "op_info:ptr_to_string_set", (int(*)(void*,void*))strcmp);
+    };
+    
+    op_info *op=info->op[i];
+
+    // FIXME: XMM?
     switch (val->t)
     {
         case V_BYTE: 
-            v=(REG)get_as_8(val);
+            rbtree_insert(op->values, (void*)(REG)get_as_8(val), NULL);
             break;
         case V_WORD: 
-            v=(REG)get_as_16(val);
+            rbtree_insert(op->values, (void*)(REG)get_as_16(val), NULL);
             break;
         case V_DWORD: 
-            v=(REG)get_as_32(val);
+            rbtree_insert(op->values, (void*)(REG)get_as_32(val), NULL);
             break;
 #ifdef _WIN64
         case V_QWORD: 
-            v=(REG)get_as_64(val);
+            rbtree_insert(op->values, (void*)(REG)get_as_64(val), NULL);
             break;
 #endif
+        case V_DOUBLE:
+            {
+                double d=get_as_double(val);
+                rbtree_insert(op->FPU_values, DMEMDUP(&d, sizeof(double), "double"), NULL);
+            };
+            break;
         default:
             // unknown val->t type
             // wont' save (yet!)
             return;
     };
-
-    if (info->op[i]==NULL)
-    {
-        info->op[i]=DCALLOC(op_info, 1, "op_info");
-        info->op[i]->values=rbtree_create(true, "op_info:values", compare_size_t);
-        info->op[i]->ptr_to_string_set=rbtree_create(true, "op_info:ptr_to_string_set", (int(*)(void*,void*))strcmp);
-    };
-
-    op_info *op=info->op[i];
-
-    // save v
-    rbtree_insert(op->values, (void*)v, NULL);
 
     info->op_t[i]=val->t;
 
@@ -688,8 +738,8 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
 
     // TODO: add flags
 
-    for (unsigned i=0; i<6; i++)
-        if (IS_SET(to_notice, 1<<i)) // NOTICE_OP1, OP2, OP3, AX, CX, DX
+    for (unsigned i=0; i<7; i++)
+        if (IS_SET(to_notice, 1<<i)) // NOTICE_OP1, OP2, OP3, AX, CX, DX, ST0
         {
             if (i<=WORKOUT_OP3)
             {
@@ -714,6 +764,9 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
                         break;
                     case WORKOUT_DX:
                         X86_register_get_value (R_EDX, ctx, &val);
+                        break;
+                    case WORKOUT_ST0:
+                        X86_register_get_value (R_ST0, ctx, &val);
                         break;
                     default:
                         assert(0);

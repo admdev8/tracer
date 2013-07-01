@@ -31,6 +31,7 @@ typedef struct _Da Da;
 #define WORKOUT_AX 3
 #define WORKOUT_CX 4
 #define WORKOUT_DX 5
+#define WORKOUT_ST0 6
 
 #define NOTICE_OP1 1<<WORKOUT_OP1
 #define NOTICE_OP2 1<<WORKOUT_OP2
@@ -38,19 +39,22 @@ typedef struct _Da Da;
 #define NOTICE_AX 1<<WORKOUT_AX
 #define NOTICE_CX 1<<WORKOUT_CX
 #define NOTICE_DX 1<<WORKOUT_DX
-#define NOTICE_PF 1<<6
-#define NOTICE_SF 1<<7
-#define NOTICE_AF 1<<8
-#define NOTICE_ZF 1<<9
-#define NOTICE_OF 1<<10
-#define NOTICE_CF 1<<11
+#define NOTICE_ST0 1<<WORKOUT_ST0
+#define NOTICE_PF 1<<7
+#define NOTICE_SF 1<<8
+#define NOTICE_AF 1<<9
+#define NOTICE_ZF 1<<10
+#define NOTICE_OF 1<<11
+#define NOTICE_CF 1<<12
 
 typedef struct _op_info
 {
     // value is unused in both trees, so these are kind of sets
 
     rbtree *values; // key may be REG or 8-byte double. 
-    
+
+    rbtree *FPU_values; // in double (64-bit) form
+
     // set of strings "can be ptr to ASCII string '<...>'"
     rbtree *ptr_to_string_set;
 
@@ -74,8 +78,8 @@ typedef struct _op_info
 typedef struct _PC_info
 {
     Da *da;
-    op_info *op[6]; // OP1/2/3/AX/CX/DX
-    enum value_t op_t[6]; // type for OP1/2/3/AX/CX/DX
+    op_info *op[7]; // OP1/2/3/AX/CX/DX
+    enum value_t op_t[7]; // type for OP1/2/3/AX/CX/DX
     octabyte executed; // how many times we've been here?
     char *comment; // (one) comment about this PC
     wyde flags; // FLAG_xF_CAN_BE_xxxx

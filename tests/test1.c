@@ -43,13 +43,13 @@ void FPU_test()
 int main()
 {
     printf ("hello: %d\n", 123);
-    printf ("0x%p\n", GetProcAddress(GetModuleHandle("msvcrt.dll"), "printf"));
+    printf ("Address of msvcrt.dll!printf: 0x%p\n", GetProcAddress(GetModuleHandle("msvcrt.dll"), "printf"));
 
     char buf[80];
 
     for (int i=0; i<10; i++)
     {
-        sprintf (buf, "i=%d\n", i);
+        sprintf (buf, "i=%d", i);
         puts (buf);
     };
 
