@@ -87,18 +87,12 @@ bp_address *create_address_filename_symbol_re(const char *filename, const char *
     rt->t=OPTS_ADR_TYPE_FILENAME_SYMBOL;
     rt->filename=DSTRDUP (filename, "");
     rt->symbol=DSTRDUP (symbol_re, "");
-    int rc;
     strbuf sb=STRBUF_INIT;
     strbuf_addc(&sb, '^');
     strbuf_addstr(&sb, symbol_re);
     strbuf_addc(&sb, '$');
 
-    if ((rc=regcomp(&rt->symbol_re, sb.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE))!=0)
-    {
-        char buffer[100];
-        regerror(rc, &rt->symbol_re, buffer, 100);
-        die("failed regcomp() for pattern '%s' (%s)", symbol_re, buffer);
-    };
+    regcomp_or_die(&rt->symbol_re, sb.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
 
     strbuf_deinit(&sb);
 

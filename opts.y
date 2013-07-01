@@ -147,15 +147,9 @@ tracer_option
     dump_all_symbols=true;
     if ($1)
     {
-        int rc;
         assert(dump_all_symbols_re==NULL);
         dump_all_symbols_re=DCALLOC(regex_t, 1, "regex_t");
-        if ((rc=regcomp(dump_all_symbols_re, $1, REG_EXTENDED | REG_ICASE | REG_NEWLINE))!=0)
-        {
-            char buffer[100];
-            regerror(rc, dump_all_symbols_re, buffer, 100);
-            die("failed regcomp() for pattern '%s' (%s)", $1, buffer);
-        };
+        regcomp_or_die(dump_all_symbols_re, $1, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
         DFREE($1);
         //printf ("dump_all_symbols_re is set\n");
     }

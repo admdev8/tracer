@@ -225,14 +225,7 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
     const char *MAP_get_all_PAT="^ ([0-9A-F]{4}):([0-9A-F]{8})       (.*)$";
 #endif // _WIN64
     regex_t PAT_compiled;
-    int rc;
-    // TODO: func: regcomp_or_die_with_error
-    if ((rc=regcomp(&PAT_compiled, MAP_get_all_PAT, REG_EXTENDED | REG_ICASE | REG_NEWLINE))!=0)
-    {
-        char buffer[100];   
-        regerror(rc, &PAT_compiled, buffer, 100);
-        die("failed regcomp() for pattern '%s' (%s)", MAP_get_all_PAT, buffer);
-    };
+    regcomp_or_die(&PAT_compiled, MAP_get_all_PAT, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
     
     add_symbol_params params={ p, m, SYM_TYPE_MAP };
     

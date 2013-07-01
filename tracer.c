@@ -333,8 +333,7 @@ bool load_cfg(const char *fname)
     regex_t trace_skip_pat;
     bool rt;
 
-    if (regcomp(&trace_skip_pat, CFG_PAT, REG_EXTENDED | REG_ICASE | REG_NEWLINE))
-        die("failed regcomp() for pattern '%s'", CFG_PAT);
+    regcomp_or_die(&trace_skip_pat, CFG_PAT, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
 
     f=fopen (fname, "rt");
     if (f==NULL) // file absent
@@ -364,14 +363,11 @@ bool load_cfg(const char *fname)
 
             tmp=DCALLOC(trace_skip_element, 1, "trace_skip_element");
 
-            if (regcomp(&tmp->re_path, opt1.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE))
-                die ("incorrect first regular exression at %s", buf);
+            regcomp_or_die(&tmp->re_path, opt1.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
 
-            if (regcomp(&tmp->re_module, opt2.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE))
-                die ("incorrect second regular exression at %s", buf);
+            regcomp_or_die(&tmp->re_module, opt2.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
 
-            if (regcomp(&tmp->re_function, opt3.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE))
-                die ("incorrect third regular exression at %s", buf);
+            regcomp_or_die(&tmp->re_function, opt3.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
 
             if (strcmp (opt3.buf, ".*")==0)
                 tmp->is_function_wildcard=true;
