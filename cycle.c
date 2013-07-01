@@ -106,6 +106,8 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
     if (cycle_c_debug)
         L ("%s() begin\n", __func__);
 
+    bool bp_handled_in_SS_mode[4]={ false, false, false, false };
+
     if (IS_SET(ctx->Dr6, FLAG_DR6_BS) || ctx->Dr6==0) // DR6=0 sometimes observed while tracing
     {
         bool tracing_handled=false;
@@ -114,32 +116,32 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
             if (t->BP_dynamic_info[b].tracing)
             {
                 handle_BP(p, t, b, ctx, mc);
-                tracing_handled=true;
+                tracing_handled=bp_handled_in_SS_mode[b]=true;
             }
 
         if (tracing_handled==false && cycle_c_debug)
             L ("[!] BS flag in DR6 (or DR6 is zero), but no breakpoint in tracing mode\n");
     };
 
-    if (IS_SET(ctx->Dr6, FLAG_DR6_B0))
+    if (IS_SET(ctx->Dr6, FLAG_DR6_B0) && bp_handled_in_SS_mode[0]==false)
     {
         assert (breakpoints[0]);
         handle_BP(p, t, 0, ctx, mc);
     };
 
-    if (IS_SET(ctx->Dr6, FLAG_DR6_B1))
+    if (IS_SET(ctx->Dr6, FLAG_DR6_B1) && bp_handled_in_SS_mode[0]==false)
     {
         assert (breakpoints[1]);
         handle_BP(p, t, 1, ctx, mc);
     };
 
-    if (IS_SET(ctx->Dr6, FLAG_DR6_B2))
+    if (IS_SET(ctx->Dr6, FLAG_DR6_B2) && bp_handled_in_SS_mode[0]==false)
     {
         assert (breakpoints[2]);
         handle_BP(p, t, 2, ctx, mc);
     };
 
-    if (IS_SET(ctx->Dr6, FLAG_DR6_B3))
+    if (IS_SET(ctx->Dr6, FLAG_DR6_B3) && bp_handled_in_SS_mode[0]==false)
     {
         assert (breakpoints[3]);
         handle_BP(p, t, 3, ctx, mc);
