@@ -40,7 +40,8 @@ bool tracer_c_debug=false;
 
 void help_and_exit()
 {
-    printf ("help...\n");
+    printf ("--dump-fpu-never: never dump FPU registers\n");
+    printf ("--dump-xmm:       dump MMX/XMM registers\n");
     exit(0);
 };
 

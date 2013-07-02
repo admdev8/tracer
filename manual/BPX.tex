@@ -6,11 +6,11 @@
 
 \IFRU{Если содержимое FPU-регистра NaN (нечисло), содержимое регистра FPU будет трактовано как регистра MMX и также будет выведено.}{If the floating point number is also NaN (Not-a-Number), FPU register contents will be treated as MMX register and will be dumped too.}
 
-\IFRU{Если указана опция \IT{-fpu\_always}, состояние регистров FPU будет выводиться на каждом прерывании.}{If \TT{-fpu\_always} option is set, FPU registers state will be dumped at each breakpoint.}
-
-\IFRU{Если указана опция \IT{-fpu\_never}, состояние регистров FPU никогда не будет выводиться.}{If \TT{-fpu\_never} option is set, FPU registers state will not be dumped.}
-
-\IFRU{Если указана опция \IT{-dump\_xmm}, состояние всех регистров XMM также будет выведено, если только регистр не пуст.}{If \TT{-dump\_xmm} option is set, each XMM registers state will be dumped too, unless it is empty.}
+%\IFRU{Если указана опция \IT{--fpu\_always}, состояние регистров FPU будет выводиться на каждом прерывании.}{If \TT{-fpu\_always} option is set, FPU registers state will be dumped at each breakpoint.}
+%*
+\IFRU{Если указана опция \IT{--dump-fpu-never}, состояние регистров FPU никогда не будет выводиться.}{If \TT{--dump-fpu-never} option is set, FPU registers state will not be dumped.}
+%*
+\IFRU{Если указана опция \IT{--dump-xmm}, состояние всех регистров XMM также будет выведено, если только регистр не пуст.}{If \TT{--dump-xmm} option is set, each XMM registers state will be dumped too, unless it is empty.}
 
 \IFRU{\TT{DUMP(ADDRESS|REGISTER|SYMBOL[+OFFSET],SIZE)}: вывод содержимого памяти. Определить адрес в памяти можно в виде шестнадцатиричного значения или в виде \TT{REGISTER+OFFSET}. \TT{SIZE} --- это размер дампа.}{\TT{DUMP(ADDRESS|REGISTER[+OFFSET],SIZE)}: dump contents of memory. Define memory address by hexadecimal address or in form \TT{REGISTER+OFFSET}. \TT{SIZE} is memory dump size.}
 

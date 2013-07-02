@@ -465,9 +465,9 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
 
     if (BPF_dump_arg(mc, accum, bpf->unicode, bpf->ret_type)==false)
         L (" (0x" PRI_REG_HEX ")", accum);
-    
-    if (IS_SET(ctx->FloatSave.TagWord, 1)) // ST0 present?
-        L (", ST0=%.1f\n", (double)*(long double*)&ctx->FloatSave.RegisterArea[0]);
+
+    if (dump_fpu && IS_SET(ctx->FloatSave.TagWord, 1)) // ST0 present?
+        L (", ST0=%.1f", (double)*(long double*)&ctx->FloatSave.RegisterArea[0]);
     L ("\n");
 
     if (bpf->dump_args)

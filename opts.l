@@ -61,6 +61,8 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>-c:.*         { yylval.str=DSTRDUP(yytext+3, "yytext"); return CMDLINE; };
 <INITIAL>--child       { return CHILD; }
 <INITIAL>-s            { return DASH_S; }
+<INITIAL>--dump-fpu-never { return DUMP_FPU_NEVER; }
+<INITIAL>--dump-xmm       { return DUMP_XMM; }
 <INITIAL>-dont-run-thread-b { return DONT_RUN_THREAD_B; }
 <INITIAL>--allsymbols:{REGEXP_EXCL}  {
         yylval.str=DSTRDUP(yytext+strlen("--allsymbols:"), "yytext"); 

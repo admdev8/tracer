@@ -237,6 +237,7 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
         case I_RETN:
         case I_CPUID:
             SET_BIT (rt, NOTICE_AX);
+            SET_BIT (rt, NOTICE_ST0);
             break;
 
         case I_MUL:
@@ -529,7 +530,8 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out,
             break;
 
         case V_DOUBLE:
-            set_of_doubles_to_string (op->FPU_values, out, 10);
+            if (dump_fpu)
+                set_of_doubles_to_string (op->FPU_values, out, 10);
             break;
         
         case V_INVALID:
@@ -680,6 +682,7 @@ static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCach
             break;
 #endif
         case V_DOUBLE:
+            if (dump_fpu)
             {
                 double d=get_as_double(val);
                 rbtree_insert(op->FPU_values, DMEMDUP(&d, sizeof(double), "double"), NULL);

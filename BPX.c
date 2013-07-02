@@ -166,7 +166,7 @@ static void handle_BPX_default_state(BP *bp, process *p, thread *t, int DRx_no, 
 
     dump_PID_if_need(p); dump_TID_if_need(p, t);
     L ("(%d) %s\n", DRx_no, sb_address.buf);
-    dump_CONTEXT (&cur_fds, ctx, false, false);
+    dump_CONTEXT (&cur_fds, ctx, dump_fpu, false /*DRx?*/, dump_xmm);
 
     if (bpx->opts)
         handle_BPX_option (p, t, ctx, mc, bpx->opts);
