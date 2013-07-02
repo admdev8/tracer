@@ -14,6 +14,8 @@
  */
 
 #include <assert.h>
+#include <windows.h>
+#include <dbghelp.h>
 
 #include "oracle_sym.h"
 #include "module.h"
@@ -295,6 +297,82 @@ exit:
     strbuf_deinit(&sb_mapfilename);
 };
 
+typedef struct _PDB_load_callback_info
+{
+    address cur_module_base;
+    unsigned MyEnumSymbolsCallback_total;
+    add_symbol_params *params;
+} PDB_load_callback_info;
+
+static BOOL CALLBACK MyEnumSymbolsCallback(SYMBOL_INFO* pSymInfo, ULONG SymbolSize, PVOID UserContext) 
+{
+    PDB_load_callback_info* info=(PDB_load_callback_info*)UserContext;
+   
+    if (pSymInfo)
+    {
+        address adr=(address)(info->cur_module_base + (pSymInfo->Address - 0x10000000)); // hack
+        add_symbol (adr, pSymInfo->Name, info->params);
+        info->MyEnumSymbolsCallback_total++;
+    };
+
+    return TRUE; // Continue enumeration 
+};
+
+static void add_symbols_from_PDB_if_exist (process *p, module *m, address img_base, PE_info *info, const char* short_PE_name)
+{ 
+    add_symbol_params params={ p, m, SYM_TYPE_PDB };
+    
+    strbuf sb_pdbfilename=STRBUF_INIT;
+    strbuf_addf (&sb_pdbfilename, "%s.pdb", m->filename_without_ext);
+    if (file_exist(sb_pdbfilename.buf)==false)
+        goto exit;
+    
+    BOOL b = SymInitialize (GetCurrentProcess(), NULL, FALSE); 
+
+    if (b == FALSE)
+    {
+        L ("%s(): SymInitialize() failed!\n", __func__);
+        goto exit;
+    };
+
+    DWORD64 ModBase=SymLoadModuleEx (GetCurrentProcess(), NULL, sb_pdbfilename.buf, NULL, 0x10000000, 
+            get_file_size (sb_pdbfilename.buf), NULL, 0); // hack. hack? what hack?
+
+    if (ModBase==0) 
+    {
+        DWORD err=GetLastError();
+
+        if (err==ERROR_SUCCESS)
+            L ("%s() Error: SymLoadModule64() failed. error code==ERROR_SUCCESS. module is already loaded?\n", __func__);
+        else
+            L ("%s() Error: SymLoadModule64() failed. Error code: 0x%x \n", __func__, err);
+    }
+    else
+    {
+        PDB_load_callback_info info2;
+        info2.cur_module_base=img_base;
+        info2.MyEnumSymbolsCallback_total=0;
+        info2.params=&params;
+
+        b=SymEnumSymbols(GetCurrentProcess(), ModBase, NULL, MyEnumSymbolsCallback, (PVOID)&info2); 
+        if (b==FALSE)
+            L("%s() Error: SymEnumSymbols() failed. Error code: 0x%x\n", __func__, GetLastError()); 
+
+        b=SymUnloadModule64(GetCurrentProcess(), ModBase); 
+        if (b==FALSE)
+            L ("%s() Error: SymUnloadModule64() failed. Error code: 0x%x\n", __func__, GetLastError() ); 
+
+        L ("%d symbols loaded from %s\n", info2.MyEnumSymbolsCallback_total, sb_pdbfilename.buf);
+    };
+
+    b=SymCleanup(GetCurrentProcess()); 
+    if (b==FALSE)
+        L ("%s() SymCleanup() failed!\n", __func__);
+
+exit:
+    strbuf_deinit(&sb_pdbfilename);
+};
+
 static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address img_base, PE_info *info, const char* short_PE_name)
 {
     strbuf sb=STRBUF_INIT;
@@ -302,12 +380,8 @@ static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address
 
     strbuf_addf (&sb, "%sRDBMS\\ADMIN\\%s.sym", ORACLE_HOME.buf, m->filename_without_ext);
 
-    //L ("Looking for %s\n", sb.buf);
-
     if (file_exist(sb.buf)==false)
         goto exit;
-
-    //L ("Found %s\n", sb.buf);
 
     int err=get_symbols_from_ORACLE_SYM (sb.buf, img_base, info->size, info->timestamp, true, 
             (void (*)(address,  char *, void *))add_symbol, (void*)&params, oracle_version);
@@ -362,6 +436,8 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
     
     // this function uses PE sections info!
     add_symbols_from_MAP_if_exist (p, m, img_base, info, get_module_name(m));
+    
+    add_symbols_from_PDB_if_exist (p, m, img_base, info, get_module_name(m));
 
     PE_info_free(info);
     strbuf_deinit(&fullpath_filename);

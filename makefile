@@ -34,7 +34,7 @@ $(OUTDIR)/%.o: %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(OUTDIR)/tracer.exe: $(OBJECTS) $(LIBS)
-	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -limagehlp
+	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -ldbghelp -limagehlp
 
 $(OUTDIR)/opts_test.exe: $(OUTDIR)/opts_test.o $(OUTDIR)/opts.tab.o $(OUTDIR)/opts.lex.o \
 	$(OUTDIR)/BP.o $(OUTDIR)/BPF.o $(OUTDIR)/BPX.o $(OUTDIR)/bp_address.o $(OUTDIR)/process.o \

@@ -47,6 +47,7 @@ typedef struct _Da Da;
 #define NOTICE_OF 1<<11
 #define NOTICE_CF 1<<12
 
+// FIXME: lisp object could be here!
 typedef struct _op_info
 {
     // value is unused in both trees, so these are kind of sets
@@ -78,8 +79,8 @@ typedef struct _op_info
 typedef struct _PC_info
 {
     Da *da;
-    op_info *op[7]; // OP1/2/3/AX/CX/DX
-    enum value_t op_t[7]; // type for OP1/2/3/AX/CX/DX
+    op_info *op[7]; // OP1/2/3/AX/CX/DX/ST0
+    enum value_t op_t[7]; // type for OP1/2/3/AX/CX/DX/ST0
     octabyte executed; // how many times we've been here?
     char *comment; // (one) comment about this PC
     wyde flags; // FLAG_xF_CAN_BE_xxxx
