@@ -31,6 +31,7 @@
 DEC            (0|[1-9][[:digit:]]*)
 HEX            0[Xx][[:xdigit:]]+
 FILENAME       [[:alnum:]_]+\.[[:alnum:]_]+
+FILEPATH_FILENAME ([[:alnum:]\\:]+)?[[:alnum:]_]+\.[[:alnum:]_]+
 SYMBOL_NAME    [[:alpha:]][[:alnum:]_@]*
 REGEXP         [[:alnum:]_@.|*^$?\\]*
 REGEXP_EXCL    [[:alnum:]_@.|*^$?\\!]*
@@ -54,16 +55,16 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>bpmw=  { yylval.num=2; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
 <INITIAL>bpmd=  { yylval.num=4; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
 <INITIAL>bpmq=  { yylval.num=8; BEGIN(STATE_BPM); yy_push_state(STATE_ADDRESS); return BPM_width; }
-<INITIAL>-l:{FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return LOAD_FILENAME; };
+<INITIAL>-l:{FILEPATH_FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return LOAD_FILENAME; };
 <INITIAL>-a:{DEC}      { yylval.num=strtol(yytext+3, NULL, 10); return ATTACH_PID; };
 <INITIAL>-a:{HEX}      { yylval.num=strtol(yytext+3, NULL, 16); return ATTACH_PID; };
-<INITIAL>-a:{FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return ATTACH_FILENAME; };
+<INITIAL>-a:{FILEPATH_FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return ATTACH_FILENAME; };
 <INITIAL>-c:.*         { yylval.str=DSTRDUP(yytext+3, "yytext"); return CMDLINE; };
 <INITIAL>--child       { return CHILD; }
 <INITIAL>-q            { return DASH_Q; }
 <INITIAL>-s            { return DASH_S; }
-<INITIAL>--dump-fpu-never { return DUMP_FPU_NEVER; }
-<INITIAL>--dump-xmm       { return DUMP_XMM; }
+<INITIAL>--dump-fpu    { return DUMP_FPU; }
+<INITIAL>--dump-xmm    { return DUMP_XMM; }
 <INITIAL>-dont-run-thread-b { return DONT_RUN_THREAD_B; }
 <INITIAL>--allsymbols:{REGEXP_EXCL}  {
         yylval.str=DSTRDUP(yytext+strlen("--allsymbols:"), "yytext"); 
