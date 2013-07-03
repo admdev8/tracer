@@ -44,7 +44,7 @@ char* attach_filename=NULL;
 char *load_command_line=NULL;
 int attach_PID=-1;
 bool debug_children=false;
-bool dash_s=false;
+bool dash_s=false, quiet=false;
 bool dump_fpu=true, dump_xmm=false;
 BPX_option *current_BPX_option=NULL; // temporary, while parsing...
 BPF* current_BPF=NULL; // filled while parsing
@@ -97,7 +97,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 
 %token COMMA PLUS ASTERISK EQ OP TWO_POINTS R_SQUARE_BRACKET SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
 %token W RW _EOF DUMP_OP SET SET_OP COPY_OP CP QUOTE PERCENT BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
-%token BPF_TRACE BPF_TRACE_COLON DASH_S DONT_RUN_THREAD_B DUMP_FPU_NEVER DUMP_XMM
+%token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DONT_RUN_THREAD_B DUMP_FPU_NEVER DUMP_XMM
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_
 %token MODULE_C_DEBUG CYCLE_C_DEBUG BPX_C_DEBUG UTILS_C_DEBUG CC_C_DEBUG BPF_C_DEBUG
@@ -134,6 +134,7 @@ tracer_option
  | ATTACH_PID              { attach_PID=$1; }
  | CHILD                   { debug_children=true; }
  | DASH_S                  { dash_s=true; }
+ | DASH_Q                  { quiet=true; }
  | DUMP_FPU_NEVER          { dump_fpu=false; }
  | DUMP_XMM                { dump_xmm=true; }
  | DONT_RUN_THREAD_B       { run_thread_b=false; }

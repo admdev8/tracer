@@ -60,6 +60,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>-a:{FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return ATTACH_FILENAME; };
 <INITIAL>-c:.*         { yylval.str=DSTRDUP(yytext+3, "yytext"); return CMDLINE; };
 <INITIAL>--child       { return CHILD; }
+<INITIAL>-q            { return DASH_Q; }
 <INITIAL>-s            { return DASH_S; }
 <INITIAL>--dump-fpu-never { return DUMP_FPU_NEVER; }
 <INITIAL>--dump-xmm       { return DUMP_XMM; }

@@ -53,7 +53,7 @@ typedef struct _BPF
     // these params may be NULL
     REG rt;
     double rt_probability;
-    unsigned args, dump_args, pause;
+    unsigned args, dump_args, pause /* ms */;
     bp_address *when_called_from_address, *when_called_from_func;
     // variables filled by is_it_known_function
     TrueFalseUndefined known_function;

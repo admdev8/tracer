@@ -29,6 +29,7 @@
 #include "symbol.h"
 #include "cc.h"
 #include "stuff.h"
+#include "rand.h"
 
 void dump_BPF(BPF *b)
 {
@@ -421,6 +422,12 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
 
     if (dash_s)
         dump_stack (p, t, ctx, mc);
+    
+    if (bpf->pause)
+    {
+        L ("Sleeping for %d milliseconds...\n", bpf->pause);
+        Sleep (bpf->pause);
+    };
 
     if (bpf->set_present)
         handle_set(bpf, bp_no, p, t, ctx, mc, args);
@@ -475,12 +482,13 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
 
     DFREE(di->BPF_args); di->BPF_args=NULL;
 
-    if (bpf->rt_probability!=0.0 && bpf->rt_probability!=1.0)
-    {
-        assert (!"not implemented");
-    };
+    bool modify_AX=false;
 
-    if (bpf->rt_probability==1.0)
+    if (bpf->rt_probability!=0.0 && bpf->rt_probability!=1.0)
+        if (rand_double()<bpf->rt_probability)
+            modify_AX=true;
+
+    if (modify_AX || bpf->rt_probability==1.0)
     {
         dump_PID_if_need(p); dump_TID_if_need(p, t);
         L ("(%d) Modifying %s register to 0x%x\n", bp_no, get_AX_register_name(), bpf->rt);

@@ -33,6 +33,7 @@
 #include "BP.h"
 #include "bp_address.h"
 #include "tracer.h"
+#include "rand.h"
 
 rbtree *processes=NULL; // PID, ptr to process
 
@@ -42,6 +43,14 @@ void help_and_exit()
 {
     printf ("--dump-fpu-never: never dump FPU registers\n");
     printf ("--dump-xmm:       dump MMX/XMM registers\n");
+    printf ("\n");
+    printf ("BPF options:\n");
+    printf ("\n");
+    printf ("pause:<number> - make delay in milliseconds at each breakpoint\n");
+    printf ("\n");
+    printf ("rt_probability:<number> - rt option will trigger in some probability,\n");
+    printf ("defined as [0..1] float number or as [0%..100%] percentage\n");
+    printf ("\n");
     exit(0);
 };
 
@@ -434,10 +443,13 @@ int main(int argc, char *argv[])
 
     check_option_constraints();
 
-    L_init ("tracer.log");
+    if (quiet==false)
+        L_init ("tracer.log"); // if not initialized, all messages are suppressed
 
     if (load_cfg("tracer.cfg")==false)
         L ("Warning: no tracer.cfg file.\n");
+    
+    sgenrand(GetTickCount()); // for BPF rt_probability option
 
     set_ORACLE_HOME();
 

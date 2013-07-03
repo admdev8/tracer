@@ -47,6 +47,7 @@ extern char *load_command_line;
 extern int attach_PID;
 extern bool debug_children;
 extern bool dash_s;
+extern bool quiet;
 extern bool dump_fpu;
 extern bool dump_xmm;
 bool dump_all_symbols;
