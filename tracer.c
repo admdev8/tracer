@@ -48,8 +48,9 @@ void help_and_exit()
     printf ("\n");
     printf ("pause:<number> - make delay in milliseconds at each breakpoint\n");
     printf ("\n");
+    printf ("skip_stdcall - skip execution of stdcall function\n");
     printf ("rt_probability:<number> - rt option will trigger in some probability,\n");
-    printf ("defined as [0..1] float number or as [0%..100%] percentage\n");
+    printf ("defined as [0..1] float number or as [0%%..100%%] percentage\n");
     printf ("\n");
     exit(0);
 };

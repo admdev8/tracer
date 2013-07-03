@@ -365,7 +365,11 @@ static bool handle_when_called_from_func(process *p, thread *t, unsigned bp_no, 
     return true;
 };
 
-static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
+// return values
+// 0 - OK, go ahead
+// 1 - when_called_from_func case, or we didn't get return address. do not call handle_finish()
+// 2 - this function should be skipped, call handle_finish()
+static unsigned handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
     // do function begin things
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
@@ -378,11 +382,11 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
     if (got_ret_adr)
         di->SP_at_ret_adr=SP;
 
-    bool rt;
+    unsigned rt;
 
     if (bpf->when_called_from_func && handle_when_called_from_func(p, t, bp_no, bpf, got_ret_adr))
     {
-        rt=false;
+        rt=1;
         goto exit;
     };
 
@@ -434,22 +438,27 @@ static bool handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx,
 
     if (got_ret_adr)
     {
-        if (bpf->skip)
+        if (bpf->skip || bpf->skip_stdcall)
         {
             L ("(%d) Skipping execution of this function\n", bp_no);
             CONTEXT_set_PC(ctx, di->ret_adr);
-            CONTEXT_set_SP(ctx, CONTEXT_get_SP(ctx)+sizeof(REG));
-            rt=false;
+            unsigned add_to_SP=0;
+
+            if (bpf->skip_stdcall)
+                add_to_SP=bpf->args;
+            
+            CONTEXT_set_SP(ctx, CONTEXT_get_SP(ctx) + (1 + add_to_SP)*sizeof(REG));
+            rt=2;
         }
         else
         {
             // set current DRx to return
             CONTEXT_setDRx_and_DR7 (ctx, bp_no, di->ret_adr); // set breakpoint at return
-            rt=true;
+            rt=0;
         }
     }
     else
-        rt=false;
+        rt=1;
 exit:
     strbuf_deinit(&sb);
     strbuf_deinit(&sb_address);
@@ -614,13 +623,17 @@ void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
     BPF_state* state=&di->BPF_states;
     BPF *bpf=bp->u.bpf;
+    unsigned u;
 
     switch (*state)
     {
         case BPF_state_default:
-            if (handle_begin(p, t, bp, bp_no, ctx, mc)==false)
-                // got no return address or function to be skipped or when_called_from_func isn't we need - exit
+
+            u=handle_begin(p, t, bp, bp_no, ctx, mc);
+            if (u==1)
                 goto switch_to_default;
+            if (u==2)
+                goto handle_finish_and_switch_to_default;
 
             if (bpf->trace)
             {
