@@ -21,8 +21,14 @@ DEP_FILES=$(addprefix $(OUTDIR)/,$(SOURCES:.c=.d))
 OBJECTS=$(addprefix $(OUTDIR)/,$(SOURCES:.c=.o))
 LIBS=$(OCTOTHORPE_LIBRARY) $(X86_DISASM_LIBRARY) $(PORG_LIBRARY) $(BOLT_LIBRARY)
 
+ifeq ($(MSYSTEM),MINGW64)
+    TRACER_EXE_NAME = tracer64.exe
+else
+    TRACER_EXE_NAME = tracer.exe
+endif
+
 #all:    $(OUTDIR) $(OUTDIR)/tracer.exe $(DEP_FILES) $(OUTDIR)/opts_test.exe
-all:    $(OUTDIR) $(OUTDIR)/tracer.exe $(DEP_FILES)
+all:    $(OUTDIR) $(OUTDIR)/$(TRACER_EXE_NAME) $(DEP_FILES)
 
 $(OUTDIR):
 	mkdir $(OUTDIR)
@@ -33,7 +39,7 @@ $(OUTDIR)/%.d: %.c
 $(OUTDIR)/%.o: %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-$(OUTDIR)/tracer.exe: $(OBJECTS) $(LIBS)
+$(OUTDIR)/$(TRACER_EXE_NAME): $(OBJECTS) $(LIBS)
 	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -ldbghelp -limagehlp
 
 $(OUTDIR)/opts_test.exe: $(OUTDIR)/opts_test.o $(OUTDIR)/opts.tab.o $(OUTDIR)/opts.lex.o \
@@ -43,7 +49,7 @@ $(OUTDIR)/opts_test.exe: $(OUTDIR)/opts_test.o $(OUTDIR)/opts.tab.o $(OUTDIR)/op
 	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -limagehlp
 	
 clean:
-	$(RM) opts.tab.h opts.tab.c opts.lex.c $(OUTDIR)/tracer.exe $(OUTDIR)/opts_test.exe
+	$(RM) opts.tab.h opts.tab.c opts.lex.c $(OUTDIR)/$(TRACER_EXE_NAME) $(OUTDIR)/opts_test.exe
 	$(RM) $(DEP_FILES)
 	$(RM) $(OBJECTS)
 

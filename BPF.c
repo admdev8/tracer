@@ -138,7 +138,7 @@ static bool BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type 
             {
                 strbuf sb=STRBUF_INIT;
 
-                if (MC_GetString(mc, arg, unicode, &sb))
+                if (MC_GetString(mc, arg, unicode, &sb) && sb.strlen>2)
                     L ("\"%s\"", sb.buf);
                 else
                 {
@@ -193,16 +193,16 @@ static void load_args(thread *t, CONTEXT *ctx, MemoryCache *mc, unsigned bp_no, 
     {
         switch (a)
         {
-            case 0: t->_BPF_args[bp_no][a]=ctx->Rcx;
+            case 0: di->BPF_args[a]=ctx->Rcx;
                     break;
-            case 1: t->_BPF_args[bp_no][a]=ctx->Rdx;
+            case 1: di->BPF_args[a]=ctx->Rdx;
                     break;
-            case 2: t->_BPF_args[bp_no][a]=ctx->R8;
+            case 2: di->BPF_args[a]=ctx->R8;
                     break;
-            case 3: t->_BPF_args[bp_no][a]=ctx->R9;
+            case 3: di->BPF_args[a]=ctx->R9;
                     break;
             default:
-                    if (MC_ReadOctabyte (mc, SP+(a+1+4)*sizeof(REG), &t->BPF_args[a])==false)
+                    if (MC_ReadOctabyte (mc, SP+(a+1+4)*sizeof(REG), &di->BPF_args[a])==false)
                         goto read_failed;
                     break;
         };
@@ -482,8 +482,9 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     if (BPF_dump_arg(mc, accum, bpf->unicode, bpf->ret_type)==false)
         L (" (0x" PRI_REG_HEX ")", accum);
 
-    if (dump_fpu && IS_SET(ctx->FloatSave.TagWord, 1)) // ST0 present?
-        L (", ST0=%.1f", (double)*(long double*)&ctx->FloatSave.RegisterArea[0]);
+    if (dump_fpu && STx_present_in_tag(ctx, 0))
+        L (", ST0=%.1f", get_STx(ctx, 0));
+    
     L ("\n");
 
     if (bpf->dump_args)

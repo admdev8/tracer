@@ -6,12 +6,6 @@
 
 \IFRU{Если содержимое FPU-регистра NaN (нечисло), содержимое регистра FPU будет трактовано как регистра MMX и также будет выведено.}{If the floating point number is also NaN (Not-a-Number), FPU register contents will be treated as MMX register and will be dumped too.}
 
-%\IFRU{Если указана опция \IT{--fpu\_always}, состояние регистров FPU будет выводиться на каждом прерывании.}{If \TT{-fpu\_always} option is set, FPU registers state will be dumped at each breakpoint.}
-%*
-\IFRU{Если указана опция \IT{--dump-fpu}, состояние регистров FPU будет выводиться.}{If \TT{--dump-fpu} option is set, FPU registers state will be dumped.}
-%*
-\IFRU{Если указана опция \IT{--dump-xmm}, состояние всех регистров XMM также будет выведено, если только регистр не пуст.}{If \TT{--dump-xmm} option is set, each XMM registers state will be dumped too, unless it is empty.}
-
 \IFRU{\TT{DUMP(ADDRESS|REGISTER|SYMBOL[+OFFSET],SIZE)}: вывод содержимого памяти. Определить адрес в памяти можно в виде шестнадцатиричного значения или в виде \TT{REGISTER+OFFSET}. \TT{SIZE} --- это размер дампа.}{\TT{DUMP(ADDRESS|REGISTER[+OFFSET],SIZE)}: dump contents of memory. Define memory address by hexadecimal address or in form \TT{REGISTER+OFFSET}. \TT{SIZE} is memory dump size.}
 
 \IFRU{Если перед адресом или регистром поставить символ \TT{*}, то tracer вначале прочитает DWORD (или QWORD в x64-версии), примет его за адрес и выдаст дамп по нему. Например: \TT{dump(*ebx,0x100)} --- взять адрес из ячейки памяти на которую указывает регистр ebx и выдать дамп размером 0x100 байт.}{If an asteriks symbol \TT{*} is set before address or register value, then tracer will read DWORD (or QWORD in x64 version), treat it as address and dump a buffer here. For example: \TT{dump(*ebx,0x100)} --- take address on a memory cell EBX register pointing on and dump buffer with size of 0x100 bytes.}

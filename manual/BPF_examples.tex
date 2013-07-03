@@ -69,30 +69,38 @@ tracer64.exe -l:[full path to]\Solitaire.exe bpf=.*!rand,rt:0
 
 \IFRU{В}{In} Windows XP SP3 x86:
 
+%*
 \begin{lstlisting}
 tracer.exe -l:c:\windows\system32\freecell.exe bpf=user32.dll!messagebeep,args:1,skip_stdcall bpf=user32.dll!messageboxw,args:4,unicode,skip_stdcall,rt:6
 \end{lstlisting}
 
+%*
 \begin{lstlisting}
-TID=444|(0) USER32.dll!MessageBeep (0x20) (called from 0x1001f52 (freecell.exe!BASE+0x1f52))
-We skip execution of this function
-TID=444|(1) USER32.dll!MessageBoxW (0x80122, L"Do you want to resign this game?", L"FreeCell", 0x24) (called from 0x1001f5f (freecell.exe!BASE+0x1f5f))
-We skip execution of this function
-TID=444|We modify return value (EAX) of this function to 6
+(0) user32.dll!messagebeep (0x20) (called from freecell.exe!BASE+0x1f52 (0x1001f52))
+(0) Skipping execution of this function
+(0) user32.dll!messagebeep () -> 0x8
+(1) user32.dll!messageboxw (0x160152, "Do you want to resign this game?", "FreeCell", 0x24) (called from freecell.exe!BASE+0x1f5f (0x1001f5f))
+(1) Skipping execution of this function
+(1) user32.dll!messageboxw () -> 0x8
+(1) Modifying EAX register to 0x6
 \end{lstlisting}
 
 \IFRU{В}{In} Windows XP SP2 x64 Russian:
 
+%*
 \begin{lstlisting}
 tracer64.exe -l:c:\windows\system32\freecell.exe bpf=user32.dll!messagebeep,args:1,skip bpf=user32.dll!messageboxw,args:4,unicode,skip,rt:6
 \end{lstlisting}
 
+%*
 \begin{lstlisting}
-TID=2028|(0) USER32.dll!MessageBeep (0x20) (called from 0x1000023f9 (freecell.exe!BASE+0x23f9))
-We skip execution of this function
-TID=2028|(1) USER32.dll!MessageBoxW (0x1f00f0, 0xbf80, 0xbf20, 0x24) (called from 0x100002416 (freecell.exe!BASE+0x2416))
-We skip execution of this function
-TID=2028|We modify return value (RAX) of this function to 6
+TID=2836|(0) user32.dll!messagebeep (0x20) (called from freecell.exe!BASE+0x23f9 (0x1000023f9))
+(0) Skipping execution of this function
+TID=2836|(0) user32.dll!messagebeep () -> 0x8
+TID=2836|(1) user32.dll!messageboxw (0x5010e, "Do you want to resign this game?", "FreeCell", 0x24) (called from freecell.exe!BASE+0x2416 (0x100002416))
+(1) Skipping execution of this function
+TID=2836|(1) user32.dll!messageboxw () -> 0x8
+TID=2836|(1) Modifying RAX register to 0x6
 \end{lstlisting}
 
 \subsection{\IFRU{Проверка ивентов и запись в лог в Oracle RDBMS}{Oracle RDBMS Events checking and log writes}}
