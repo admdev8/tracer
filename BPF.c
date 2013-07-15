@@ -422,7 +422,7 @@ static unsigned handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *
     dump_object_info_if_needed(bpf, mc, ctx);
 
     if (bpf->dump_args)
-        dump_bufs_if_need(t, mc, args, bpf->args, di->BPF_args, bp_no);
+        dump_bufs_if_need(t, mc, bpf->dump_args, bpf->args, di->BPF_args, bp_no);
 
     if (dash_s)
         dump_stack (p, t, ctx, mc);

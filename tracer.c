@@ -42,17 +42,18 @@ bool tracer_c_debug=false;
 void help_and_exit()
 {
     printf ("-t - print timestamp\n");
-    printf ("--dump-fpu-never - never dump FPU registers\n");
+    printf ("--dump-fpu - dump FPU registers where it's possible\n");
     printf ("--dump-xmm - dump MMX/XMM registers\n");
     printf ("\n");
     printf ("BPF options:\n");
     printf ("\n");
+    printf ("args:<number> - number of arguments to be dumped\n");
+    printf ("dump_args:<size> - try to dump each argument as a pointer to buffer with size of <size>\n");
     printf ("pause:<number> - make delay in milliseconds at each breakpoint\n");
-    printf ("\n");
     printf ("skip - skip execution of function\n");
     printf ("skip_stdcall - skip execution of stdcall function\n");
     printf ("rt_probability:<number> - rt option will trigger in some probability,\n");
-    printf ("defined as [0..1] float number or as [0%%..100%%] percentage\n");
+    printf ("        defined as [0..1] float number or as [0%%..100%%] percentage\n");
     printf ("\n");
     exit(0);
 };

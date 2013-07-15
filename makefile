@@ -1,14 +1,25 @@
 CC=gcc
-OUTDIR=$(MSYSTEM)_debug
+
+ifeq ($(BUILD),debug)
+bsuffix=debug
+CPPFLAGS_ADD=-D_DEBUG -DYYDEBUG=1
+else
+bsuffix=release
+CPPFLAGS_ADD=-O3
+endif
+
+OUTDIR=$(MSYSTEM)_$(bsuffix)
+
 OCTOTHORPE=../octothorpe
-OCTOTHORPE_LIBRARY=$(OCTOTHORPE)/$(MSYSTEM)_debug/octothorped.a
+OCTOTHORPE_LIBRARY=$(OCTOTHORPE)/$(MSYSTEM)_$(bsuffix)/octothorpe.a
 X86_DISASM=../x86_disasm
-X86_DISASM_LIBRARY=$(X86_DISASM)/$(MSYSTEM)_debug/x86_disasmd.a
+X86_DISASM_LIBRARY=$(X86_DISASM)/$(MSYSTEM)_$(bsuffix)/x86_disasm.a
 PORG=../porg
-PORG_LIBRARY=$(PORG)/$(MSYSTEM)_debug/porgd.a
+PORG_LIBRARY=$(PORG)/$(MSYSTEM)_$(bsuffix)/porg.a
 BOLT=../bolt
-BOLT_LIBRARY=$(BOLT)/$(MSYSTEM)_debug/boltd.a
-CPPFLAGS=-I$(OCTOTHORPE) -I$(X86_DISASM) -I$(PORG) -I$(BOLT) -D_DEBUG -DYYDEBUG=1
+BOLT_LIBRARY=$(BOLT)/$(MSYSTEM)_$(bsuffix)/bolt.a
+
+CPPFLAGS=-I$(OCTOTHORPE) -I$(X86_DISASM) -I$(PORG) -I$(BOLT) $(CPPFLAGS_ADD)
 #GPROF_FLAG=-pg
 GPROF_FLAG=
 CFLAGS=-Wall -g $(GPROF_FLAG) -std=gnu99
@@ -27,7 +38,6 @@ else
     TRACER_EXE_NAME = tracer.exe
 endif
 
-#all:    $(OUTDIR) $(OUTDIR)/tracer.exe $(DEP_FILES) $(OUTDIR)/opts_test.exe
 all:    $(OUTDIR) $(OUTDIR)/$(TRACER_EXE_NAME) $(DEP_FILES)
 
 $(OUTDIR):
@@ -41,22 +51,27 @@ $(OUTDIR)/%.o: %.c
 
 $(OUTDIR)/$(TRACER_EXE_NAME): $(OBJECTS) $(LIBS)
 	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -ldbghelp -limagehlp
+ifeq ($(BUILD),debug)
+else
+	strip $(OUTDIR)/$(TRACER_EXE_NAME)
+endif
 
-$(OUTDIR)/opts_test.exe: $(OUTDIR)/opts_test.o $(OUTDIR)/opts.tab.o $(OUTDIR)/opts.lex.o \
-	$(OUTDIR)/BP.o $(OUTDIR)/BPF.o $(OUTDIR)/BPX.o $(OUTDIR)/bp_address.o $(OUTDIR)/process.o \
-	$(OUTDIR)/thread.o $(OUTDIR)/module.o $(OUTDIR)/symbol.o $(OUTDIR)/utils.o \
-	$(OUTDIR)/cc.o $(OUTDIR)/cycle.o $(LIBS)
-	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -limagehlp
-	
 clean:
-	$(RM) opts.tab.h opts.tab.c opts.lex.c $(OUTDIR)/$(TRACER_EXE_NAME) $(OUTDIR)/opts_test.exe
+	$(RM) opts.tab.h opts.tab.c opts.lex.c $(OUTDIR)/$(TRACER_EXE_NAME)
 	$(RM) $(DEP_FILES)
 	$(RM) $(OBJECTS)
 
 opts.tab.h opts.tab.c: opts.y
+ifeq ($(BUILD),debug)
 	$(BISON) -d opts.y -t
-#$(BISON) -d opts.y
+else	
+	$(BISON) -d opts.y
+endif	
 
 opts.lex.c: opts.l opts.tab.h opts.h
+ifeq ($(BUILD),debug)
+	$(FLEX) -d -oopts.lex.c opts.l
+else	
 	$(FLEX) -oopts.lex.c opts.l
-#$(FLEX) -d -oopts.lex.c opts.l
+endif
+

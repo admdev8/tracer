@@ -30,8 +30,8 @@
 
 DEC            (0|[1-9][[:digit:]]*)
 HEX            0[Xx][[:xdigit:]]+
-FILENAME       [[:alnum:]_]+\.[[:alnum:]_]+
-FILEPATH_FILENAME ([[:alnum:]\\:]+)?[[:alnum:]_]+\.[[:alnum:]_]+
+FILENAME       [[:alnum:]_\+]+\.[[:alnum:]_]+
+FILEPATH_FILENAME ([[:alnum:]\\:]+)?[[:alnum:]_\+]+\.[[:alnum:]_]+
 SYMBOL_NAME    [[:alpha:]][[:alnum:]_@]*
 REGEXP         [[:alnum:]_@.|*^$?\\]*
 REGEXP_EXCL    [[:alnum:]_@.|*^$?\\!]*
@@ -60,7 +60,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>-a:{HEX}      { yylval.num=strtol(yytext+3, NULL, 16); return ATTACH_PID; };
 <INITIAL>-a:{FILEPATH_FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return ATTACH_FILENAME; };
 <INITIAL>-c:.*         { yylval.str=DSTRDUP(yytext+3, "yytext"); return CMDLINE; };
-<INITIAL>--child       { return CHILD; }
+<INITIAL>--ehild       { return CHILD; }
 <INITIAL>-q            { return DASH_Q; }
 <INITIAL>-s            { return DASH_S; }
 <INITIAL>-t            { return DASH_T; }

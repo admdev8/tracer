@@ -80,7 +80,8 @@ static void dump_stack_not_using_EBP (process *p, thread *t, CONTEXT *ctx, Memor
 
     L ("Call stack:\n");
  
-    L ("SP_at_start=0x%x, stack_top=0x%x, stack_bottom=0x%x\n", SP_at_start, stack_top, stack_bottom);
+    if (thread_c_debug)
+        L ("SP_at_start=0x%x, stack_top=0x%x, stack_bottom=0x%x\n", SP_at_start, stack_top, stack_bottom);
 
     for (address a=SP_at_start; a<stack_top; a=a+sizeof(REG))
     {
