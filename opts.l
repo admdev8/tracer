@@ -60,7 +60,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>-a:{HEX}      { yylval.num=strtol(yytext+3, NULL, 16); return ATTACH_PID; };
 <INITIAL>-a:{FILEPATH_FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return ATTACH_FILENAME; };
 <INITIAL>-c:.*         { yylval.str=DSTRDUP(yytext+3, "yytext"); return CMDLINE; };
-<INITIAL>--ehild       { return CHILD; }
+<INITIAL>--child       { return CHILD; }
 <INITIAL>-q            { return DASH_Q; }
 <INITIAL>-s            { return DASH_S; }
 <INITIAL>-t            { return DASH_T; }
