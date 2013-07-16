@@ -101,11 +101,11 @@ void add_new_address_to_be_resolved (bp_address *a)
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_
-%token MODULE_C_DEBUG CYCLE_C_DEBUG BPX_C_DEBUG UTILS_C_DEBUG CC_C_DEBUG BPF_C_DEBUG
+%token MODULE_C_DEBUG CYCLE_C_DEBUG BPX_C_DEBUG UTILS_C_DEBUG CC_C_DEBUG BPF_C_DEBUG NEWLINE
 %token <num> DEC_NUMBER HEX_NUMBER HEX_BYTE
 %token <num> BPM_width CSTRING_BYTE ATTACH_PID DMALLOC_BREAK_ON LIMIT_TRACE_NESTEDNESS
 %token <num> BYTE_WORD_DWORD_DWORD64
-%token <x86reg> REGISTER
+%token <x86reg> REGISTER FPU_REGISTER
 %token <dbl> FLOAT_NUMBER
 %token <str> FILENAME_EXCLAMATION SYMBOL_NAME_RE SYMBOL_NAME_RE_PLUS LOAD_FILENAME ATTACH_FILENAME CMDLINE
 %token <str> ALL_SYMBOLS
@@ -122,6 +122,11 @@ void add_new_address_to_be_resolved (bp_address *a)
 %%
 
 tracer_option
+ : tracer_option_without_newline
+ | tracer_option_without_newline NEWLINE
+ ;
+
+tracer_option_without_newline
  : bpm             { add_new_BP ($1); }
  | bpx             { add_new_BP ($1); }
  | bpf             { 
@@ -212,6 +217,8 @@ BPX_option
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->reg=$2; $$->size_or_value=BPX_DUMP_DEFAULT; }
  | SET_OP REGISTER COMMA DEC_OR_HEX CP
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->size_or_value=$4; }
+ | SET_OP FPU_REGISTER COMMA FLOAT_NUMBER CP
+ { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->float_value=$4; }
  | COPY_OP address COMMA QUOTE cstring QUOTE CP
  { 
     $$=DCALLOC(BPX_option, 1, "BPX_option"); 

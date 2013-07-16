@@ -79,9 +79,13 @@ int opts_test()
     do_test("bpf=filename.dll!symbol1,rt_probability:1%,rt:123\0");
     do_test("bpf=filename.dll!symbol1,rt_probability:100%,rt:123\0");
     do_test("bpx=filename.dll!0x12345678,dump(eax,123)\0");
-    do_test("bpf=filename.dll!0x14036FE50,rt:0\0");
+    do_test("bpf=filename.dll!0x14036FE50,rt:0\n\0");
     do_test("bpf=filename.dll!0x14036FE50,rt:0,set(byte,*(arg_5+0x123)=0x567)\0");
-
+    do_test("bpx=filename.dll!0x12345678,set(st0,123.456)\0");
+    do_test("bpx=filename.dll!0x12345678,set(st0,-123.456)\0");
+    do_test("bpx=filename.dll!0x12345678,set(st0,-123.456)\n\0");
+    do_test("bpx=bytemask:\"DC45E883EC08DD1C2483EC08DD45E8DD1C24\",set(st0,2.34567890)\0");
+    do_test("bpx=bytemask:\"DC45E883EC08DD1C2483EC08DD45E8DD1C24\",set(st0,2.34567890)\n\0");
     dlist_free(addresses_to_be_resolved, NULL);
     DFREE(load_filename);
     DFREE(attach_filename);

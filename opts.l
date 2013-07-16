@@ -39,9 +39,11 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 
 %x STATE_BPM STATE_BPX STATE_BPF
 %x STATE_ADDRESS STATE_ADDRESS_OR_REG STATE_BYTEMASK STATE_BYTEMASK_SKIP_OPT STATE_READ_ADR_OFS
+%x STATE_FLOAT_NUMBER
 
 %%
 
+<INITIAL,STATE_BPX>"\n"   { return NEWLINE; }
 <INITIAL>bpx=   { BEGIN(STATE_BPX); yy_push_state(STATE_ADDRESS); return BPX_EQ; }
 <INITIAL>bpf=   { 
     assert (current_BPF==NULL); 
@@ -91,47 +93,11 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>--cc-c-debug       { return CC_C_DEBUG; }
 <INITIAL>--BPF-c-debug      { return BPF_C_DEBUG; }
 
-<STATE_ADDRESS_OR_REG>eax   { yylval.x86reg=R_EAX; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>ebx   { yylval.x86reg=R_EBX; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>ecx   { yylval.x86reg=R_ECX; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>edx   { yylval.x86reg=R_EDX; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>esi   { yylval.x86reg=R_ESI; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>edi   { yylval.x86reg=R_EDI; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>ebp   { yylval.x86reg=R_EBP; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>esp   { yylval.x86reg=R_ESP; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>eip   { yylval.x86reg=R_EIP; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>pf    { yylval.x86reg=R_PF;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>sf    { yylval.x86reg=R_SF;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>af    { yylval.x86reg=R_AF;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>zf    { yylval.x86reg=R_ZF;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>of    { yylval.x86reg=R_OF;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>cf    { yylval.x86reg=R_CF;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>df    { yylval.x86reg=R_DF;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>rax   { yylval.x86reg=R_RAX; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>rbx   { yylval.x86reg=R_RBX; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>rcx   { yylval.x86reg=R_RCX; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>rdx   { yylval.x86reg=R_RDX; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>rsi   { yylval.x86reg=R_RSI; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>rdi   { yylval.x86reg=R_RDI; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>rsp   { yylval.x86reg=R_RSP; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>rbp   { yylval.x86reg=R_RBP; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>rip   { yylval.x86reg=R_RIP; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r8    { yylval.x86reg=R_R8;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r9    { yylval.x86reg=R_R9;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r10   { yylval.x86reg=R_R10; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r11   { yylval.x86reg=R_R11; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r12   { yylval.x86reg=R_R12; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r13   { yylval.x86reg=R_R13; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r14   { yylval.x86reg=R_R14; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r15   { yylval.x86reg=R_R15; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r8d   { yylval.x86reg=R_R8D;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r9d   { yylval.x86reg=R_R9D;  yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r10d  { yylval.x86reg=R_R10D; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r11d  { yylval.x86reg=R_R11D; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r12d  { yylval.x86reg=R_R12D; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r13d  { yylval.x86reg=R_R13D; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r14d  { yylval.x86reg=R_R14D; yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r15d  { yylval.x86reg=R_R15D; yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>(e|r)(ax|bx|cx|dx|si|di|bp|sp|ip)   { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>(p|s|a|z|o|c|d)f    { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r(8|9)d?    { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r1[0-5]d?   { yylval.x86reg=X86_register_from_string(yytext); return REGISTER; }
+<STATE_ADDRESS_OR_REG>st[0-7]   { yylval.x86reg=X86_register_from_string(yytext); BEGIN(STATE_FLOAT_NUMBER); return FPU_REGISTER; }
 
 <STATE_ADDRESS,STATE_ADDRESS_OR_REG>"bytemask:\""             { yy_push_state(STATE_BYTEMASK); return BYTEMASK; }
 <STATE_BYTEMASK>[[:xdigit:]][[:xdigit:]] { yylval.num = strtol(yytext, NULL, 16); return HEX_BYTE; }
@@ -165,7 +131,9 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 #endif
     return DEC_NUMBER; 
 }
-<STATE_BPF>[0-9]+\.([0-9]+)?   { 
+<STATE_BPF,STATE_FLOAT_NUMBER>-?[0-9]+\.([0-9]+)?   { 
+    if (YYSTATE==STATE_FLOAT_NUMBER)
+        yy_pop_state(); /* switch back to what was before */
     yylval.dbl = atof(yytext); 
     return FLOAT_NUMBER; 
 }
@@ -180,7 +148,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
     yylval.str = DSTRDUP(yytext, "yytext"); 
     return SYMBOL_NAME_RE; }
 
-<STATE_BPM,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BPX,STATE_BPF>","                 { return COMMA; }
+<STATE_BPM,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BPX,STATE_FLOAT_NUMBER,STATE_BPF>","                 { return COMMA; }
 <STATE_BPM>w                            { return W; }
 <STATE_BPM>rw                            { return RW; }
 

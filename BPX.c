@@ -71,7 +71,11 @@ void dump_BPX_option(BPX_option *b)
 
         case BPX_option_SET:
             assert (b->a==NULL); // must be always register
-            printf("[SET reg:%s value:%d]", X86_register_ToString(b->reg), b->size_or_value);
+            printf("[SET reg:%s ", X86_register_ToString(b->reg));
+            if (X86_register_is_STx(b->reg))
+                printf("float_value:%f]", b->float_value);
+            else
+                printf("value:%d]", b->size_or_value);
             break;
 
         case BPX_option_COPY:

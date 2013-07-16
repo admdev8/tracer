@@ -80,10 +80,29 @@ bp_address=filename.dll!symbol1. BPF. options: rt: 7b
 do_test(bpx=filename.dll!0x12345678,dump(eax,123))
 bp_address=filename.dll!0x12345678. BPX. options: [DUMP reg:EAX size: 123]
 
-do_test(bpf=filename.dll!0x14036FE50,rt:0)
+do_test(bpf=filename.dll!0x14036FE50,rt:0
+)
+
 bp_address=filename.dll!0x7fffffff. BPF. options: rt: 0 
 
 do_test(bpf=filename.dll!0x14036FE50,rt:0,set(byte,*(arg_5+0x123)=0x567))
 bp_address=filename.dll!0x7fffffff. BPF. options: rt: 0 
 set_width=1 set_arg_n=5 set_ofs=0x123 set_val=0x567
+
+do_test(bpx=filename.dll!0x12345678,set(st0,123.456))
+bp_address=filename.dll!0x12345678. BPX. options: [SET reg:ST0 float_value:123.456000]
+
+do_test(bpx=filename.dll!0x12345678,set(st0,-123.456))
+bp_address=filename.dll!0x12345678. BPX. options: [SET reg:ST0 float_value:-123.456000]
+
+do_test(bpx=filename.dll!0x12345678,set(st0,-123.456)
+)
+bp_address=filename.dll!0x12345678. BPX. options: [SET reg:ST0 float_value:-123.456000]
+
+do_test(bpx=bytemask:"DC45E883EC08DD1C2483EC08DD45E8DD1C24",set(st0,2.34567890))
+bp_address=bytemask:"DC45E883EC08DD1C2483EC08DD45E8DD1C24". BPX. options: [SET reg:ST0 float_value:2.345679]
+
+do_test(bpx=bytemask:"DC45E883EC08DD1C2483EC08DD45E8DD1C24",set(st0,2.34567890)
+)
+bp_address=bytemask:"DC45E883EC08DD1C2483EC08DD45E8DD1C24". BPX. options: [SET reg:ST0 float_value:2.345679]
 

@@ -41,6 +41,7 @@ bool tracer_c_debug=false;
 
 void help_and_exit()
 {
+    printf ("@filename - load options from text file, line per option\n");
     printf ("-t - print timestamp\n");
     printf ("--dump-fpu - dump FPU registers where it's possible\n");
     printf ("--dump-xmm - dump MMX/XMM registers\n");
@@ -443,7 +444,23 @@ int main(int argc, char *argv[])
 #endif
 
     for (int i=1; i<argc; i++)
-        parse_option(argv[i]);
+    {
+        if (argv[i][0]=='@')
+        {
+            char *fname=&argv[i][1];
+            FILE *f=fopen (fname, "r");
+            if (f==NULL)
+                die ("Can't open %s file\n", fname);
+            char buf[1024];
+          
+            while (fgets (buf, sizeof(buf), f))
+                parse_option(buf);
+
+            fclose(f);
+        }
+        else
+            parse_option(argv[i]);
+    };
 
     check_option_constraints();
 
