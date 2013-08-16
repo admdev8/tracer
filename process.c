@@ -109,3 +109,4 @@ bool adr_in_executable_section(process *p, address a)
     return module_adr_in_executable_section (m, a);
 };
 
+/* vim: set expandtab ts=4 sw=4 : */

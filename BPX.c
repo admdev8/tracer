@@ -221,3 +221,5 @@ void handle_BPX(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc
     if (bpx_c_debug)
         L ("%s() end\n", __func__);
 };
+
+/* vim: set expandtab ts=4 sw=4 : */

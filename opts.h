@@ -68,3 +68,5 @@ void add_new_BP (BP* bp);
 void add_new_address_to_be_resolved (bp_address *a);
 
 void yyerror(char *s);
+
+/* vim: set expandtab ts=4 sw=4 : */

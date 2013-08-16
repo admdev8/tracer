@@ -21,3 +21,4 @@ extern bool detaching;
 void handle_debug_event (DEBUG_EVENT *de);
 void cycle();
 
+/* vim: set expandtab ts=4 sw=4 : */

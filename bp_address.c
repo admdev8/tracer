@@ -146,3 +146,5 @@ void bp_address_free(bp_address *a)
         DFREE(a->bytemask);
     DFREE(a);
 };
+
+/* vim: set expandtab ts=4 sw=4 : */

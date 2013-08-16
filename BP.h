@@ -52,3 +52,5 @@ typedef struct _BP
 BP* create_BP (enum BP_type t, bp_address* a, void* p);
 void dump_BP (BP* b);
 void BP_free(BP*);
+
+/* vim: set expandtab ts=4 sw=4 : */

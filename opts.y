@@ -358,3 +358,5 @@ void yyerror(char *s)
 {
     fprintf(stderr, "bison error: %s\n", s);
 }
+
+/* vim: set expandtab ts=4 sw=4 : */

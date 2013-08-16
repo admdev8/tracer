@@ -89,3 +89,5 @@ bool symbol_skip_on_tracing(module *m, symbol *s)
     s->skip_on_tracing=Fuzzy_False;
     return false;
 };
+
+/* vim: set expandtab ts=4 sw=4 : */

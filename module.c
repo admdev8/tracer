@@ -260,9 +260,9 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
 
         if (regexec(&PAT_compiled, buf, 4, matches, 0)==0)
         {
-            char *v1=strdup_range (buf, matches[1].rm_so, matches[1].rm_eo);
-            char *v2=strdup_range (buf, matches[2].rm_so, matches[2].rm_eo);
-            char *v3=strdup_range (buf, matches[3].rm_so, matches[3].rm_eo);
+            char *v1=strdup_range (buf, matches[1].rm_so, matches[1].rm_eo-matches[1].rm_so);
+            char *v2=strdup_range (buf, matches[2].rm_so, matches[2].rm_eo-matches[2].rm_so);
+            char *v3=strdup_range (buf, matches[3].rm_so, matches[3].rm_eo-matches[3].rm_so);
             unsigned t_i;
 
 
@@ -596,3 +596,4 @@ address module_get_next_sym_address_after (module *m, address a)
     return rt;
 };
 
+/* vim: set expandtab ts=4 sw=4 : */

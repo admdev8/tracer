@@ -59,3 +59,5 @@ int main()
 
     FPU_test();
 };
+
+/* vim: set expandtab ts=4 sw=4 : */

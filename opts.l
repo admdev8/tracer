@@ -208,3 +208,5 @@ void flex_restart()
 {
     BEGIN(INITIAL);
 };
+
+/* vim: set expandtab ts=4 sw=4 : */

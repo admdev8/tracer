@@ -314,7 +314,8 @@ static void is_it_known_function (const char *fn_name, BPF* bpf)
         return;
     };
 
-    if (strstr(fn_name, "?1QString@@QEAA@XZ")) // in fact: "??1QString@@QEAA@XZ" 
+    if (strstr(fn_name, "?1QString@@QEAA@XZ") || // in fact: "??1QString@@QEAA@XZ" 
+        strstr(fn_name, "?1QString@@QAE@XZ"))    // in fact: "??1QString@@QAE@XZ" __thiscall QString::~QString(void)
     {
         bpf->this_type=TY_QSTRING;
         bpf->known_function=Fuzzy_True;
@@ -700,3 +701,5 @@ exit:
     if (BPF_c_debug)
         L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
 };
+
+/* vim: set expandtab ts=4 sw=4 : */

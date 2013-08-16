@@ -84,3 +84,5 @@ void dump_BP (BP* b)
     };
     //printf ("next=0x%p\n", b->next);
 };
+
+/* vim: set expandtab ts=4 sw=4 : */

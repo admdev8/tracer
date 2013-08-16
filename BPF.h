@@ -73,3 +73,5 @@ typedef struct _BPF
 void BPF_free(BPF*);
 void dump_BPF(BPF *b);
 void handle_BPF(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc);
+
+/* vim: set expandtab ts=4 sw=4 : */

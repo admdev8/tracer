@@ -35,3 +35,5 @@ typedef struct _trace_skip_element
 trace_skip_element *trace_skip_options;
 
 void clean_all_DRx();
+
+/* vim: set expandtab ts=4 sw=4 : */

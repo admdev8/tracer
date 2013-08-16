@@ -67,3 +67,5 @@ BPX* create_BPX(BPX_option *opts);
 void dump_BPX(BPX *);
 
 void handle_BPX(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc);
+
+/* vim: set expandtab ts=4 sw=4 : */

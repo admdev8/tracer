@@ -49,4 +49,4 @@ void process_get_sym (process *p, address a, bool add_module_name, bool add_offs
 bool adr_in_executable_section(process *p, address a);
 address process_get_next_sym_address_after (process *p, address a);
 
-
+/* vim: set expandtab ts=4 sw=4 : */

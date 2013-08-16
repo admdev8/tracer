@@ -54,3 +54,5 @@ typedef struct _add_symbol_params
 
 void add_symbol (address a, char *name, add_symbol_params *params);
 bool symbol_skip_on_tracing(module *m, symbol *s);
+
+/* vim: set expandtab ts=4 sw=4 : */

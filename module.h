@@ -56,3 +56,4 @@ bool module_adr_in_executable_section (module *m, address a);
 address get_module_end(module *m);
 address module_get_next_sym_address_after (module *m, address a);
 
+/* vim: set expandtab ts=4 sw=4 : */
