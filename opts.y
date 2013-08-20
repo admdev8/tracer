@@ -97,7 +97,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 }
 
 %token TWO_POINTS SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
-%token _EOF DUMP_OP SET SET_OP COPY_OP QUOTE BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
+%token _EOF DUMP_OP SET SET_OP COPY_OP BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_
@@ -225,7 +225,7 @@ BPX_option
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->size_or_value=$4; }
  | SET_OP FPU_REGISTER ',' FLOAT_NUMBER ')'
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->float_value=$4; }
- | COPY_OP address ',' QUOTE cstring QUOTE ')'
+ | COPY_OP address ',' '"' cstring '"' ')'
  { 
     $$=DCALLOC(BPX_option, 1, "BPX_option"); 
     $$->t=BPX_option_COPY; 
@@ -233,7 +233,7 @@ BPX_option
     list_of_bytes_to_array (&($$->copy_string), &($$->copy_string_len), $5); 
     obj_free($5);
  }
- | COPY_OP REGISTER ',' QUOTE cstring QUOTE ')'
+ | COPY_OP REGISTER ',' '"' cstring '"' ')'
  { 
     $$=DCALLOC(BPX_option, 1, "BPX_option"); 
     $$->t=BPX_option_COPY; 

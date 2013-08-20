@@ -147,7 +147,6 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <STATE_BPX>"dump("  { yy_push_state(STATE_ADDRESS_OR_REG); return DUMP_OP; }
 <STATE_BPX>"set("   { yy_push_state(STATE_ADDRESS_OR_REG); return SET_OP; }
 <STATE_BPX>"copy("  { yy_push_state(STATE_ADDRESS_OR_REG); return COPY_OP; }
-<STATE_BPX>"\""     { return QUOTE; }
 <STATE_BPX>"\\x"[[:xdigit:]][[:xdigit:]]   { yylval.num = strtol(yytext+2, NULL, 16); return CSTRING_BYTE ; }
 <STATE_BPX>[^\\\",)]                         { yylval.num = yytext[0]; return CSTRING_BYTE ; }
 <STATE_BPF>unicode                   { return BPF_UNICODE; }
