@@ -96,8 +96,8 @@ void add_new_address_to_be_resolved (bp_address *a)
     X86_register x86reg;
 }
 
-%token PLUS ASTERISK OP TWO_POINTS SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
-%token _EOF DUMP_OP SET SET_OP COPY_OP CP QUOTE PERCENT BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
+%token TWO_POINTS SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
+%token _EOF DUMP_OP SET SET_OP COPY_OP QUOTE BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_
@@ -213,19 +213,19 @@ BPF_options
  ;
 
 BPX_option
- : DUMP_OP address ',' DEC_OR_HEX CP
+ : DUMP_OP address ',' DEC_OR_HEX ')'
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->a=$2; $$->size_or_value=$4; }
- | DUMP_OP address CP
+ | DUMP_OP address ')'
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->a=$2; $$->size_or_value=BPX_DUMP_DEFAULT; }
- | DUMP_OP REGISTER ',' DEC_OR_HEX CP
+ | DUMP_OP REGISTER ',' DEC_OR_HEX ')'
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->reg=$2; $$->size_or_value=$4; }
- | DUMP_OP REGISTER CP
+ | DUMP_OP REGISTER ')'
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->reg=$2; $$->size_or_value=BPX_DUMP_DEFAULT; }
- | SET_OP REGISTER ',' DEC_OR_HEX CP
+ | SET_OP REGISTER ',' DEC_OR_HEX ')'
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->size_or_value=$4; }
- | SET_OP FPU_REGISTER ',' FLOAT_NUMBER CP
+ | SET_OP FPU_REGISTER ',' FLOAT_NUMBER ')'
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->float_value=$4; }
- | COPY_OP address ',' QUOTE cstring QUOTE CP
+ | COPY_OP address ',' QUOTE cstring QUOTE ')'
  { 
     $$=DCALLOC(BPX_option, 1, "BPX_option"); 
     $$->t=BPX_option_COPY; 
@@ -233,7 +233,7 @@ BPX_option
     list_of_bytes_to_array (&($$->copy_string), &($$->copy_string_len), $5); 
     obj_free($5);
  }
- | COPY_OP REGISTER ',' QUOTE cstring QUOTE CP
+ | COPY_OP REGISTER ',' QUOTE cstring QUOTE ')'
  { 
     $$=DCALLOC(BPX_option, 1, "BPX_option"); 
     $$->t=BPX_option_COPY; 
@@ -256,7 +256,7 @@ BPF_option
  | BPF_DUMP_ARGS DEC_OR_HEX         { current_BPF->dump_args=$2; }
  | WHEN_CALLED_FROM_ADDRESS address { current_BPF->when_called_from_address=$2; }
  | WHEN_CALLED_FROM_FUNC address    { current_BPF->when_called_from_func=$2; }
- | SET OP BYTE_WORD_DWORD_DWORD64 ',' ASTERISK OP ARGUMENT_N PLUS DEC_OR_HEX CP '=' DEC_OR_HEX CP {
+ | SET '(' BYTE_WORD_DWORD_DWORD64 ',' '*' '(' ARGUMENT_N '+' DEC_OR_HEX ')' '=' DEC_OR_HEX ')' {
     // FIXME: there should be support of multiple SET options!
     current_BPF->set_present=true;
     current_BPF->set_width=$3;
@@ -272,7 +272,7 @@ ARGUMENT_N
 
 float_or_perc
  : FLOAT_NUMBER
- | DEC_NUMBER PERCENT { $$=(double)$1/(double)100; }
+ | DEC_NUMBER '%' { $$=(double)$1/(double)100; }
  ;
 
 cstring
