@@ -96,8 +96,8 @@ void add_new_address_to_be_resolved (bp_address *a)
     X86_register x86reg;
 }
 
-%token PLUS ASTERISK OP TWO_POINTS R_SQUARE_BRACKET SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
-%token W RW _EOF DUMP_OP SET SET_OP COPY_OP CP QUOTE PERCENT BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
+%token PLUS ASTERISK OP TWO_POINTS SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
+%token _EOF DUMP_OP SET SET_OP COPY_OP CP QUOTE PERCENT BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_
@@ -174,9 +174,9 @@ tracer_option_without_newline
  ;
 
 bpm
- : BPM_width address ',' W
+ : BPM_width address ',' 'w'
    { $$=create_BP(BP_type_BPM, $2, create_BPM ($1, BPM_type_W)); }
- | BPM_width address ',' RW
+ | BPM_width address ',' 'r' 'w'
    { $$=create_BP(BP_type_BPM, $2, create_BPM ($1, BPM_type_RW)); }
  ;
 
@@ -336,7 +336,7 @@ bytemask_element
  ;
 
 skip_n
- : SKIP DEC_NUMBER R_SQUARE_BRACKET { $$=$2; }
+ : SKIP DEC_NUMBER ']' { $$=$2; }
  ;
 
 %%

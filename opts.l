@@ -114,7 +114,6 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
         yy_pop_state(); /* switch back to what was before */
     };
     return BYTEMASK_END; }
-<STATE_BYTEMASK>"]"                      { return R_SQUARE_BRACKET; }
 
 <STATE_READ_ADR_OFS,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BPM,INITIAL,STATE_BPX,STATE_BPF>{HEX} {
     if ((YYSTATE==STATE_ADDRESS) || (YYSTATE==STATE_READ_ADR_OFS))
@@ -144,9 +143,6 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
     yy_pop_state(); /* switch back to what was before STATE_ADDRESS */
     yylval.str = DSTRDUP(yytext, "yytext"); 
     return SYMBOL_NAME_RE; }
-
-<STATE_BPM>w                            { return W; }
-<STATE_BPM>rw                            { return RW; }
 
 <STATE_BPX>"dump("  { yy_push_state(STATE_ADDRESS_OR_REG); return DUMP_OP; }
 <STATE_BPX>"set("   { yy_push_state(STATE_ADDRESS_OR_REG); return SET_OP; }
