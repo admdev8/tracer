@@ -423,6 +423,36 @@ void free_trace_skip_options(trace_skip_element *i)
 int opts_test(); // opts_test.c
 #endif
 
+void free_all_globals()
+{
+    // any left processes?
+    rbtree_foreach(processes, NULL, NULL, (void(*)(void*))process_free);
+
+    rbtree_deinit(processes);
+
+    free_trace_skip_options(trace_skip_options);
+
+    dlist_free(addresses_to_be_resolved, NULL);
+    for (unsigned i=0; i<4; i++)
+        BP_free(breakpoints[i]);
+
+    DFREE(load_filename);
+    DFREE(attach_filename);
+    DFREE(load_command_line);
+    if (dump_all_symbols_re)
+    {
+        regfree (dump_all_symbols_re);
+        DFREE(dump_all_symbols_re);
+    };
+    if (one_time_int3_bp_re)
+    {
+        regfree (one_time_int3_bp_re);
+        DFREE(one_time_int3_bp_re);
+    };
+
+    strbuf_deinit(&ORACLE_HOME);
+};
+
 int main(int argc, char *argv[])
 {
     printf ("tracer 0.7 %s by Dennis Yurichev\n", 
@@ -501,32 +531,7 @@ int main(int argc, char *argv[])
 
     detach_from_all_processes();
 
-    // any left processes?
-    rbtree_foreach(processes, NULL, NULL, (void(*)(void*))process_free);
-
-    rbtree_deinit(processes);
-
-    free_trace_skip_options(trace_skip_options);
-
-    dlist_free(addresses_to_be_resolved, NULL);
-    for (unsigned i=0; i<4; i++)
-        BP_free(breakpoints[i]);
-
-    DFREE(load_filename);
-    DFREE(attach_filename);
-    DFREE(load_command_line);
-    if (dump_all_symbols_re)
-    {
-        regfree (dump_all_symbols_re);
-        DFREE(dump_all_symbols_re);
-    };
-    if (one_time_int3_bp_re)
-    {
-        regfree (one_time_int3_bp_re);
-        DFREE(one_time_int3_bp_re);
-    };
-
-    strbuf_deinit(&ORACLE_HOME);
+    free_all_globals();
 
     L_deinit();
 
