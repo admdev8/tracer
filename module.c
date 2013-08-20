@@ -192,15 +192,22 @@ static void set_filename_and_path_for_module (HANDLE file_hdl, module *m, strbuf
     };
 };
 
-static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_filename, address img_base)
+static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_filename, address img_base, 
+        MemoryCache *mc)
 {
     PE_info *info=DCALLOC(PE_info, 1, "PE_info");
 
-    add_symbol_params params={p, m, SYM_TYPE_PE_EXPORT};
+    add_symbol_params params={p, m, SYM_TYPE_PE_EXPORT, mc};
+
+    PE_get_sections_info (fullpath_filename->buf, &m->sections, &m->sections_total);
+    m->base=img_base;
+
+    // PE_get_info() will call add_symbol(), and the latter may use m->base, m->sections, 
+    // m->sections_total, so these variables in $m$ should be already present!
+    // that's weird, I know.
 
     PE_get_info (fullpath_filename->buf, img_base, info, (void (*)(address,  char *, void *))add_symbol, 
             (void*)&params);
-    m->base=img_base;
     m->original_base=info->original_base;
     m->OEP=info->OEP;
     m->size=info->size;
@@ -215,11 +222,12 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
     add_symbol(info->OEP, "OEP", &params);
     // add BASE
     params.t=SYM_TYPE_BASE;
-    add_symbol(img_base, "BASE", &params); 
+    add_symbol(img_base, "BASE", &params);
     return info;
 };
 
-static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_base, PE_info *info, const char* short_PE_name)
+static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_base, PE_info *info, 
+        const char* short_PE_name, MemoryCache *mc)
 {
 #ifdef _WIN64
     const char *MAP_get_all_PAT="^ ([0-9A-F]{8}):([0-9A-F]{16})       (.*)$";
@@ -229,7 +237,7 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
     regex_t PAT_compiled;
     regcomp_or_die(&PAT_compiled, MAP_get_all_PAT, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
     
-    add_symbol_params params={ p, m, SYM_TYPE_MAP };
+    add_symbol_params params={ p, m, SYM_TYPE_MAP, mc };
     
     strbuf sb_mapfilename=STRBUF_INIT;
     strbuf_addf (&sb_mapfilename, "%s.map", m->filename_without_ext);
@@ -318,9 +326,10 @@ static BOOL CALLBACK MyEnumSymbolsCallback(SYMBOL_INFO* pSymInfo, ULONG SymbolSi
     return TRUE; // Continue enumeration 
 };
 
-static void add_symbols_from_PDB_if_exist (process *p, module *m, address img_base, PE_info *info, const char* short_PE_name)
+static void add_symbols_from_PDB_if_exist (process *p, module *m, address img_base, PE_info *info, 
+        const char* short_PE_name, MemoryCache *mc)
 { 
-    add_symbol_params params={ p, m, SYM_TYPE_PDB };
+    add_symbol_params params={ p, m, SYM_TYPE_PDB, mc };
     
     strbuf sb_pdbfilename=STRBUF_INIT;
     strbuf_addf (&sb_pdbfilename, "%s.pdb", m->filename_without_ext);
@@ -373,10 +382,11 @@ exit:
     strbuf_deinit(&sb_pdbfilename);
 };
 
-static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address img_base, PE_info *info, const char* short_PE_name)
+static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address img_base, PE_info *info, 
+        const char* short_PE_name, MemoryCache *mc)
 {
     strbuf sb=STRBUF_INIT;
-    add_symbol_params params={ p, m, SYM_TYPE_ORACLE_SYM };
+    add_symbol_params params={ p, m, SYM_TYPE_ORACLE_SYM, mc };
 
     strbuf_addf (&sb, "%sRDBMS\\ADMIN\\%s.sym", ORACLE_HOME.buf, m->filename_without_ext);
 
@@ -397,7 +407,7 @@ exit:
     strbuf_deinit(&sb);
 };
 
-module* add_module (process *p, address img_base, HANDLE file_hdl)
+module* add_module (process *p, address img_base, HANDLE file_hdl, MemoryCache *mc)
 {
     module *m=DCALLOC(module, 1, "module");
     strbuf fullpath_filename=STRBUF_INIT;
@@ -406,14 +416,15 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
         L ("%s() begin\n", __func__);
 
     m->parent_process=p;
+    m->INT3_BP_bytes=rbtree_create(true, "INT3_BP_bytes", compare_size_t);
 
     m->symbols=rbtree_create(true, "symbols", compare_size_t);
 
     set_filename_and_path_for_module(file_hdl, m, &fullpath_filename);
-
-    PE_info* info=get_all_info_from_PE (p, m, &fullpath_filename, img_base);
+    
+    PE_info* info=get_all_info_from_PE (p, m, &fullpath_filename, img_base, mc);
     if (ORACLE_HOME.strlen>0)
-        add_symbols_from_ORACLE_SYM_if_exist (p, m, img_base, info, get_module_name(m));
+        add_symbols_from_ORACLE_SYM_if_exist (p, m, img_base, info, get_module_name(m), mc);
 
     // will symbols from this module skipping during tracing?
     int j;
@@ -430,14 +441,10 @@ module* add_module (process *p, address img_base, HANDLE file_hdl)
                 };
     };
 
-    m->sections_total=info->sections_total;
-    m->sections=info->sections;
-    info->sections=NULL; // 'tranfer' it to here, so DFREE in PE_info_free() will not free it
-    
     // this function uses PE sections info!
-    add_symbols_from_MAP_if_exist (p, m, img_base, info, get_module_name(m));
+    add_symbols_from_MAP_if_exist (p, m, img_base, info, get_module_name(m), mc);
     
-    add_symbols_from_PDB_if_exist (p, m, img_base, info, get_module_name(m));
+    add_symbols_from_PDB_if_exist (p, m, img_base, info, get_module_name(m), mc);
 
     PE_info_free(info);
     strbuf_deinit(&fullpath_filename);
@@ -473,6 +480,7 @@ static void module_free (module *m)
     };
 
     rbtree_deinit(m->symbols);
+    rbtree_deinit(m->INT3_BP_bytes);
     DFREE(m);
 };
 
@@ -558,10 +566,12 @@ char *get_module_name (module *m)
 
 static IMAGE_SECTION_HEADER* find_section (module *m, address a)
 {
+    assert(m->sections && "PE sections info wasn't yet loaded to module structure");
     for (unsigned i=0; i<m->sections_total; i++)
     {
         IMAGE_SECTION_HEADER *s=&m->sections[i];
-        //L ("%s() trying section %s\n", __func__, s->Name);
+        if (module_c_debug)
+            L ("%s() trying section %s\n", __func__, s->Name);
         address start=s->VirtualAddress + m->base;
         if (a>=start && a<(start + s->Misc.VirtualSize))
             return s;
@@ -571,8 +581,10 @@ static IMAGE_SECTION_HEADER* find_section (module *m, address a)
 
 bool module_adr_in_executable_section (module *m, address a)
 {
-    //L ("%s() module=%s, a=0x" PRI_ADR_HEX "\n", __func__, get_module_name(m), a);
+    if (module_c_debug)
+        L ("%s() module=%s, a=0x" PRI_ADR_HEX "\n", __func__, get_module_name(m), a);
     // find specific section
+    assert(m->sections && "PE sections info wasn't yet loaded to module structure");
     IMAGE_SECTION_HEADER* s=find_section(m, a);
     if (s==NULL)
         return false;

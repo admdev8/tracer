@@ -16,22 +16,27 @@
 #pragma once
 
 #include <windows.h>
-#include "datatypes.h"
-#include "rbtree.h"
+#include "memorycache.h"
 
 typedef struct _process process;
 typedef struct _thread thread;
-typedef struct _BP BP;
-typedef struct _MemoryCache MemoryCache;
-typedef struct _Da Da;
-typedef struct _module module;
 
-void dump_PID_if_need(process *p);
-void dump_TID_if_need(process *p, thread *t);
-void set_or_update_DRx_for_thread(thread *t, BP *bp, unsigned DRx_no);
-void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no);
-void set_or_update_all_DRx_breakpoints(process *p);
-Da* MC_disas(address a, MemoryCache *mc);
-void dump_buf_as_array_of_strings(MemoryCache *mc, address a, size_t size);
-        
+enum BPM_type
+{
+    BPM_type_W,
+    BPM_type_RW
+};
+
+typedef struct _BPM
+{
+    unsigned width; // in bytes!
+    enum BPM_type t;
+} BPM;
+
+BPM *create_BPM(unsigned width, enum BPM_type t);
+void dump_BPM(BPM *);
+void BPM_free(BPM *);
+void handle_BPM(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc);
+void BPM_set_or_update_DRx_breakpoint(BPM *b, address a, unsigned DRx_no, CONTEXT *ctx);
+
 /* vim: set expandtab ts=4 sw=4 : */

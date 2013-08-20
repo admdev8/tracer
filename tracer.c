@@ -45,6 +45,7 @@ void help_and_exit()
     printf ("-t - print timestamp\n");
     printf ("--dump-fpu - dump FPU registers where it's possible\n");
     printf ("--dump-xmm - dump MMX/XMM registers\n");
+    printf ("--one-time-INT3-bp:<symbol_mask> - set multiple one-time INT3 breakpoints\n");
     printf ("\n");
     printf ("BPF options:\n");
     printf ("\n");
@@ -518,6 +519,11 @@ int main(int argc, char *argv[])
     {
         regfree (dump_all_symbols_re);
         DFREE(dump_all_symbols_re);
+    };
+    if (one_time_int3_bp_re)
+    {
+        regfree (one_time_int3_bp_re);
+        DFREE(one_time_int3_bp_re);
     };
 
     strbuf_deinit(&ORACLE_HOME);

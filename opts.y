@@ -96,7 +96,7 @@ void add_new_address_to_be_resolved (bp_address *a)
     X86_register x86reg;
 }
 
-%token COMMA PLUS ASTERISK EQ OP TWO_POINTS R_SQUARE_BRACKET SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
+%token PLUS ASTERISK OP TWO_POINTS R_SQUARE_BRACKET SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
 %token W RW _EOF DUMP_OP SET SET_OP COPY_OP CP QUOTE PERCENT BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
@@ -108,7 +108,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 %token <x86reg> REGISTER FPU_REGISTER
 %token <dbl> FLOAT_NUMBER
 %token <str> FILENAME_EXCLAMATION SYMBOL_NAME_RE SYMBOL_NAME_RE_PLUS LOAD_FILENAME ATTACH_FILENAME CMDLINE
-%token <str> ALL_SYMBOLS
+%token <str> ALL_SYMBOLS ONE_TIME_INT3_BP
 
 %type <a> address
 %type <o> bytemask bytemask_element cstring
@@ -165,19 +165,25 @@ tracer_option_without_newline
         //printf ("dump_all_symbols_re is set\n");
     }
     }
+ | ONE_TIME_INT3_BP     { 
+    assert(one_time_int3_bp_re==NULL);
+    one_time_int3_bp_re=DCALLOC(regex_t, 1, "regex_t");
+    regcomp_or_die(one_time_int3_bp_re, $1, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
+    DFREE($1);
+    }
  ;
 
 bpm
- : BPM_width address COMMA W
+ : BPM_width address ',' W
    { $$=create_BP(BP_type_BPM, $2, create_BPM ($1, BPM_type_W)); }
- | BPM_width address COMMA RW
+ | BPM_width address ',' RW
    { $$=create_BP(BP_type_BPM, $2, create_BPM ($1, BPM_type_RW)); }
  ;
 
 bpx
  : BPX_EQ address
    { $$=create_BP(BP_type_BPX, $2, create_BPX (NULL)); }
- | BPX_EQ address COMMA BPX_options
+ | BPX_EQ address ',' BPX_options
    { 
        $$=create_BP(BP_type_BPX, $2, create_BPX (current_BPX_option)); 
        current_BPX_option=NULL;
@@ -186,11 +192,11 @@ bpx
 
 bpf
  : BPF_EQ address                   { current_BPF_address=$2; } 
- | BPF_EQ address COMMA BPF_options { current_BPF_address=$2; }
+ | BPF_EQ address ',' BPF_options { current_BPF_address=$2; }
  ;
 
 BPX_options
- : BPX_option COMMA BPX_options
+ : BPX_option ',' BPX_options
  { 
      BPX_option *o;
      assert(current_BPX_option);
@@ -202,24 +208,24 @@ BPX_options
  ;
 
 BPF_options
- : BPF_option COMMA BPF_options
+ : BPF_option ',' BPF_options
  | BPF_option
  ;
 
 BPX_option
- : DUMP_OP address COMMA DEC_OR_HEX CP
+ : DUMP_OP address ',' DEC_OR_HEX CP
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->a=$2; $$->size_or_value=$4; }
  | DUMP_OP address CP
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->a=$2; $$->size_or_value=BPX_DUMP_DEFAULT; }
- | DUMP_OP REGISTER COMMA DEC_OR_HEX CP
+ | DUMP_OP REGISTER ',' DEC_OR_HEX CP
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->reg=$2; $$->size_or_value=$4; }
  | DUMP_OP REGISTER CP
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->reg=$2; $$->size_or_value=BPX_DUMP_DEFAULT; }
- | SET_OP REGISTER COMMA DEC_OR_HEX CP
+ | SET_OP REGISTER ',' DEC_OR_HEX CP
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->size_or_value=$4; }
- | SET_OP FPU_REGISTER COMMA FLOAT_NUMBER CP
+ | SET_OP FPU_REGISTER ',' FLOAT_NUMBER CP
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->float_value=$4; }
- | COPY_OP address COMMA QUOTE cstring QUOTE CP
+ | COPY_OP address ',' QUOTE cstring QUOTE CP
  { 
     $$=DCALLOC(BPX_option, 1, "BPX_option"); 
     $$->t=BPX_option_COPY; 
@@ -227,7 +233,7 @@ BPX_option
     list_of_bytes_to_array (&($$->copy_string), &($$->copy_string_len), $5); 
     obj_free($5);
  }
- | COPY_OP REGISTER COMMA QUOTE cstring QUOTE CP
+ | COPY_OP REGISTER ',' QUOTE cstring QUOTE CP
  { 
     $$=DCALLOC(BPX_option, 1, "BPX_option"); 
     $$->t=BPX_option_COPY; 
@@ -250,7 +256,7 @@ BPF_option
  | BPF_DUMP_ARGS DEC_OR_HEX         { current_BPF->dump_args=$2; }
  | WHEN_CALLED_FROM_ADDRESS address { current_BPF->when_called_from_address=$2; }
  | WHEN_CALLED_FROM_FUNC address    { current_BPF->when_called_from_func=$2; }
- | SET OP BYTE_WORD_DWORD_DWORD64 COMMA ASTERISK OP ARGUMENT_N PLUS DEC_OR_HEX CP EQ DEC_OR_HEX CP {
+ | SET OP BYTE_WORD_DWORD_DWORD64 ',' ASTERISK OP ARGUMENT_N PLUS DEC_OR_HEX CP '=' DEC_OR_HEX CP {
     // FIXME: there should be support of multiple SET options!
     current_BPF->set_present=true;
     current_BPF->set_width=$3;

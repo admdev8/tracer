@@ -50,6 +50,7 @@ typedef struct _add_symbol_params
     process* p;
     module* m;
     symbol_type t;
+    MemoryCache *mc;
 } add_symbol_params;
 
 void add_symbol (address a, char *name, add_symbol_params *params);

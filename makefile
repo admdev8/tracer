@@ -27,7 +27,7 @@ FLEX=flex
 FLEX_PATH=$(HOME)/flex-2.5.37
 BISON=bison
 SOURCES=opts.tab.c opts.lex.c tracer.c cycle.c module.c process.c symbol.c thread.c BP.c \
-	BPF.c BPX.c BPM.c bp_address.c utils.c cc.c opts_test.c
+	BPF.c BPX.c BPM.c bp_address.c utils.c cc.c opts_test.c one_time_INT3_BP.c
 DEP_FILES=$(addprefix $(OUTDIR)/,$(SOURCES:.c=.d))
 OBJECTS=$(addprefix $(OUTDIR)/,$(SOURCES:.c=.o))
 LIBS=$(OCTOTHORPE_LIBRARY) $(X86_DISASM_LIBRARY) $(PORG_LIBRARY) $(BOLT_LIBRARY)

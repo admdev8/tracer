@@ -38,9 +38,9 @@ typedef struct _process
     rbtree *modules; // base_address (in process), module
 
     bool we_are_loading_and_OEP_was_executed;
-
 } process;
 
+process* process_init (DWORD PID, HANDLE PHDL, HANDLE file_handle, LPVOID base_of_image); 
 void process_free (process *p);
 process *find_process(DWORD PID);
 module *find_module_for_address (process *p, address a);

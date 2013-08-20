@@ -69,6 +69,10 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>--dump-fpu    { return DUMP_FPU; }
 <INITIAL>--dump-xmm    { return DUMP_XMM; }
 <INITIAL>-dont-run-thread-b { return DONT_RUN_THREAD_B; }
+<INITIAL>--one-time-INT3-bp:{REGEXP_EXCL}  {
+        yylval.str=DSTRDUP(yytext+strlen("--one-time-INT3-bp:"), "yytext");
+        return ONE_TIME_INT3_BP;
+    }
 <INITIAL>--allsymbols:{REGEXP_EXCL}  {
         yylval.str=DSTRDUP(yytext+strlen("--allsymbols:"), "yytext"); 
         //printf ("--allsymbols: [%s]\n", yylval.str);
@@ -112,27 +116,24 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
     return BYTEMASK_END; }
 <STATE_BYTEMASK>"]"                      { return R_SQUARE_BRACKET; }
 
-<STATE_READ_ADR_OFS,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BPM,INITIAL,STATE_BPX,STATE_BPF>{HEX}                     {
+<STATE_READ_ADR_OFS,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BPM,INITIAL,STATE_BPX,STATE_BPF>{HEX} {
     if ((YYSTATE==STATE_ADDRESS) || (YYSTATE==STATE_READ_ADR_OFS))
         yy_pop_state(); /* switch back to what was before STATE_ADDRESS */
-#ifdef _WIN64
-    yylval.num = strtoll(yytext, NULL, 16); 
-#else
-    yylval.num = strtol(yytext, NULL, 16); 
-#endif
-    return HEX_NUMBER; }
+    yylval.num = strtol_or_strtoll(yytext, NULL, 16); 
+    return HEX_NUMBER; 
+   }
 <STATE_READ_ADR_OFS,INITIAL,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BYTEMASK_SKIP_OPT,STATE_BPX,STATE_BPF>{DEC}   { 
     if (YYSTATE==STATE_READ_ADR_OFS || YYSTATE==STATE_BYTEMASK_SKIP_OPT)
         yy_pop_state(); /* switch back to what was before STATE_ADDRESS */
     yylval.num = strtol_or_strtoll(yytext, NULL, 10); 
     return DEC_NUMBER; 
-}
+   }
 <STATE_BPF,STATE_FLOAT_NUMBER>-?[0-9]+\.([0-9]+)?   { 
     if (YYSTATE==STATE_FLOAT_NUMBER)
         yy_pop_state(); /* switch back to what was before */
     yylval.dbl = atof(yytext); 
     return FLOAT_NUMBER; 
-}
+   }
 <STATE_ADDRESS,STATE_ADDRESS_OR_REG>{FILENAME}!               { yylval.str = DSTRDUP(yytext, "yytext"); str_trim_one_char_right(yylval.str); return FILENAME_EXCLAMATION; }
 <STATE_ADDRESS,STATE_ADDRESS_OR_REG>{SYMBOL_NAME_RE}\+           { 
     BEGIN (STATE_READ_ADR_OFS);
@@ -144,7 +145,6 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
     yylval.str = DSTRDUP(yytext, "yytext"); 
     return SYMBOL_NAME_RE; }
 
-<STATE_BPM,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BPX,STATE_FLOAT_NUMBER,STATE_BPF>","                 { return COMMA; }
 <STATE_BPM>w                            { return W; }
 <STATE_BPM>rw                            { return RW; }
 
@@ -153,12 +153,11 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <STATE_BPX>"copy("  { yy_push_state(STATE_ADDRESS_OR_REG); return COPY_OP; }
 <STATE_BPF>"\*"               { return ASTERISK; }
 <STATE_BPF>"\+"               { return PLUS; }
-<STATE_BPF>"="               { return EQ; }
 <STATE_BPF>"("               { return OP; }
 <STATE_BPX,STATE_BPF>")"     { return CP; }
 <STATE_BPX>"\""     { return QUOTE; }
 <STATE_BPX>"\\x"[[:xdigit:]][[:xdigit:]]   { yylval.num = strtol(yytext+2, NULL, 16); return CSTRING_BYTE ; }
-<STATE_BPX>[^\\\"]                         { yylval.num = yytext[0]; return CSTRING_BYTE ; }
+<STATE_BPX>[^\\\",]                         { yylval.num = yytext[0]; return CSTRING_BYTE ; }
 <STATE_BPF>unicode                   { return BPF_UNICODE; }
 <STATE_BPF>trace:                    { return BPF_TRACE_COLON; }
 <STATE_BPF>trace                     { return BPF_TRACE; }
@@ -183,7 +182,10 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <STATE_BPF>arg_                     { return ARG_; }
 
 
-<STATE_BPM,STATE_BPX,STATE_BPF,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BYTEMASK,STATE_BYTEMASK_SKIP_OPT,STATE_READ_ADR_OFS>.                        { fprintf (stderr, "Unrecognized symbol: '%c'\n", yytext[0]); return yytext[0]; }
+<*>. { 
+    //fprintf (stderr, "Catch-all symbol: '%c'\n", yytext[0]); 
+    return yytext[0]; 
+}
 %%
 
 //<STATE_BPX><<EOF>> { return _EOF; }

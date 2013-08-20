@@ -16,7 +16,7 @@
 #include "symbol.h"
 #include "dmalloc.h"
 #include "tracer.h"
-#include "utils.h"
+#include "one_time_INT3_BP.h"
 
 static symbol *create_symbol (symbol_type t, char *n)
 {
@@ -31,6 +31,20 @@ void add_symbol (address a, char *name, add_symbol_params *params)
 {
     module *m=params->m;
     rbtree *symtbl=m->symbols;
+    MemoryCache *mc=params->mc;
+
+    if (one_time_int3_bp_re && params->t==SYM_TYPE_PE_EXPORT && module_adr_in_executable_section (m, a))
+    {
+        strbuf sb=STRBUF_INIT;
+        strbuf_addstr (&sb, get_module_name(m));
+        strbuf_addc (&sb, '!');
+        strbuf_addstr (&sb, name);
+
+        if (regexec (one_time_int3_bp_re, sb.buf, 0, NULL, 0)==0)
+            set_onetime_INT3_BP(a, params->p, m, name, mc);
+
+        strbuf_deinit (&sb);
+    };
 
     bool dump_symbol=false;
     if (dump_all_symbols_re)

@@ -27,6 +27,7 @@
 #include "bitfields.h"
 #include "x86.h"
 #include "stuff.h"
+#include "module.h"
 
 void dump_PID_if_need(process *p)
 {

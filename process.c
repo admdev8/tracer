@@ -24,6 +24,21 @@
 
 bool process_c_debug=false;
 
+process* process_init (DWORD PID, HANDLE PHDL, HANDLE file_handle, LPVOID base_of_image)
+{
+    process *p=DCALLOC (process, 1, "process");
+    
+    p->PID=PID;
+    p->PHDL=PHDL;
+    p->file_handle=file_handle;
+    p->base_of_image=(address)base_of_image;
+
+    p->modules=rbtree_create(true, "modules", compare_size_t); // compare_REGs?
+    p->threads=rbtree_create(true, "threads", compare_tetrabytes);
+
+    return p;
+};
+
 void process_free (process *p)
 {
     if (process_c_debug)

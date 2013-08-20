@@ -20,7 +20,7 @@
 
 typedef struct _process process;
 typedef struct _symbol symbol;
-
+typedef struct _MemoryCache MemoryCache;
 typedef struct _module
 {
     process *parent_process;
@@ -43,9 +43,12 @@ typedef struct _module
     char *internal_name; // may be NULL
     IMAGE_SECTION_HEADER *sections; // ptr to array of sections. allocated via DMALLOC. deep copy here.
     unsigned sections_total;
+
+    // for one-time INT3 breakpoints
+    rbtree* INT3_BP_bytes; // address, byte
 } module;
 
-module* add_module (process *p, address img_base, HANDLE file_hdl);
+module* add_module (process *p, address img_base, HANDLE file_hdl, MemoryCache *mc);
 void unload_module_and_free(module *m);
 void remove_module (process *p, address img_base);
 bool address_in_module (module *m, address a);

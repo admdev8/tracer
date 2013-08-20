@@ -51,7 +51,7 @@ extern bool quiet;
 extern bool dump_fpu;
 extern bool dump_xmm;
 bool dump_all_symbols;
-regex_t *dump_all_symbols_re;
+regex_t *dump_all_symbols_re, *one_time_int3_bp_re;
 extern bool module_c_debug;
 extern bool cycle_c_debug;
 extern bool bpx_c_debug;

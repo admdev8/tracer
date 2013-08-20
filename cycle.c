@@ -70,30 +70,20 @@ void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
         L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
 };
 
-bool handle_OEP_breakpoint (process *p, thread *t)
+static bool handle_OEP_breakpoint (process *p, thread *t, MemoryCache *mc, CONTEXT *ctx)
 {
     if (cycle_c_debug)
         L ("%s() begin\n", __func__);
 
-    CONTEXT ctx;
-    ctx.ContextFlags = CONTEXT_ALL;
-    DWORD rt;
-    rt=GetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
-    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+    CONTEXT_decrement_PC(ctx);
 
-    CONTEXT_decrement_PC(&ctx);
-    rt=SetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
-
-    bool b=MC_WriteByte (mc, CONTEXT_get_PC(&ctx), p->executable_module->saved_OEP_byte);
+    bool b=MC_WriteByte (mc, CONTEXT_get_PC(ctx), p->executable_module->saved_OEP_byte);
     assert (b && "cannot restore original byte at OEP");
 
     if (load_filename)
         p->we_are_loading_and_OEP_was_executed=true;
 
     set_or_update_all_DRx_breakpoints(p); // for all threads! only DRx breakpoints set/updated!
-
-    MC_Flush (mc);
-    MC_MemoryCache_dtor (mc, true);
 
     if (cycle_c_debug)
         L ("%s() end\n", __func__);
@@ -160,6 +150,58 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
         L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
 };
 
+DWORD handle_EXCEPTION_BREAKPOINT(DEBUG_EVENT *de)
+{
+    DWORD PID=de->dwProcessId, TID=de->dwThreadId;
+    EXCEPTION_DEBUG_INFO *e=&de->u.Exception;
+    EXCEPTION_RECORD *er=&e->ExceptionRecord;
+    address adr=(address)er->ExceptionAddress;
+    process *p=find_process(PID);
+    thread *t=find_thread(PID, TID);
+    DWORD rt=DBG_EXCEPTION_NOT_HANDLED; // default;
+    strbuf tmp=STRBUF_INIT;
+    
+    process_get_sym (p, adr, true, true, &tmp);
+
+    if (cycle_c_debug)
+        L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
+
+    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+    CONTEXT ctx;
+    ctx.ContextFlags = CONTEXT_ALL;
+    BOOL b;
+    b=GetThreadContext (t->THDL, &ctx); assert (b!=FALSE);
+    
+    if (stricmp(tmp.buf, "ntdll.dll!DbgBreakPoint")==0)
+    {
+        if (cycle_c_debug)
+            L ("We handle this\n");
+        rt=DBG_CONTINUE;
+    };
+
+    // we are loading and is it OEP?
+    if (rt==DBG_EXCEPTION_NOT_HANDLED && load_filename && (adr==p->executable_module->OEP))
+    {
+        handle_OEP_breakpoint (p, t, mc, &ctx);
+        rt=DBG_CONTINUE; // handled
+    };
+    
+    if (rt==DBG_EXCEPTION_NOT_HANDLED) // still not handled
+    {
+        if (check_for_onetime_INT3_BP(p, t, adr, mc, tmp.buf, &ctx))
+            rt=DBG_CONTINUE; // handled
+    };
+
+    if (rt==DBG_EXCEPTION_NOT_HANDLED)
+        L ("Warning: unknown (to us) INT3 breakpoint at %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
+
+    b=SetThreadContext (t->THDL, &ctx); assert (b!=FALSE);
+    MC_Flush (mc);
+    MC_MemoryCache_dtor (mc, true);
+    strbuf_deinit(&tmp);
+    return rt;
+};
+
 DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
 {
     DWORD PID=de->dwProcessId, TID=de->dwThreadId;
@@ -199,33 +241,11 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 rt=DBG_CONTINUE; // handled
             };
             break;
+
         case EXCEPTION_BREAKPOINT:
-            {
-                strbuf tmp=STRBUF_INIT;
-                process_get_sym (p, adr, true, true, &tmp);
-
-                if (cycle_c_debug);
-                L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
-
-                if (stricmp(tmp.buf, "ntdll.dll!DbgBreakPoint")==0)
-                {
-                    if (cycle_c_debug)
-                        L ("We handle this\n");
-                    rt=DBG_CONTINUE;
-                };
-
-                // we are loading and is it OEP?
-                if (rt==DBG_EXCEPTION_NOT_HANDLED && load_filename && (adr==p->executable_module->OEP))
-                {
-                    handle_OEP_breakpoint (p, t);
-                    rt=DBG_CONTINUE; // handled
-                };
-
-                if (rt==DBG_EXCEPTION_NOT_HANDLED)
-                    L ("Warning: unknown (to us) INT3 breakpoint\n");
-                strbuf_deinit(&tmp);
-            };
+            rt=handle_EXCEPTION_BREAKPOINT(de);
             break;
+
         case EXCEPTION_ACCESS_VIOLATION:
             {
                 strbuf sb_sym=STRBUF_INIT;
@@ -243,11 +263,18 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
 
                 dump_CONTEXT (&cur_fds, &ctx, dump_fpu, false /* dump_DRx */, dump_xmm);
             };
-
             break;
+
         default:
             if (cycle_c_debug)
-                L ("unknown ExceptionCode: %ld (0x%08X)\n", er->ExceptionCode, er->ExceptionCode);
+            {
+                strbuf sb_sym=STRBUF_INIT;
+                address a=(address)er->ExceptionAddress;
+                process_get_sym(p, a, true, true, &sb_sym);
+                L ("unknown ExceptionCode: %ld (0x%08X) at %s (0x" PRI_ADR_HEX ")\n", 
+                        er->ExceptionCode, er->ExceptionCode, sb_sym.buf, adr);
+                strbuf_deinit(&sb_sym);
+            };
             break;
     };
     return rt;
@@ -270,24 +297,19 @@ void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
 {
     CREATE_PROCESS_DEBUG_INFO *i=&de->u.CreateProcessInfo;
     DWORD PID=de->dwProcessId, TID=de->dwThreadId;
-    process *p=DCALLOC (process, 1, "process");
 
     if (cycle_c_debug)
         L ("%s() begin\n", __func__);
-    p->PID=PID;
-    p->PHDL=i->hProcess;
-    p->file_handle=i->hFile;
-    p->base_of_image=(address)i->lpBaseOfImage;
 
-    p->modules=rbtree_create(true, "modules", compare_size_t); // compare_REGs?
-    p->threads=rbtree_create(true, "threads", compare_tetrabytes);
+    process* p=process_init (PID, i->hProcess, i->hFile, i->lpBaseOfImage);
+    
     add_thread (p, TID, i->hThread, (address)i->lpStartAddress);
     rbtree_insert(processes, (void*)PID, p);
-
-    p->executable_module=add_module(p, (address)i->lpBaseOfImage, p->file_handle);
-    L ("PID=%d|New process %s\n", PID, get_module_name (p->executable_module));
-
+    
     MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+
+    p->executable_module=add_module(p, (address)i->lpBaseOfImage, p->file_handle, mc);
+    L ("PID=%d|New process %s\n", PID, get_module_name (p->executable_module));
 
     if (load_filename)
         save_OEP_byte_and_set_INT3_breakpoint (mc, p->executable_module);
@@ -328,10 +350,21 @@ void handle_LOAD_DLL_DEBUG_EVENT (DEBUG_EVENT *de)
     assert (b);
 
     if (cycle_c_debug)
-        L ("LOAD_DLL_DEBUG_EVENT: %s 0x%x\n", sb.buf, i->lpBaseOfDll);
+        L ("%s() LOAD_DLL_DEBUG_EVENT: %s 0x%x\n", __func__, sb.buf, i->lpBaseOfDll);
     strbuf_deinit (&sb);
+    
+    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
 
-    add_module (p, (address)i->lpBaseOfDll, i->hFile);
+    add_module (p, (address)i->lpBaseOfDll, i->hFile, mc);
+
+    if (cycle_c_debug)
+        L ("%s() MC_Flush() to be called\n", __func__);
+
+    MC_Flush (mc);
+    MC_MemoryCache_dtor (mc, false);
+
+    if (cycle_c_debug)
+        L ("%s() exiting\n", __func__);
 };
 
 void handle_UNLOAD_DLL_DEBUG_EVENT (DEBUG_EVENT *de)
