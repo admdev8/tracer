@@ -96,7 +96,7 @@ void add_new_address_to_be_resolved (bp_address *a)
     X86_register x86reg;
 }
 
-%token TWO_POINTS SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
+%token SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
 %token _EOF DUMP_OP SET SET_OP COPY_OP BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
@@ -123,7 +123,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 
 tracer_option
  : tracer_option_without_newline
- | tracer_option_without_newline NEWLINE
+ | tracer_option_without_newline '\n'
  ;
 
 tracer_option_without_newline
@@ -331,7 +331,7 @@ bytemask
 
 bytemask_element
  : HEX_BYTE     { $$=cons (obj_wyde($1), NULL); }
- | TWO_POINTS   { $$=cons (obj_wyde(BYTEMASK_WILDCARD_BYTE), NULL); }
+ | '.' '.'      { $$=cons (obj_wyde(BYTEMASK_WILDCARD_BYTE), NULL); }
  | skip_n       { $$=obj_wyde_n_times (BYTEMASK_WILDCARD_BYTE, $1); }
  ;
 

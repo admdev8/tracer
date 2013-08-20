@@ -43,7 +43,6 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 
 %%
 
-<INITIAL,STATE_BPX>"\n"   { return NEWLINE; }
 <INITIAL>bpx=   { BEGIN(STATE_BPX); yy_push_state(STATE_ADDRESS); return BPX_EQ; }
 <INITIAL>bpf=   { 
     assert (current_BPF==NULL); 
@@ -106,7 +105,6 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <STATE_ADDRESS,STATE_ADDRESS_OR_REG>"bytemask:\""             { yy_push_state(STATE_BYTEMASK); return BYTEMASK; }
 <STATE_BYTEMASK>[[:xdigit:]][[:xdigit:]] { yylval.num = strtol(yytext, NULL, 16); return HEX_BYTE; }
 <STATE_BYTEMASK>"[skip:"                  { yy_push_state(STATE_BYTEMASK_SKIP_OPT); return SKIP; }
-<STATE_BYTEMASK>".."                     { return TWO_POINTS; }
 <STATE_BYTEMASK>"\""                     { 
     if (YYSTATE==STATE_BYTEMASK)
     {
@@ -148,7 +146,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <STATE_BPX>"set("   { yy_push_state(STATE_ADDRESS_OR_REG); return SET_OP; }
 <STATE_BPX>"copy("  { yy_push_state(STATE_ADDRESS_OR_REG); return COPY_OP; }
 <STATE_BPX>"\\x"[[:xdigit:]][[:xdigit:]]   { yylval.num = strtol(yytext+2, NULL, 16); return CSTRING_BYTE ; }
-<STATE_BPX>[^\\\",)]                         { yylval.num = yytext[0]; return CSTRING_BYTE ; }
+<STATE_BPX>[^\\\",)\n]                         { yylval.num = yytext[0]; return CSTRING_BYTE ; }
 <STATE_BPF>unicode                   { return BPF_UNICODE; }
 <STATE_BPF>trace:                    { return BPF_TRACE_COLON; }
 <STATE_BPF>trace                     { return BPF_TRACE; }
