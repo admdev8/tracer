@@ -38,8 +38,10 @@
 // ,set(byte,*arg_0=0x123)
 // ,set(byte,*(arg_0+0x150)=0x123)
 
+// globals to be set here:
+
 BP* breakpoints[4]={ NULL, NULL, NULL, NULL }; // 0..3 - DR0-3
-dlist* addresses_to_be_resolved=NULL; // list of opaque objects-pointers to bp_address structures. don't free them.
+dlist* addresses_to_be_resolved=NULL;
 char* load_filename=NULL;
 char* attach_filename=NULL;
 char *load_command_line=NULL;

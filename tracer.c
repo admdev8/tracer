@@ -46,6 +46,7 @@ void help_and_exit()
     printf ("--dump-fpu - dump FPU registers where it's possible\n");
     printf ("--dump-xmm - dump MMX/XMM registers\n");
     printf ("--one-time-INT3-bp:<symbol_mask> - set multiple one-time INT3 breakpoints\n");
+    printf ("--limit-trace-nestedness:<number> - limit level of trace in BPF CC. default is 1.\n");
     printf ("\n");
     printf ("BPF options:\n");
     printf ("\n");

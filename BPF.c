@@ -574,7 +574,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
         };
 
         Da* da=MC_disas(PC, mc);
-
+        
         if (da==NULL)
         {
             strbuf sb=STRBUF_INIT;
@@ -596,7 +596,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
                 //clear_TF(ctx);
                 CONTEXT_setDRx_and_DR7 (ctx, bp_no, new_adr);
                 if (bpf->cc)                            // redundant
-                    handle_cc(da, p, t, ctx, mc, true); // redundant
+                    handle_cc(da, p, t, ctx, mc, false, true); // redundant
                 Da_free(da);
                 return 3;
             }
@@ -608,7 +608,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
             di->tracing_CALLs_executed--;
 
         if (bpf->cc)
-            handle_cc(da, p, t, ctx, mc, false);
+            handle_cc(da, p, t, ctx, mc, false, false);
         Da_free(da);
 
     } while (emulated);

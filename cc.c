@@ -781,7 +781,8 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
         L ("%s() end\n", __func__);
 };
 
-void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, bool CALL_to_be_skipped)
+void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, 
+        bool CALL_to_be_skipped_due_to_module, bool CALL_to_be_skipped_due_to_trace_limit)
 {
     //printf ("sizeof(ins_reported_as_unhandled)/sizeof(bool)=%d\n", sizeof(ins_reported_as_unhandled)/sizeof(bool));
     //printf ("I_MAX_INS=%d\n", I_MAX_INS);
@@ -799,10 +800,16 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, boo
     if (da==NULL)
         strbuf_addstr (&comment, "instruction wasn't disassembled");
 
-    if (CALL_to_be_skipped)
+    if (CALL_to_be_skipped_due_to_trace_limit)
     {
         assert (da && da->ins_code==I_CALL);
         strbuf_addf (&comment, "tracing nested maximum level (%d) reached, skipping this CALL",
+                limit_trace_nestedness);
+    };
+    if (CALL_to_be_skipped_due_to_module) // not used (so far).
+    {
+        assert (da && da->ins_code==I_CALL);
+        strbuf_addf (&comment, "skipping this CALL: all functions in this module is to be skipped",
                 limit_trace_nestedness);
     };
 

@@ -176,12 +176,6 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 }
 %%
 
-//<STATE_BPX><<EOF>> { return _EOF; }
-// [ \t]                    { /* ignore comment and white space */ }
-// ":"                      { return COLON; }
-// \n                       { return EOL; }
-/* <STATE_ADDRESS>"+"                        { return PLUS; } */
-// .                        { fprintf(stderr, "Unparsed character %c\n", *yytext); }
 void flex_set_str(char *s)
 {
     YY_BUFFER_STATE buf;
