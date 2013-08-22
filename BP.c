@@ -59,30 +59,37 @@ BP* create_BP (enum BP_type t, bp_address* a, void* p)
     return rt;
 };
 
-void dump_BP (BP* b)
+void BP_ToString (BP* b, strbuf* out)
 {
     if (b->a)
     {
-        printf ("bp_address=");
-        dump_address (b->a);
-        printf (". ");
+        strbuf_addstr (out, "bp_address=");
+        address_to_string (b->a, out);
+        strbuf_addstr (out, ". ");
     };
 
     switch (b->t)
     {
         case BP_type_BPM:
-            dump_BPM(b->u.bpm);
+            BPM_ToString(b->u.bpm, out);
             break;
         case BP_type_BPX:
-            dump_BPX(b->u.bpx);
+            BPX_ToString(b->u.bpx, out);
             break;
         case BP_type_BPF:
-            dump_BPF(b->u.bpf);
+            BPF_ToString(b->u.bpf, out);
             break;
         default:
             assert(0);
     };
-    //printf ("next=0x%p\n", b->next);
+};
+
+void dump_BP (BP* b)
+{
+    strbuf sb=STRBUF_INIT;
+    BP_ToString(b, &sb);
+    strbuf_puts (&sb);
+    strbuf_deinit (&sb);
 };
 
 /* vim: set expandtab ts=4 sw=4 : */

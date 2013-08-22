@@ -50,6 +50,7 @@ typedef struct _BP
 } BP;
 
 BP* create_BP (enum BP_type t, bp_address* a, void* p);
+void BP_ToString (BP* b, strbuf* out);
 void dump_BP (BP* b);
 void BP_free(BP*);
 

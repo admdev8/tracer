@@ -34,7 +34,7 @@ typedef struct _BPM
 } BPM;
 
 BPM *create_BPM(unsigned width, enum BPM_type t);
-void dump_BPM(BPM *);
+void BPM_ToString(BPM *bpm, strbuf *out);
 void BPM_free(BPM *);
 void handle_BPM(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc);
 void BPM_set_or_update_DRx_breakpoint(BPM *b, address a, unsigned DRx_no, CONTEXT *ctx);

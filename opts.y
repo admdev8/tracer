@@ -252,8 +252,12 @@ BPF_option
  | BPF_SKIP                         { current_BPF->skip=true; } 
  | BPF_SKIP_STDCALL                 { current_BPF->skip_stdcall=true; }
  | BPF_PAUSE DEC_OR_HEX             { current_BPF->pause=$2; }
- | BPF_RT DEC_OR_HEX                { current_BPF->rt=$2; current_BPF->rt_probability=1.0; }
- | BPF_RT_PROBABILITY float_or_perc { current_BPF->rt_probability=$2; }
+ | BPF_RT DEC_OR_HEX                { current_BPF->rt=$2; }
+ | BPF_RT_PROBABILITY float_or_perc { current_BPF->rt_probability=$2; 
+#ifdef _DEBUG 
+    fprintf (stderr, "rt_probability=%f", $2); 
+#endif
+    }
  | BPF_ARGS DEC_OR_HEX              { current_BPF->args=$2; }
  | BPF_DUMP_ARGS DEC_OR_HEX         { current_BPF->dump_args=$2; }
  | WHEN_CALLED_FROM_ADDRESS address { current_BPF->when_called_from_address=$2; }

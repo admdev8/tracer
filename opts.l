@@ -47,7 +47,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>bpf=   { 
     assert (current_BPF==NULL); 
     current_BPF=DCALLOC (BPF, 1, "BPF"); 
-    current_BPF->rt_probability=0; 
+    current_BPF->rt_probability=1.0; 
     BEGIN(STATE_BPF); 
     yy_push_state(STATE_ADDRESS); 
     return BPF_EQ; 

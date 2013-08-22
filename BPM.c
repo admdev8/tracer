@@ -40,14 +40,14 @@ void BPM_free(BPM *o)
     DFREE (o);
 };
 
-void dump_BPM(BPM *bpm)
+void BPM_ToString(BPM *bpm, strbuf *out)
 {
-    printf ("BPM. width=%d, ", bpm->width);
+    strbuf_addf (out, "BPM. width=%d, ", bpm->width);
     if (bpm->t==BPM_type_RW)
-        printf ("type=RW");
+        strbuf_addstr (out, "type=RW");
     else
-        printf ("type=W");
-    printf ("\n");
+        strbuf_addstr (out, "type=W");
+    strbuf_addstr (out, "\n");
 };
 
 void BPM_set_or_update_DRx_breakpoint(BPM *bpm, address a, unsigned DRx_no, CONTEXT *ctx)

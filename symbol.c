@@ -16,6 +16,7 @@
 #include "symbol.h"
 #include "dmalloc.h"
 #include "tracer.h"
+#include "utils.h"
 #include "one_time_INT3_BP.h"
 
 static symbol *create_symbol (symbol_type t, char *n)

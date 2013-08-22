@@ -31,49 +31,50 @@
 #include "stuff.h"
 #include "rand.h"
 
-void dump_BPF(BPF *b)
+void BPF_ToString(BPF *b, strbuf *out)
 {
-    printf ("BPF. options: ");
+    strbuf_addstr (out, "BPF. options: ");
     if (b->unicode)
-        printf ("unicode ");
+        strbuf_addstr (out, "unicode ");
     if (b->skip)
-        printf ("skip ");
+        strbuf_addstr (out, "skip ");
     if (b->skip_stdcall)
-        printf ("skip_stdcall ");
+        strbuf_addstr (out, "skip_stdcall ");
     if (b->trace)
-        printf ("trace ");
+        strbuf_addstr (out, "trace ");
     if (b->cc)
-        printf ("cc ");
-    printf ("rt: " PRI_REG_HEX " ", b->rt);
+        strbuf_addstr (out, "cc ");
+    strbuf_addf (out, "rt: " PRI_REG_HEX " ", b->rt);
 
+    //fprintf (stderr, "%s() rt_probability: %f ", __func__, b->rt_probability);
     if (b->rt_probability!=1)
-        printf ("rt_probability: %f ", b->rt_probability);
+        strbuf_addf (out, "rt_probability: %f ", b->rt_probability);
 
     if (b->args)
-        printf ("args: %d ", b->args);
+        strbuf_addf (out, "args: %d ", b->args);
 
     if (b->dump_args)
-        printf ("dump_args: %d ", b->dump_args);
+        strbuf_addf (out, "dump_args: %d ", b->dump_args);
 
     if (b->pause)
-        printf ("pause: %d ", b->pause);
+        strbuf_addf (out, "pause: %d ", b->pause);
 
-    printf ("\n");
+    strbuf_addstr (out, "\n");
     if (b->when_called_from_address)
     {
-        printf ("when_called_from_address: ");
-        dump_address (b->when_called_from_address);
-        printf ("\n");
+        strbuf_addstr (out, "when_called_from_address: ");
+        address_to_string (b->when_called_from_address, out);
+        strbuf_addstr (out, "\n");
     };
     if (b->when_called_from_func)
     {
-        printf ("when_called_from_func: ");
-        dump_address (b->when_called_from_func);
-        printf ("\n");
+        strbuf_addstr (out, "when_called_from_func: ");
+        address_to_string (b->when_called_from_func, out);
+        strbuf_addstr (out, "\n");
     };
     if (b->set_present)
     {
-        printf ("set_width=%d set_arg_n=%d set_ofs=0x" PRI_REG_HEX " set_val=0x" PRI_REG_HEX "\n", b->set_width, b->set_arg_n, b->set_ofs, b->set_val);
+        strbuf_addf (out, "set_width=%d set_arg_n=%d set_ofs=0x" PRI_REG_HEX " set_val=0x" PRI_REG_HEX "\n", b->set_width, b->set_arg_n, b->set_ofs, b->set_val);
     };
     // NOTE: args_n, arg_types, ret_type, this_type not dumped
 };

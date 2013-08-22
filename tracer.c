@@ -421,7 +421,7 @@ void free_trace_skip_options(trace_skip_element *i)
 };
 
 #ifdef _DEBUG
-int opts_test(); // opts_test.c
+void tests(); // tests.c
 #endif
 
 void free_all_globals()
@@ -468,9 +468,9 @@ int main(int argc, char *argv[])
         help_and_exit();
 
 #ifdef _DEBUG
-    if (argc==2 && stricmp (argv[1], "opts_test")==0)
+    if (argc==2 && stricmp (argv[1], "test")==0)
     {
-        opts_test();
+        tests();
         return 0;
     };
 #endif

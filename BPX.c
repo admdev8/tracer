@@ -44,51 +44,51 @@ void BPX_free(BPX *o)
     DFREE (o);
 };
 
-void dump_BPX(BPX *b)
+void BPX_ToString(BPX *b, strbuf *out)
 {
-    printf ("BPX.");
+    strbuf_addstr (out, "BPX.");
     if (b->opts)
     {
-        printf (" options: ");
+        strbuf_addstr (out, " options: ");
         for (BPX_option *o=b->opts; o; o=o->next)
-            dump_BPX_option(o);
+            BPX_option_ToString(o, out);
     };
-    printf ("\n");
+    strbuf_addstr (out, "\n");
 };
 
-void dump_BPX_option(BPX_option *b)
+void BPX_option_ToString(BPX_option *b, strbuf *out)
 {
     switch (b->t)
     {
         case BPX_option_DUMP:
-            printf ("[DUMP ");
+            strbuf_addstr (out, "[DUMP ");
             if (b->a)
-                dump_address(b->a);
+                address_to_string(b->a, out);
             else
-                printf ("reg:%s", X86_register_ToString(b->reg));
-            printf (" size: %d]", b->size_or_value);
+                strbuf_addf (out, "reg:%s", X86_register_ToString(b->reg));
+            strbuf_addf (out, " size: %d]", b->size_or_value);
             break;
 
         case BPX_option_SET:
             assert (b->a==NULL); // must be always register
-            printf("[SET reg:%s ", X86_register_ToString(b->reg));
+            strbuf_addf (out, "[SET reg:%s ", X86_register_ToString(b->reg));
             if (X86_register_is_STx(b->reg))
-                printf("float_value:%f]", b->float_value);
+                strbuf_addf (out, "float_value:%f]", b->float_value);
             else
-                printf("value:%d]", b->size_or_value);
+                strbuf_addf (out, "value:%d]", b->size_or_value);
             break;
 
         case BPX_option_COPY:
-            printf ("[COPY ");
+            strbuf_addstr (out, "[COPY ");
             if (b->a)
-                dump_address(b->a);
+                address_to_string(b->a, out);
             else
-                printf ("reg:%s", X86_register_ToString(b->reg));
+                strbuf_addf (out, "reg:%s", X86_register_ToString(b->reg));
             assert(b->copy_string);
-            printf ("[");
+            strbuf_addstr (out, "[");
             for (int i=0; i<b->copy_string_len; i++)
-                printf ("0x%02X ", b->copy_string[i]);
-            printf ("]");
+                strbuf_addf (out, "0x%02X ", b->copy_string[i]);
+            strbuf_addstr (out, "]");
             break;
 
         default:

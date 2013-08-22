@@ -61,10 +61,10 @@ typedef enum _BPX_state
 } BPX_state;
 
 void BPX_option_free(BPX_option *);
-void dump_BPX_option(BPX_option *b);
+void BPX_ToString(BPX *b, strbuf *out);
+void BPX_option_ToString(BPX_option *b, strbuf *out);
 void BPX_free(BPX *);
 BPX* create_BPX(BPX_option *opts);
-void dump_BPX(BPX *);
 
 void handle_BPX(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc);
 
