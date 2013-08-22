@@ -157,11 +157,11 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
             if (da->_op[0]->type==DA_OP_TYPE_REGISTER || da->_op[0]->type==DA_OP_TYPE_VALUE_IN_MEMORY) // add symbol to comment
             {
                 address adr;
-                s_Value val;
+                obj val;
 
                 strbuf_addstr (comments, "op1=");
                 if (Da_op_get_value_of_op (da->_op[0], &adr, ctx, mc, __FILE__, __LINE__, &val))
-                    process_get_sym (p, get_as_REG (&val), true, true, comments);
+                    process_get_sym (p, obj_get_as_REG (&val), true, true, comments);
                 else
                     strbuf_addstr (comments, "<can't get value of op1 here>");
                 strbuf_addstr (comments, " ");
@@ -500,11 +500,11 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out,
     //L ("%s() begin\n", __func__);
     assert(da);
     op_info *op=info->op[i];
-    enum value_t op_t=info->op_t[i];
+    enum obj_type op_t=info->op_t[i];
 
     if (op==NULL)
     {
-        assert (op_t==V_INVALID);
+        assert (op_t==OBJ_NONE);
         return false;
     };
 
@@ -514,10 +514,10 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out,
 
     switch (op_t)
     {
-        case V_BYTE:
-        case V_WORD:
-        case V_DWORD:
-        case V_QWORD: 
+        case OBJ_BYTE:
+        case OBJ_WYDE:
+        case OBJ_TETRABYTE:
+        case OBJ_OCTABYTE: 
             {
                 set_of_REG_to_string (op->values, out, 10);
 
@@ -529,13 +529,13 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out,
             };
             break;
 
-        case V_DOUBLE:
+        case OBJ_DOUBLE:
             if (dump_fpu)
                 set_of_doubles_to_string (op->FPU_values, out, 10);
             break;
         
-        case V_INVALID:
-            assert("op_t==V_INVALID");
+        case OBJ_NONE:
+            assert("op_t==OBJ_NONE");
             break;
 
         default:
@@ -651,7 +651,7 @@ void cc_dump_and_free(module *m) // for module m
         L ("%s() end\n", __func__);
 };
 
-static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCache *mc, PC_info *info)
+static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *mc, PC_info *info)
 {
     
     if (info->op[i]==NULL)
@@ -667,24 +667,19 @@ static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCach
     // FIXME: XMM?
     switch (val->t)
     {
-        case V_BYTE: 
-            rbtree_insert(op->values, (void*)(REG)get_as_8(val), NULL);
-            break;
-        case V_WORD: 
-            rbtree_insert(op->values, (void*)(REG)get_as_16(val), NULL);
-            break;
-        case V_DWORD: 
-            rbtree_insert(op->values, (void*)(REG)get_as_32(val), NULL);
-            break;
+        case OBJ_BYTE: 
+        case OBJ_WYDE: 
+        case OBJ_TETRABYTE: 
 #ifdef _WIN64
-        case V_QWORD: 
-            rbtree_insert(op->values, (void*)(REG)get_as_64(val), NULL);
+        case OBJ_OCTABYTE:
+#endif            
+            rbtree_insert(op->values, (void*)obj_get_as_REG(val), NULL);
             break;
-#endif
-        case V_DOUBLE:
+        
+        case OBJ_DOUBLE:
             if (dump_fpu)
             {
-                double d=get_as_double(val);
+                double d=obj_get_as_double(val);
                 rbtree_insert(op->FPU_values, DMEMDUP(&d, sizeof(double), "double"), NULL);
             };
             break;
@@ -698,14 +693,14 @@ static void save_info_about_op (address PC, unsigned i, s_Value *val, MemoryCach
 
     if (val->t==
 #ifdef _WIN64
-            V_QWORD
+            OBJ_OCTABYTE
 #else
-            V_DWORD
+            OBJ_TETRABYTE
 #endif
        )
     {
         strbuf sb=STRBUF_INIT;
-        if (MC_get_any_string (mc, get_as_REG(val), &sb)) // unicode string too
+        if (MC_get_any_string (mc, obj_get_as_REG(val), &sb)) // unicode string too
         {
             if (sb.strlen>1+1+STRING_LEN)
                 set_add_string_or_free (op->ptr_to_string_set, strbuf_detach(&sb, NULL));
@@ -747,7 +742,7 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
             if (i<=WORKOUT_OP3)
             {
                 address adr;
-                s_Value val;
+                obj val;
                 if (Da_op_get_value_of_op (da->_op[i], &adr, ctx, mc, __FILE__, __LINE__, &val))
                 {
                     save_info_about_op (PC, i, &val, mc, info);
@@ -756,7 +751,7 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
             }
             else
             {
-                s_Value val;
+                obj val;
                 switch (i)
                 {
                     case WORKOUT_AX:

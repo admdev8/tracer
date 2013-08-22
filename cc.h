@@ -18,6 +18,7 @@
 #include <windows.h>
 #include "memorycache.h"
 #include "x86_disas.h"
+#include "lisp.h"
 
 typedef struct _process process;
 typedef struct _thread thread;
@@ -80,7 +81,7 @@ typedef struct _PC_info
 {
     Da *da;
     op_info *op[7]; // OP1/2/3/AX/CX/DX/ST0
-    enum value_t op_t[7]; // type for OP1/2/3/AX/CX/DX/ST0
+    enum obj_type op_t[7]; // type for OP1/2/3/AX/CX/DX/ST0. use this from lisp.h
     octabyte executed; // how many times we've been here?
     char *comment; // (one) comment about this PC
     wyde flags; // FLAG_xF_CAN_BE_xxxx

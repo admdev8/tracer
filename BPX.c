@@ -140,9 +140,8 @@ static void handle_BPX_option (process *p, thread *t, CONTEXT *ctx, MemoryCache 
 
         case BPX_option_SET:
             assert (o->a==NULL); // only reg allowed (yet)
-            s_Value val;
-            X86_register_get_value(o->reg, ctx, &val); // so to create s_Value with right type. FIXME!
-            val.u.v=o->size_or_value;
+            obj val;
+            obj_REG2_and_set_type (X86_register_get_type(o->reg), o->size_or_value, &val);
             X86_register_set_value(o->reg, ctx, &val);
             L ("Set %s register to 0x" PRI_REG_HEX "\n", X86_register_ToString(o->reg), o->size_or_value);
             break;
