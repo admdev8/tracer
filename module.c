@@ -468,16 +468,17 @@ static void module_free (module *m)
     DFREE(m->internal_name);
     DFREE(m->sections);
 
-    for (struct rbtree_node_t *i=rbtree_minimum(m->symbols); i; i=rbtree_succ(i))
-    {
-        for (symbol* s=(symbol*)i->value; s; )
+    if (m->symbols)
+        for (struct rbtree_node_t *i=rbtree_minimum(m->symbols); i; i=rbtree_succ(i))
         {
-            symbol *tmp=s;
-            s=s->next;
-            DFREE(tmp->name);
-            DFREE(tmp);
+            for (symbol* s=(symbol*)i->value; s; )
+            {
+                symbol *tmp=s;
+                s=s->next;
+                DFREE(tmp->name);
+                DFREE(tmp);
+            };
         };
-    };
 
     rbtree_deinit(m->symbols);
     rbtree_deinit(m->INT3_BP_bytes);

@@ -1,11 +1,18 @@
 CC=gcc
 
+DEBUG_FLAGS=-D_DEBUG -DYYDEBUG=1
+GCOV_FLAGS=-fprofile-arcs -ftest-coverage
 ifeq ($(BUILD),debug)
 bsuffix=debug
-CPPFLAGS_ADD=-D_DEBUG -DYYDEBUG=1
-else
-bsuffix=release
-CPPFLAGS_ADD=-O3
+CPPFLAGS_ADD=$(DEBUG_FLAGS)
+else 
+	ifeq ($(BUILD),gcov)
+	bsuffix=debug
+	CPPFLAGS_ADD=$(DEBUG_FLAGS) $(GCOV_FLAGS)
+	else
+	bsuffix=release
+	CPPFLAGS_ADD=-O3
+	endif
 endif
 
 OUTDIR=$(MSYSTEM)_$(bsuffix)
@@ -28,7 +35,8 @@ FLEX=flex
 FLEX_PATH=$(HOME)/flex-2.5.37
 BISON=bison
 SOURCES=opts.tab.c opts.lex.c tracer.c cycle.c module.c process.c symbol.c thread.c BP.c \
-	BPF.c BPX.c BPM.c bp_address.c utils.c cc.c opts_test.c one_time_INT3_BP.c tests.c
+	BPF.c BPX.c BPM.c bp_address.c utils.c cc.c opts_test.c one_time_INT3_BP.c tests.c \
+	cc_tests.c
 DEP_FILES=$(addprefix $(OUTDIR)/,$(SOURCES:.c=.d))
 OBJECTS=$(addprefix $(OUTDIR)/,$(SOURCES:.c=.o))
 LIBS=$(OCTOTHORPE_LIBRARY) $(X86_DISASM_LIBRARY) $(PORG_LIBRARY) $(BOLT_LIBRARY)
@@ -51,7 +59,7 @@ $(OUTDIR)/%.o: %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(OUTDIR)/$(TRACER_EXE_NAME): $(OBJECTS) $(LIBS)
-	$(CC) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -ldbghelp -limagehlp
+	$(CC) $(GCOV_FLAGS) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -ldbghelp -limagehlp
 ifeq ($(BUILD),debug)
 else
 	strip $(OUTDIR)/$(TRACER_EXE_NAME)
@@ -61,6 +69,10 @@ clean:
 	$(RM) opts.tab.h opts.tab.c opts.lex.c $(OUTDIR)/$(TRACER_EXE_NAME)
 	$(RM) $(DEP_FILES)
 	$(RM) $(OBJECTS)
+	$(RM) *.gcov *.gcda *.gcno
+	$(RM) $(OUTDIR)/*.gcov
+	$(RM) $(OUTDIR)/*.gcda
+	$(RM) $(OUTDIR)/*.gcno
 
 opts.tab.h opts.tab.c: opts.y
 ifeq ($(BUILD),debug)
@@ -75,4 +87,3 @@ ifeq ($(BUILD),debug)
 else	
 	$(FLEX) -oopts.lex.c opts.l
 endif
-

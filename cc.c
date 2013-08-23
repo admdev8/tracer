@@ -26,6 +26,7 @@
 #include "stuff.h"
 #include "X86_register_helpers.h"
 #include "set.h"
+#include "oassert.h"
 
 #define IDA_MAX_COMMENT_SIZE 1023
 #define STRING_LEN 4
@@ -47,7 +48,7 @@ static int compare_doubles(void* leftp, void* rightp)
     if (left > right)
         return 1;
 
-    return 1; // eh...
+    oassert(0);
 };
 
 unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, MemoryCache *mc)
@@ -549,6 +550,20 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out,
     return true;
 };
 
+void construct_common_string(strbuf *out, address a, PC_info *info)
+{
+    if (info->comment)
+        strbuf_addf (out, "%s ", info->comment);
+    // add all info
+    if (info->da)
+        for (unsigned j=0; j<7; j++)
+        {
+            if (cc_dump_op_and_free (info->da, info, j, out, a))
+                strbuf_addc (out, ' ');
+        };
+    strbuf_trim_last_char (out);
+};
+
 static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCache *mc, 
         FILE *f_txt, FILE *f_idc, FILE* f_clear_idc)
 {
@@ -563,15 +578,9 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
         strbuf_addstr (&sb_txt, "not disasmed");
 
     strbuf_addstr (&sb_txt, "] ");
-    if (info->comment)
-        strbuf_addf (&sb_common, "%s ", info->comment);
-    // add all info
-    if (info->da)
-        for (unsigned j=0; j<7; j++)
-        {
-            if (cc_dump_op_and_free (info->da, info, j, &sb_common, a))
-                strbuf_addc (&sb_common, ' ');
-        };
+
+    construct_common_string(&sb_common, a, info);
+
     // TODO: flags?
     fputs (sb_txt.buf, f_txt);
     fputs (sb_common.buf, f_txt);
@@ -653,7 +662,6 @@ void cc_dump_and_free(module *m) // for module m
 
 static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *mc, PC_info *info)
 {
-    
     if (info->op[i]==NULL)
     {
         info->op[i]=DCALLOC(op_info, 1, "op_info");
@@ -709,7 +717,8 @@ static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *m
     };
 };
 
-static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, Da* da, CONTEXT *ctx, MemoryCache *mc)
+static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, Da* da, CONTEXT *ctx, 
+        MemoryCache *mc)
 {
     if (cc_c_debug)
         L ("%s(comment=\"%s\") begin\n", __func__, comment->buf);
@@ -792,6 +801,7 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc,
     unsigned to_notice=what_to_notice(p, da, &comment, ctx, mc);
 
     module *m=find_module_for_address (p, PC);
+    oassert (m);
     if (da==NULL)
         strbuf_addstr (&comment, "instruction wasn't disassembled");
 

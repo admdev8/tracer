@@ -91,4 +91,7 @@ void cc_dump_and_free(module *m); // for module m
 void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, 
         bool CALL_to_be_skipped_due_to_module, bool CALL_to_be_skipped_due_to_trace_limit);
 
+// can be called from cc_tests.c
+void construct_common_string(strbuf *out, address a, PC_info *info);
+
 /* vim: set expandtab ts=4 sw=4 : */
