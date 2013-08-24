@@ -24,6 +24,7 @@
 #include "opts.tab.h"
 #include "opts.h"
 #include "BPF.h"
+//<INITIAL>--dump-fpu    { return DUMP_FPU; }
 %}
 
 %option stack
@@ -65,7 +66,6 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>-q            { return DASH_Q; }
 <INITIAL>-s            { return DASH_S; }
 <INITIAL>-t            { return DASH_T; }
-<INITIAL>--dump-fpu    { return DUMP_FPU; }
 <INITIAL>--dump-xmm    { return DUMP_XMM; }
 <INITIAL>-dont-run-thread-b { return DONT_RUN_THREAD_B; }
 <INITIAL>--one-time-INT3-bp:{REGEXP_EXCL}  {

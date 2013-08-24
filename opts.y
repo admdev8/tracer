@@ -48,7 +48,7 @@ char *load_command_line=NULL;
 int attach_PID=-1;
 bool debug_children=false;
 bool dash_s=false, quiet=false;
-bool dump_fpu=false, dump_xmm=false;
+bool dump_fpu=true, dump_xmm=false;
 BPX_option *current_BPX_option=NULL; // temporary, while parsing...
 BPF* current_BPF=NULL; // filled while parsing
 bp_address* current_BPF_address; // filled while parsing
