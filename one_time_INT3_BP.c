@@ -7,6 +7,7 @@
 #include "memorycache.h"
 #include "CONTEXT_utils.h"
 #include "strbuf.h"
+#include "utils.h"
 
 void set_onetime_INT3_BP(address a, process *p, module *m, char *name, MemoryCache *mc)
 {

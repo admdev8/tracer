@@ -33,6 +33,12 @@ typedef struct _Da Da;
 #define WORKOUT_CX 4
 #define WORKOUT_DX 5
 #define WORKOUT_ST0 6
+#define WORKOUT_PF 7
+#define WORKOUT_SF 8
+#define WORKOUT_AF 9
+#define WORKOUT_ZF 10
+#define WORKOUT_OF 11
+#define WORKOUT_CF 12
 
 #define NOTICE_OP1 1<<WORKOUT_OP1
 #define NOTICE_OP2 1<<WORKOUT_OP2
@@ -41,12 +47,12 @@ typedef struct _Da Da;
 #define NOTICE_CX 1<<WORKOUT_CX
 #define NOTICE_DX 1<<WORKOUT_DX
 #define NOTICE_ST0 1<<WORKOUT_ST0
-#define NOTICE_PF 1<<7
-#define NOTICE_SF 1<<8
-#define NOTICE_AF 1<<9
-#define NOTICE_ZF 1<<10
-#define NOTICE_OF 1<<11
-#define NOTICE_CF 1<<12
+#define NOTICE_PF 1<<WORKOUT_PF
+#define NOTICE_SF 1<<WORKOUT_SF
+#define NOTICE_AF 1<<WORKOUT_AF
+#define NOTICE_ZF 1<<WORKOUT_ZF
+#define NOTICE_OF 1<<WORKOUT_OF
+#define NOTICE_CF 1<<WORKOUT_CF
 
 // FIXME: lisp object could be here!
 typedef struct _op_info
@@ -84,7 +90,7 @@ typedef struct _PC_info
     enum obj_type op_t[7]; // type for OP1/2/3/AX/CX/DX/ST0. use this from lisp.h
     octabyte executed; // how many times we've been here?
     char *comment; // (one) comment about this PC
-    wyde flags; // FLAG_xF_CAN_BE_xxxx
+    wyde flags; // FLAG_xF_CAN_BE_(TRUE|FALSE)
 } PC_info;
 
 void cc_dump_and_free(module *m); // for module m

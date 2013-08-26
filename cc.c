@@ -27,6 +27,7 @@
 #include "X86_register_helpers.h"
 #include "set.h"
 #include "oassert.h"
+#include "x86.h"
 
 #define IDA_MAX_COMMENT_SIZE 1023
 #define STRING_LEN 4
@@ -165,7 +166,7 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
                     process_get_sym (p, obj_get_as_REG (&val), true, true, comments);
                 else
                     strbuf_addstr (comments, "<can't get value of op1 here>");
-                strbuf_addstr (comments, " ");
+                //strbuf_addstr (comments, " ");
             }
             else
                 SET_BIT (rt, NOTICE_OP1);
@@ -472,7 +473,8 @@ static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
             break;
         
         case WORKOUT_ST0:
-            strbuf_addstr (out, "ST0");
+            if (dump_fpu)
+                strbuf_addstr (out, "ST0");
             break;
 
         default:
@@ -505,7 +507,7 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out,
 
     if (op==NULL)
     {
-        assert (op_t==OBJ_NONE);
+        oassert (op_t==OBJ_NONE);
         return false;
     };
 
@@ -536,7 +538,7 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out,
             break;
         
         case OBJ_NONE:
-            assert("op_t==OBJ_NONE");
+            oassert(!"op_t==OBJ_NONE");
             break;
 
         default:
@@ -561,7 +563,51 @@ void construct_common_string(strbuf *out, address a, PC_info *info)
             if (cc_dump_op_and_free (info->da, info, j, out, a))
                 strbuf_addc (out, ' ');
         };
-    strbuf_trim_last_char (out);
+
+    if (IS_SET(info->flags, FLAG_PF_CAN_BE_FALSE) && IS_SET(info->flags, FLAG_PF_CAN_BE_TRUE))
+        strbuf_addstr (out, "PF=false,true ");
+    else if (IS_SET(info->flags, FLAG_PF_CAN_BE_FALSE))
+        strbuf_addstr (out, "PF=false ");
+    else if (IS_SET(info->flags, FLAG_PF_CAN_BE_TRUE))
+        strbuf_addstr (out, "PF=true ");
+
+    if (IS_SET(info->flags, FLAG_SF_CAN_BE_FALSE) && IS_SET(info->flags, FLAG_SF_CAN_BE_TRUE))
+        strbuf_addstr (out, "SF=false,true ");
+    else if (IS_SET(info->flags, FLAG_SF_CAN_BE_FALSE))
+        strbuf_addstr (out, "SF=false ");
+    else if (IS_SET(info->flags, FLAG_SF_CAN_BE_TRUE))
+        strbuf_addstr (out, "SF=true ");
+
+    if (IS_SET(info->flags, FLAG_AF_CAN_BE_FALSE) && IS_SET(info->flags, FLAG_AF_CAN_BE_TRUE))
+        strbuf_addstr (out, "AF=false,true ");
+    else if (IS_SET(info->flags, FLAG_AF_CAN_BE_FALSE))
+        strbuf_addstr (out, "AF=false ");
+    else if (IS_SET(info->flags, FLAG_AF_CAN_BE_TRUE))
+        strbuf_addstr (out, "AF=true ");
+
+    if (IS_SET(info->flags, FLAG_ZF_CAN_BE_FALSE) && IS_SET(info->flags, FLAG_ZF_CAN_BE_TRUE))
+        strbuf_addstr (out, "ZF=false,true ");
+    else if (IS_SET(info->flags, FLAG_ZF_CAN_BE_FALSE))
+        strbuf_addstr (out, "ZF=false ");
+    else if (IS_SET(info->flags, FLAG_ZF_CAN_BE_TRUE))
+        strbuf_addstr (out, "ZF=true ");
+
+    if (IS_SET(info->flags, FLAG_OF_CAN_BE_FALSE) && IS_SET(info->flags, FLAG_OF_CAN_BE_TRUE))
+        strbuf_addstr (out, "OF=false,true ");
+    else if (IS_SET(info->flags, FLAG_OF_CAN_BE_FALSE))
+        strbuf_addstr (out, "OF=false ");
+    else if (IS_SET(info->flags, FLAG_OF_CAN_BE_TRUE))
+        strbuf_addstr (out, "OF=true ");
+
+    if (IS_SET(info->flags, FLAG_CF_CAN_BE_FALSE) && IS_SET(info->flags, FLAG_CF_CAN_BE_TRUE))
+        strbuf_addstr (out, "CF=false,true ");
+    else if (IS_SET(info->flags, FLAG_CF_CAN_BE_FALSE))
+        strbuf_addstr (out, "CF=false ");
+    else if (IS_SET(info->flags, FLAG_CF_CAN_BE_TRUE))
+        strbuf_addstr (out, "CF=true ");
+
+    if (out->strlen>0)
+        strbuf_trim_last_char (out);
 };
 
 static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCache *mc, 
@@ -745,7 +791,7 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
 
     // TODO: add flags
 
-    for (unsigned i=0; i<7; i++)
+    for (unsigned i=0; i<13; i++)
         if (IS_SET(to_notice, 1<<i)) // NOTICE_OP1, OP2, OP3, AX, CX, DX, ST0
         {
             if (i<=WORKOUT_OP3)
@@ -765,20 +811,69 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
                 {
                     case WORKOUT_AX:
                         X86_register_get_value (R_EAX, ctx, &val);
+                        save_info_about_op (PC, i, &val, mc, info);
                         break;
+
                     case WORKOUT_CX:
                         X86_register_get_value (R_ECX, ctx, &val);
+                        save_info_about_op (PC, i, &val, mc, info);
+
                         break;
                     case WORKOUT_DX:
                         X86_register_get_value (R_EDX, ctx, &val);
+                        save_info_about_op (PC, i, &val, mc, info);
+
                         break;
                     case WORKOUT_ST0:
                         X86_register_get_value (R_ST0, ctx, &val);
+                        save_info_about_op (PC, i, &val, mc, info);
                         break;
+
+                    case WORKOUT_PF:
+                        if (IS_SET(ctx->EFlags, FLAG_PF)) 
+                            SET_BIT(info->flags, FLAG_PF_CAN_BE_TRUE);
+                        else
+                            SET_BIT(info->flags, FLAG_PF_CAN_BE_FALSE);
+                        break;
+
+                    case WORKOUT_SF:
+                        if (IS_SET(ctx->EFlags, FLAG_SF)) 
+                            SET_BIT(info->flags, FLAG_SF_CAN_BE_TRUE);
+                        else
+                            SET_BIT(info->flags, FLAG_SF_CAN_BE_FALSE);
+                        break;
+
+                    case WORKOUT_AF:
+                        if (IS_SET(ctx->EFlags, FLAG_AF)) 
+                            SET_BIT(info->flags, FLAG_AF_CAN_BE_TRUE);
+                        else
+                            SET_BIT(info->flags, FLAG_AF_CAN_BE_FALSE);
+                        break;
+
+                    case WORKOUT_ZF:
+                        if (IS_SET(ctx->EFlags, FLAG_ZF)) 
+                            SET_BIT(info->flags, FLAG_ZF_CAN_BE_TRUE);
+                        else
+                            SET_BIT(info->flags, FLAG_ZF_CAN_BE_FALSE);
+                        break;
+
+                    case WORKOUT_OF:
+                        if (IS_SET(ctx->EFlags, FLAG_OF)) 
+                            SET_BIT(info->flags, FLAG_OF_CAN_BE_TRUE);
+                        else
+                            SET_BIT(info->flags, FLAG_OF_CAN_BE_FALSE);
+                        break;
+
+                    case WORKOUT_CF:
+                        if (IS_SET(ctx->EFlags, FLAG_CF)) 
+                            SET_BIT(info->flags, FLAG_CF_CAN_BE_TRUE);
+                        else
+                            SET_BIT(info->flags, FLAG_CF_CAN_BE_FALSE);
+                        break;
+
                     default:
                         assert(0);
                 };
-                save_info_about_op (PC, i, &val, mc, info);
             };
         };
     if (cc_c_debug)

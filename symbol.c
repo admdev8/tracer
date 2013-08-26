@@ -18,6 +18,7 @@
 #include "tracer.h"
 #include "utils.h"
 #include "one_time_INT3_BP.h"
+#include "oassert.h"
 
 static symbol *create_symbol (symbol_type t, char *n)
 {
@@ -32,6 +33,7 @@ void add_symbol (address a, char *name, add_symbol_params *params)
 {
     module *m=params->m;
     rbtree *symtbl=m->symbols;
+    oassert(symtbl && "symbols=NULL in module");
     MemoryCache *mc=params->mc;
 
     if (one_time_int3_bp_re && params->t==SYM_TYPE_PE_EXPORT && module_adr_in_executable_section (m, a))

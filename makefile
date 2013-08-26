@@ -60,8 +60,7 @@ $(OUTDIR)/%.o: %.c
 
 $(OUTDIR)/$(TRACER_EXE_NAME): $(OBJECTS) $(LIBS)
 	$(CC) $(GCOV_FLAGS) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -ldbghelp -limagehlp
-ifeq ($(BUILD),debug)
-else
+ifeq ($(BUILD),release)
 	strip $(OUTDIR)/$(TRACER_EXE_NAME)
 endif
 
