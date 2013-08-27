@@ -66,21 +66,14 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
     //if (Da_ins_is_FPU(da))
     //    return 0; // do nothing (yet)
 
-    bool op_present[3];
+    bool op_present[3]={ false, false, false };
 
-    for (int i=0; i<3; i++)
-        op_present[i]=da->_op[i]==NULL ? false : true;
-
-    unsigned ops=0;
-
-    if (op_present[0] && !op_present[1] && !op_present[2]) // 1 op
-        ops=1;
-    else
-        if (op_present[0] && op_present[1] && !op_present[2]) // 2 op
-            ops=2;
-        else
-            if (op_present[0] && op_present[1] && op_present[2]) // 3 op
-                ops=3;
+    if (da->ops_total>=1)
+        op_present[0]=true;
+    if (da->ops_total>=2)
+        op_present[1]=true;
+    if (da->ops_total==3)
+        op_present[2]=true;
 
     switch (da->ins_code)
     {
@@ -96,7 +89,7 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
             break;
 
         case I_JMP:
-            if (da->_op[0]->type==DA_OP_TYPE_REGISTER || da->_op[0]->type==DA_OP_TYPE_VALUE_IN_MEMORY)
+            if (da->op[0].type==DA_OP_TYPE_REGISTER || da->op[0].type==DA_OP_TYPE_VALUE_IN_MEMORY)
                 SET_BIT (rt, NOTICE_OP1);
             break;
 
@@ -156,13 +149,13 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
             break;
 
         case I_CALL:
-            if (da->_op[0]->type==DA_OP_TYPE_REGISTER || da->_op[0]->type==DA_OP_TYPE_VALUE_IN_MEMORY) // add symbol to comment
+            if (da->op[0].type==DA_OP_TYPE_REGISTER || da->op[0].type==DA_OP_TYPE_VALUE_IN_MEMORY) // add symbol to comment
             {
                 address adr;
                 obj val;
 
                 strbuf_addstr (comments, "op1=");
-                if (Da_op_get_value_of_op (da->_op[0], &adr, ctx, mc, __FILE__, __LINE__, &val))
+                if (Da_op_get_value_of_op (&da->op[0], &adr, ctx, mc, __FILE__, __LINE__, &val))
                     process_get_sym (p, obj_get_as_REG (&val), true, true, comments);
                 else
                     strbuf_addstr (comments, "<can't get value of op1 here>");
@@ -248,7 +241,7 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
             break;
 
         case I_IMUL:
-            switch (ops)
+            switch (da->ops_total)
             {
                 case 1:
                     SET_BIT (rt, NOTICE_OP1);
@@ -416,10 +409,10 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
             break;
     };
 
-    if (ops==2)
+    if (da->ops_total==2)
     {
         // if two first operands are the same...
-        if (Da_op_equals (da->_op[0], da->_op[1]))
+        if (Da_op_equals (&da->op[0], &da->op[1]))
             REMOVE_BIT(rt, NOTICE_OP2); // do not report second
 
         // XOR with same operands - we do not interesting in them
@@ -430,9 +423,9 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
     for (int i=0; i<3; i++)
         if (op_present[i])
         {
-            if (Da_op_is_reg (da->_op[i], R_EBP) ||       // we do not interesting in operands with EBP values
-                    (Da_op_is_reg (da->_op[i], R_ESP)) || // neither in operands with ESP values
-                    (da->_op[i]->type==DA_OP_TYPE_VALUE)) // neither in operands with values
+            if (Da_op_is_reg (&da->op[i], R_EBP) ||       // we do not interesting in operands with EBP values
+                    (Da_op_is_reg (&da->op[i], R_ESP)) || // neither in operands with ESP values
+                    (da->op[i].type==DA_OP_TYPE_VALUE)) // neither in operands with values
                 REMOVE_BIT(rt, 1<<i); // these are always NOTICE_OP1, _OP2, _OP3 at lower bits
         };
 
@@ -448,16 +441,16 @@ static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
     {
         case WORKOUT_OP1:
         case WORKOUT_OP3:
-            Da_op_ToString(da->_op[i], out);
+            Da_op_ToString(&da->op[i], out);
             break;
 
         case WORKOUT_OP2:
 #if 0
-            if (da->ins_code==I_LEA && da->_op[i]->type==DA_OP_TYPE_VALUE_IN_MEMORY) // LEA case, op2 -> memory
+            if (da->ins_code==I_LEA && da->op[i]->type==DA_OP_TYPE_VALUE_IN_MEMORY) // LEA case, op2 -> memory
                 strbuf_addf (out, "op%d", 2);
             else
 #endif
-                Da_op_ToString(da->_op[i], out);
+                Da_op_ToString(&da->op[i], out);
             break;
 
         case WORKOUT_AX:
@@ -610,6 +603,13 @@ void construct_common_string(strbuf *out, address a, PC_info *info)
         strbuf_trim_last_char (out);
 };
 
+void free_PC_info (PC_info *i)
+{
+    DFREE (i->da);
+    DFREE (i->comment);
+    DFREE (i);
+};
+
 static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCache *mc, 
         FILE *f_txt, FILE *f_idc, FILE* f_clear_idc)
 {
@@ -643,9 +643,7 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
 
     strbuf_deinit(&sb_txt);
     strbuf_deinit(&sb_common);
-    Da_free(info->da);
-    DFREE (info->comment);
-    DFREE (info);
+    free_PC_info (info);
 };
 
 void cc_dump_and_free(module *m) // for module m
@@ -734,7 +732,8 @@ static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *m
             if (dump_fpu)
             {
                 double d=obj_get_as_double(val);
-                rbtree_insert(op->FPU_values, DMEMDUP(&d, sizeof(double), "double"), NULL);
+                if (rbtree_is_key_present(op->FPU_values, (void*)&d)==false)
+                    rbtree_insert(op->FPU_values, DMEMDUP(&d, sizeof(double), "double"), NULL);
             };
             break;
         default:
@@ -787,7 +786,7 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
     info->executed++;
 
     if (info->da==NULL && da)
-        info->da=Da_copy (da);
+        info->da=DMEMDUP (da, da->struct_size, "Da");
 
     // TODO: add flags
 
@@ -798,7 +797,7 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
             {
                 address adr;
                 obj val;
-                if (Da_op_get_value_of_op (da->_op[i], &adr, ctx, mc, __FILE__, __LINE__, &val))
+                if (Da_op_get_value_of_op (&da->op[i], &adr, ctx, mc, __FILE__, __LINE__, &val))
                 {
                     save_info_about_op (PC, i, &val, mc, info);
                     //assert (info->op_t[i]!=V_INVALID);

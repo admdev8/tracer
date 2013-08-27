@@ -574,9 +574,10 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
             };
         };
 
-        Da* da=MC_disas(PC, mc);
+        Da da;
+        bool disassembled=MC_disas(PC, mc, &da);
         
-        if (da==NULL)
+        if (disassembled==false)
         {
             strbuf sb=STRBUF_INIT;
             process_get_sym(p, PC, true, true, &sb);
@@ -585,7 +586,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
             strbuf_deinit (&sb);
         }
 
-        if (da && da->ins_code==I_CALL)
+        if (disassembled && da.ins_code==I_CALL)
         {
             if (limit_trace_nestedness && di->tracing_CALLs_executed+1 >= limit_trace_nestedness)
             {
@@ -593,24 +594,22 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
                 if (BPF_c_debug)
                     L ("t->tracing_CALLs_executed=%d, limit_trace_nestedness=%d, skipping this CALL!\n",
                             di->tracing_CALLs_executed, limit_trace_nestedness);
-                address new_adr=CONTEXT_get_PC(ctx) + da->len;
+                address new_adr=CONTEXT_get_PC(ctx) + da.ins_len;
                 //clear_TF(ctx);
                 CONTEXT_setDRx_and_DR7 (ctx, bp_no, new_adr);
                 if (bpf->cc)                            // redundant
-                    handle_cc(da, p, t, ctx, mc, false, true); // redundant
-                Da_free(da);
+                    handle_cc(&da, p, t, ctx, mc, false, true); // redundant
                 return 3;
             }
             else
                 di->tracing_CALLs_executed++;
         };
 
-        if (da && da->ins_code==I_RETN && di->tracing_CALLs_executed>0)
+        if (disassembled && da.ins_code==I_RETN && di->tracing_CALLs_executed>0)
             di->tracing_CALLs_executed--;
 
         if (bpf->cc)
-            handle_cc(da, p, t, ctx, mc, false, false);
-        Da_free(da);
+            handle_cc(&da, p, t, ctx, mc, false, false);
 
     } while (emulated);
 

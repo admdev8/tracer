@@ -19,6 +19,7 @@ void cc_tests()
 	m->size=0x10000;
 	m->internal_name=DSTRDUP ("dummy_module", "char*");
 	bool b;
+	Da da;
 
 	bzero (&ctx, sizeof(CONTEXT));
 	BYTE* memory_test=DCALLOC(BYTE, PAGE_SIZE, "BYTE");
@@ -43,9 +44,9 @@ void cc_tests()
 	for (unsigned i=0; i<sizeof(EAX_array_at_0)/sizeof(tetrabyte); i++)
 	{
 		ctx.Eax=EAX_array_at_0[i];
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_INC_EAX, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_INC_EAX, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	ctx.Eip+=X86_INC_EAX_LEN;
 	
@@ -53,9 +54,9 @@ void cc_tests()
 	for (tetrabyte EAX=0xa; EAX<0x70; EAX+=4)
 	{
 		ctx.Eax=EAX;
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_INC_EAX, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_INC_EAX, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	ctx.Eip+=X86_INC_EAX_LEN;
 	
@@ -63,9 +64,9 @@ void cc_tests()
 	for (tetrabyte EAX=0xa; EAX<0x70; EAX+=8)
 	{
 		ctx.Eax=EAX;
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_INC_EAX, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_INC_EAX, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	ctx.Eip+=X86_INC_EAX_LEN;
 
@@ -87,9 +88,9 @@ void cc_tests()
 	for (tetrabyte i=0; i<0x30; i+=0x10)
 	{
 		ctx.Esi=i;
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_MOV_EAX_ESI, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_MOV_EAX_ESI, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	ctx.Eip+=X86_MOV_EAX_ESI_LEN;
 	
@@ -102,12 +103,12 @@ void cc_tests()
 	{
 		CONTEXT_set_reg_STx (&ctx, R_ST0, ST0_array_at_0[i]);
 		FPU_set_tag (&ctx, 0); // ST0 is present
-		cur_fds.fd1=stdout;
+		//cur_fds.fd1=stdout;
 		//dump_CONTEXT (&cur_fds, &ctx, true, false, false);
 		ctx.Esi=0x30;
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_FSTP_ESI, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_FSTP_ESI, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	ctx.Eip+=X86_FSTP_ESI_LEN;
 
@@ -119,9 +120,9 @@ void cc_tests()
 		//cur_fds.fd1=stdout;
 		//dump_CONTEXT (&cur_fds, &ctx, true, false, false);
 		ctx.Esi=0x30;
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_FSTP_ESI, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_FSTP_ESI, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	ctx.Eip+=X86_FSTP_ESI_LEN;
 
@@ -129,9 +130,9 @@ void cc_tests()
 #define X86_JA_NEXT "\x77\x00"
 #define X86_JA_NEXT_LEN 2
 	{
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_JA_NEXT, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_JA_NEXT, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	ctx.Eip+=X86_JA_NEXT_LEN;
 
@@ -139,25 +140,25 @@ void cc_tests()
 	SET_BIT(ctx.EFlags, FLAG_ZF);
 	SET_BIT(ctx.EFlags, FLAG_CF);
 	{
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_JA_NEXT, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_JA_NEXT, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	ctx.Eip+=X86_JA_NEXT_LEN;
 
 	// addr 13 (0xd)
 	{
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_JA_NEXT, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_JA_NEXT, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	REMOVE_BIT(ctx.EFlags, FLAG_ZF);
 	REMOVE_BIT(ctx.EFlags, FLAG_CF);
 	// one more time
 	{
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_JA_NEXT, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_JA_NEXT, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	ctx.Eip+=X86_JA_NEXT_LEN;
 
@@ -166,9 +167,9 @@ void cc_tests()
 #define X86_CALL_EAX_LEN 2
 	ctx.Eax=0x1006;
 	{
-		Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_CALL_EAX, ctx.Eip);
-		handle_cc(d, p, t, &ctx, mc, false, false);
-		Da_free (d);
+		b=Da_Da(Fuzzy_False, (BYTE*)X86_CALL_EAX, ctx.Eip, &da);
+		oassert(b);
+		handle_cc(&da, p, t, &ctx, mc, false, false);
 	};
 	ctx.Eip+=X86_CALL_EAX_LEN;
 
@@ -180,9 +181,8 @@ void cc_tests()
 		{
 			ctx.Eax=EAX;
 			ctx.Ebx=EBX;
-			Da* d=Da_Da(Fuzzy_False, (BYTE*)X86_CMP_EAX_EBX, ctx.Eip);
-			handle_cc(d, p, t, &ctx, mc, false, false);
-			Da_free (d);
+			b=Da_Da(Fuzzy_False, (BYTE*)X86_CMP_EAX_EBX, ctx.Eip, &da);
+			handle_cc(&da, p, t, &ctx, mc, false, false);
 		};
 	ctx.Eip+=X86_CMP_EAX_EBX_LEN;
 
@@ -225,11 +225,14 @@ void cc_tests()
 		};
 		oassert(strcmp(should_be, sb.buf)==0);
 		strbuf_deinit (&sb);
+		free_PC_info (info);
 	};
 
+    	rbtree_deinit(m->PC_infos);
 	m->PC_infos=NULL;
 
 	MC_MemoryCache_dtor (mc, false);
 	DFREE (memory_test);
 	process_free (p);
+	dump_unfreed_blocks();
 };

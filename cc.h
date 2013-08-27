@@ -99,5 +99,6 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc,
 
 // can be called from cc_tests.c
 void construct_common_string(strbuf *out, address a, PC_info *info);
+void free_PC_info (PC_info *i);
 
 /* vim: set expandtab ts=4 sw=4 : */

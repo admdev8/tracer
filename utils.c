@@ -124,14 +124,14 @@ void set_or_update_all_DRx_breakpoints(process *p)
         L ("%s() end\n", __func__);
 };
 
-Da* MC_disas(address a, MemoryCache *mc)
+bool MC_disas(address a, MemoryCache *mc, Da* out)
 {
     return Da_Da_callbacks (Fuzzy_Undefined, a, 
             (callback_read_byte)MC_ReadByte, 
             (callback_read_word)MC_ReadWyde, 
             (callback_read_dword)MC_ReadTetrabyte, 
             (callback_read_oword)MC_ReadOctabyte, 
-            (void *)mc);
+            (void *)mc, out);
 };
 
 void dump_buf_as_array_of_strings(MemoryCache *mc, address a, size_t size)

@@ -45,7 +45,7 @@ void BP_free(BP* b)
         default:
             assert(0);
     };
-    Da_free(b->ins);
+    DFREE(b->ins);
     DFREE(b);
 };
 
