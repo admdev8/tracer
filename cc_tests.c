@@ -51,8 +51,6 @@ void cc_tests()
 	add_symbol (0x1000, "dummy_symbol", &sym_params);
 
 	// addr 0
-#define X86_INC_EAX "\x40"
-#define X86_INC_EAX_LEN 1
 
 	tetrabyte EAX_array_at_0[]={0xa, 0xb, 0xc, 0xd, 0x10, 0x12, 0x15, 0x20, 0x29a};
 	ctx.Eip=0;
@@ -86,8 +84,6 @@ void cc_tests()
 	ctx.Eip+=X86_INC_EAX_LEN;
 
 	// addr 3
-#define X86_MOV_EAX_ESI "\x89\xF0"
-#define X86_MOV_EAX_ESI_LEN 2
 
 #define TEST_STRING_1 "test_string_1"
 #define TEST_STRING_2 "test_string_2"
@@ -109,9 +105,6 @@ void cc_tests()
 	};
 	ctx.Eip+=X86_MOV_EAX_ESI_LEN;
 	
-#define X86_FSTP_ESI "\xD9\x1E"
-#define X86_FSTP_ESI_LEN 2
-
 	// addr 5
 	double ST0_array_at_0[]={ 1234.1, 666.7, 0.1, 1, 100, 100 };
 	for (unsigned i=0; i<sizeof(ST0_array_at_0)/sizeof(double); i++)
@@ -142,8 +135,6 @@ void cc_tests()
 	ctx.Eip+=X86_FSTP_ESI_LEN;
 
 	// addr 9
-#define X86_JA_NEXT "\x77\x00"
-#define X86_JA_NEXT_LEN 2
 	{
 		b=Da_Da(Fuzzy_False, (BYTE*)X86_JA_NEXT, ctx.Eip, &da);
 		oassert(b);
@@ -178,8 +169,6 @@ void cc_tests()
 	ctx.Eip+=X86_JA_NEXT_LEN;
 
 	// addr 15 (0xf)
-#define X86_CALL_EAX "\xFF\xD0"
-#define X86_CALL_EAX_LEN 2
 	ctx.Eax=0x1006;
 	{
 		b=Da_Da(Fuzzy_False, (BYTE*)X86_CALL_EAX, ctx.Eip, &da);
@@ -189,8 +178,6 @@ void cc_tests()
 	ctx.Eip+=X86_CALL_EAX_LEN;
 
 	// addr 17 (0x11)
-#define X86_CMP_EAX_EBX "\x39\xD8"
-#define X86_CMP_EAX_EBX_LEN 2
 	for (tetrabyte EAX=0x100; EAX<0x200; EAX+=4)
 		for (tetrabyte EBX=0x200; EBX<0x220; EBX++)
 		{

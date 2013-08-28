@@ -13,8 +13,7 @@
  *
  */
 
-#include <assert.h>
-
+#include "oassert.h"
 #include "BPF.h"
 #include "bp_address.h"
 #include "dmalloc.h"
@@ -30,6 +29,8 @@
 #include "cc.h"
 #include "stuff.h"
 #include "rand.h"
+
+bool tracing_dbg=false;
 
 void BPF_ToString(BPF *b, strbuf *out)
 {
@@ -167,7 +168,7 @@ static bool BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type 
 
         default:
             printf ("ft=%d\n", ft);
-            assert(!"not implemented");
+            oassert(!"not implemented");
             break;
     };
     return rt;
@@ -238,7 +239,7 @@ static void handle_set (BPF* bpf, unsigned bp_no, process *p, thread *t, CONTEXT
 static void dump_bufs_if_need(thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args, unsigned bp_no)
 {
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
-    assert (di->BPF_buffers_at_start==NULL);
+    oassert (di->BPF_buffers_at_start==NULL);
     di->BPF_buffers_at_start=(REG**)DCALLOC(REG*, args_n, "REG*");
     di->BPF_buffers_at_start_cnt=args_n;
 
@@ -259,7 +260,7 @@ static void dump_bufs_if_need(thread *t, MemoryCache *mc, unsigned size, unsigne
 static void dump_args_diff_if_need(thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args, unsigned bp_no)
 {
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
-    assert (di->BPF_buffers_at_start);
+    oassert (di->BPF_buffers_at_start);
 
     for (unsigned i=0; i<args_n; i++)
     {
@@ -268,7 +269,7 @@ static void dump_args_diff_if_need(thread *t, MemoryCache *mc, unsigned size, un
 
         BYTE *buf2=DMALLOC(BYTE, size, "buf");
         bool b=MC_ReadBuffer (mc, args[i], size, buf2);
-        assert (b);
+        oassert (b);
         if (memcmp (di->BPF_buffers_at_start[i], buf2, size)!=0)
         {
             L ("Argument %d/%d difference\n", i+1, args_n);
@@ -333,7 +334,7 @@ static void is_it_known_function (const char *fn_name, BPF* bpf)
 static bool handle_when_called_from_func(process *p, thread *t, unsigned bp_no, BPF *bpf, bool got_ret_adr)
 {
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
-    assert (bpf->when_called_from_func);
+    oassert (bpf->when_called_from_func);
 
     if (bpf->when_called_from_func->resolved==false || got_ret_adr==false)
         return true;
@@ -508,14 +509,19 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     };
 
     // set back current DRx to begin
-    assert(bp_no<4); // be sure we work only with DRx breakpoints
+    oassert(bp_no<4); // be sure we work only with DRx breakpoints
     CONTEXT_setDRx_and_DR7 (ctx, bp_no, bp_a->abs_address);
     strbuf_deinit(&sb_address);
 };
 
-bool tracing_dbg=false;
+enum ht_result
+{
+    ht_go_on,
+    ht_finished,
+    ht_need_to_skip_something
+};
 
-static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
+static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 {
     bool emulated=false;
     address PC, SP;
@@ -539,19 +545,19 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
         SP=CONTEXT_get_SP(ctx);
         // (to be implemented in future): check other BPF/BPX breakpoints. handle them if need.
 
-        // finished? PC==ret_adr and SP==SP_at_ret_adr? return 2
+        // finished? PC==ret_adr and SP==SP_at_ret_adr?
         // check SP as well, this we need for tracing recursive functions correctly
         if (PC==di->ret_adr && (SP==(di->SP_at_ret_adr)+sizeof(REG)))
-            return 2;
+            return ht_finished;
 
         // need to skip something? are we at the start of function to skip? is SYSCALL here? depth-level reached?
-        // set drx, return 3
+        // set drx
         DWORD tmp;
         if (MC_ReadTetrabyte (mc, PC, &tmp) && tmp==0xC015FF64) // 64 FF 15 C0 00 00 00 <call large dword ptr fs:0C0h>
         {
             L ("syscall to be skipped\n");
             CONTEXT_setDRx_and_DR7 (ctx, bp_no, PC+7);
-            return 3;
+            return ht_need_to_skip_something;
         };
 
         // is there symbol?
@@ -566,11 +572,11 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
                 //L ("symbol to be skipped\n");
                 if (MC_ReadREG(mc, CONTEXT_get_SP(ctx), &ret_adr)==false)
                 {
-                    assert(0);
+                    oassert(0);
                 };
                 //clear_TF(ctx);
                 CONTEXT_setDRx_and_DR7 (ctx, bp_no, ret_adr);
-                return 3;
+                return ht_need_to_skip_something;
             };
         };
 
@@ -595,11 +601,10 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
                     L ("t->tracing_CALLs_executed=%d, limit_trace_nestedness=%d, skipping this CALL!\n",
                             di->tracing_CALLs_executed, limit_trace_nestedness);
                 address new_adr=CONTEXT_get_PC(ctx) + da.ins_len;
-                //clear_TF(ctx);
                 CONTEXT_setDRx_and_DR7 (ctx, bp_no, new_adr);
-                if (bpf->cc)                            // redundant
-                    handle_cc(&da, p, t, ctx, mc, false, true); // redundant
-                return 3;
+                if (bpf->cc)                            // redundant?
+                    handle_cc(&da, p, t, ctx, mc, false, true); // redundant?
+                return ht_need_to_skip_something;
             }
             else
                 di->tracing_CALLs_executed++;
@@ -614,7 +619,7 @@ static int handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, Memory
     } while (emulated);
 
     // continue?
-    return 1;
+    return ht_go_on;
 };
 
 void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
@@ -661,32 +666,28 @@ void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
             goto call_handle_tracing_etc;
 
         default:
-            assert(!"invalid *state");
-            break; // TMCH
+            oassert(!"invalid *state");
     };
     goto exit;
 
 call_handle_tracing_etc:
     switch (handle_tracing(bp_no, p, t, ctx, mc))
     {
-        case 1: // go on
+        case ht_go_on: // go on
             if (BPF_c_debug)
-                L ("handle_tracing() -> 1\n");
-            //set_TF (ctx);
+                L ("handle_tracing() -> ht_go_on\n");
             di->tracing=true;
             break;
-        case 2: // finished
+        case ht_finished: // finished
             if (BPF_c_debug)
-                L ("handle_tracing() -> 2\n");
+                L ("handle_tracing() -> ht_finished\n");
             di->tracing=false;
-            //clear_TF(ctx);
             REMOVE_BIT(ctx->Dr6, FLAG_DR6_BS);
             goto handle_finish_and_switch_to_default;
-        case 3: // need to skip something
+        case ht_need_to_skip_something: // need to skip something
             if (BPF_c_debug)
-                L ("handle_tracing() -> 3\n");
+                L ("handle_tracing() -> ht_need_to_skip_something\n");
             di->tracing=false;
-            //clear_TF(ctx);
             *state=BPF_state_tracing_skipping;
             break;
     };
