@@ -514,6 +514,85 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     strbuf_deinit(&sb_address);
 };
 
+bool handle_tracing_should_be_skipped(process *p, MemoryCache *mc, CONTEXT *ctx, unsigned bp_no)
+{
+    REG PC=CONTEXT_get_PC(ctx);
+    DWORD tmp;
+    if (MC_ReadTetrabyte (mc, PC, &tmp) && tmp==0xC015FF64) // 64 FF 15 C0 00 00 00 <call large dword ptr fs:0C0h>
+    {
+        L ("syscall to be skipped\n");
+        CONTEXT_setDRx_and_DR7 (ctx, bp_no, PC+7);
+        return true;
+    };
+
+    // is there symbol?
+    module *m=find_module_for_address (p, PC);
+    symbol *s=process_sym_exist_at(p, PC);
+    if (s)
+    {
+        // should it be skipped?
+        if (symbol_skip_on_tracing(m, s))
+        {
+            REG ret_adr;
+            //L ("symbol to be skipped\n");
+            if (MC_ReadREG(mc, CONTEXT_get_SP(ctx), &ret_adr)==false)
+            {
+                oassert(!"can't read return address while we'are 'inside' function");
+            };
+            //clear_TF(ctx);
+            CONTEXT_setDRx_and_DR7 (ctx, bp_no, ret_adr);
+            return true;
+        };
+    };
+    return false;
+};
+
+static bool handle_tracing_disassemble_and_cc (process *p, thread *t, MemoryCache *mc,
+        CONTEXT *ctx, unsigned bp_no)
+{
+    BP *bp=breakpoints[bp_no];
+    BPF *bpf=bp->u.bpf;
+    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    REG PC=CONTEXT_get_PC(ctx);
+    Da da;
+    bool disassembled=MC_disas(PC, mc, &da);
+
+    if (disassembled==false)
+    {
+        strbuf sb=STRBUF_INIT;
+        process_get_sym(p, PC, true, true, &sb);
+
+        L_once ("%s() disassemble failed for PC=%s (0x" PRI_ADR_HEX ")\n", __func__, sb.buf, PC);
+        strbuf_deinit (&sb);
+    }
+
+    if (disassembled && da.ins_code==I_CALL)
+    {
+        if (limit_trace_nestedness && di->tracing_CALLs_executed+1 >= limit_trace_nestedness)
+        {
+            // this call is to be skipped!
+            if (BPF_c_debug)
+                L ("t->tracing_CALLs_executed=%d, limit_trace_nestedness=%d, skipping this CALL!\n",
+                        di->tracing_CALLs_executed, limit_trace_nestedness);
+            address new_adr=CONTEXT_get_PC(ctx) + da.ins_len;
+            CONTEXT_setDRx_and_DR7 (ctx, bp_no, new_adr);
+            if (bpf->cc)                            // redundant?
+                handle_cc(&da, p, t, ctx, mc, false, true); // redundant?
+            return true;
+        }
+        else
+            di->tracing_CALLs_executed++;
+    };
+
+    if (disassembled && da.ins_code==I_RETN && di->tracing_CALLs_executed>0)
+        di->tracing_CALLs_executed--;
+
+    if (bpf->cc)
+        handle_cc(&da, p, t, ctx, mc, false, false);
+
+    return false;
+};
+
 enum ht_result
 {
     ht_go_on,
@@ -551,70 +630,11 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
             return ht_finished;
 
         // need to skip something? are we at the start of function to skip? is SYSCALL here? depth-level reached?
-        // set drx
-        DWORD tmp;
-        if (MC_ReadTetrabyte (mc, PC, &tmp) && tmp==0xC015FF64) // 64 FF 15 C0 00 00 00 <call large dword ptr fs:0C0h>
-        {
-            L ("syscall to be skipped\n");
-            CONTEXT_setDRx_and_DR7 (ctx, bp_no, PC+7);
+        if (handle_tracing_should_be_skipped (p, mc, ctx, bp_no))
             return ht_need_to_skip_something;
-        };
 
-        // is there symbol?
-        module *m=find_module_for_address (p, PC);
-        symbol *s=process_sym_exist_at(p, PC);
-        if (s)
-        {
-            // should it be skipped?
-            if (symbol_skip_on_tracing(m, s))
-            {
-                REG ret_adr;
-                //L ("symbol to be skipped\n");
-                if (MC_ReadREG(mc, CONTEXT_get_SP(ctx), &ret_adr)==false)
-                {
-                    oassert(0);
-                };
-                //clear_TF(ctx);
-                CONTEXT_setDRx_and_DR7 (ctx, bp_no, ret_adr);
-                return ht_need_to_skip_something;
-            };
-        };
-
-        Da da;
-        bool disassembled=MC_disas(PC, mc, &da);
-        
-        if (disassembled==false)
-        {
-            strbuf sb=STRBUF_INIT;
-            process_get_sym(p, PC, true, true, &sb);
-
-            L_once ("%s() disassemble failed for PC=%s (0x" PRI_ADR_HEX ")\n", __func__, sb.buf, PC);
-            strbuf_deinit (&sb);
-        }
-
-        if (disassembled && da.ins_code==I_CALL)
-        {
-            if (limit_trace_nestedness && di->tracing_CALLs_executed+1 >= limit_trace_nestedness)
-            {
-                // this call is to be skipped!
-                if (BPF_c_debug)
-                    L ("t->tracing_CALLs_executed=%d, limit_trace_nestedness=%d, skipping this CALL!\n",
-                            di->tracing_CALLs_executed, limit_trace_nestedness);
-                address new_adr=CONTEXT_get_PC(ctx) + da.ins_len;
-                CONTEXT_setDRx_and_DR7 (ctx, bp_no, new_adr);
-                if (bpf->cc)                            // redundant?
-                    handle_cc(&da, p, t, ctx, mc, false, true); // redundant?
-                return ht_need_to_skip_something;
-            }
-            else
-                di->tracing_CALLs_executed++;
-        };
-
-        if (disassembled && da.ins_code==I_RETN && di->tracing_CALLs_executed>0)
-            di->tracing_CALLs_executed--;
-
-        if (bpf->cc)
-            handle_cc(&da, p, t, ctx, mc, false, false);
+        if (handle_tracing_disassemble_and_cc(p, t, mc, ctx, bp_no))
+            return ht_need_to_skip_something;
 
     } while (emulated);
 
