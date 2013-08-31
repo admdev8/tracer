@@ -37,7 +37,6 @@ typedef struct _BP_thread_specific_dynamic_info
 
     // BPX and BPF related info
     bool tracing;
-
 } BP_thread_specific_dynamic_info;
 
 typedef struct _thread
@@ -47,6 +46,12 @@ typedef struct _thread
     address start;
 
     BP_thread_specific_dynamic_info BP_dynamic_info[4];
+
+    // for CPU emulator
+    bool last_emulated_present;
+    Da *last_emulated_ins;
+    MemoryCache *last_emulated_MC;
+    CONTEXT *last_emulated_ctx;
 } thread;
 
 void thread_free (thread *t);

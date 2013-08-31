@@ -71,14 +71,22 @@ void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
         L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
 };
 
-static bool handle_OEP_breakpoint (process *p, thread *t, MemoryCache *mc, CONTEXT *ctx)
+static bool handle_OEP_breakpoint (process *p, thread *t, MemoryCache *mc)
 {
     if (cycle_c_debug)
         L ("%s() begin\n", __func__);
 
-    CONTEXT_decrement_PC(ctx);
+    CONTEXT ctx;
+    ctx.ContextFlags = CONTEXT_ALL;
+    BOOL B;
+    B=GetThreadContext (t->THDL, &ctx); assert (B!=FALSE);
 
-    bool b=MC_WriteByte (mc, CONTEXT_get_PC(ctx), p->executable_module->saved_OEP_byte);
+    CONTEXT_decrement_PC(&ctx);
+    address PC=CONTEXT_get_PC(&ctx);
+
+    B=SetThreadContext (t->THDL, &ctx); assert (B!=FALSE);
+
+    bool b=MC_WriteByte (mc, PC, p->executable_module->saved_OEP_byte);
     assert (b && "cannot restore original byte at OEP");
 
     if (load_filename)
@@ -143,7 +151,7 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
         if (t->BP_dynamic_info[b].tracing)
         {
             if (cycle_c_debug)
-                L ("%s() setting TF because %d is in tracing mode\n", __func__, b);
+                L ("%s() setting TF because bp #%d is in tracing mode\n", __func__, b);
             set_TF(ctx);
         };
 
@@ -168,11 +176,7 @@ DWORD handle_EXCEPTION_BREAKPOINT(DEBUG_EVENT *de)
         L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
 
     MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
-    CONTEXT ctx;
-    ctx.ContextFlags = CONTEXT_ALL;
-    BOOL b;
-    b=GetThreadContext (t->THDL, &ctx); assert (b!=FALSE);
-    
+
     if (stricmp(tmp.buf, "ntdll.dll!DbgBreakPoint")==0)
     {
         if (cycle_c_debug)
@@ -183,20 +187,26 @@ DWORD handle_EXCEPTION_BREAKPOINT(DEBUG_EVENT *de)
     // we are loading and is it OEP?
     if (rt==DBG_EXCEPTION_NOT_HANDLED && load_filename && (adr==p->executable_module->OEP))
     {
-        handle_OEP_breakpoint (p, t, mc, &ctx);
+        handle_OEP_breakpoint (p, t, mc); // we shouldn't pass ctx here
         rt=DBG_CONTINUE; // handled
     };
     
     if (rt==DBG_EXCEPTION_NOT_HANDLED) // still not handled
     {
+        CONTEXT ctx;
+        ctx.ContextFlags = CONTEXT_ALL;
+        BOOL b;
+        b=GetThreadContext (t->THDL, &ctx); assert (b!=FALSE);
+
         if (check_for_onetime_INT3_BP(p, t, adr, mc, tmp.buf, &ctx))
             rt=DBG_CONTINUE; // handled
+
+        b=SetThreadContext (t->THDL, &ctx); assert (b!=FALSE);
     };
 
     if (rt==DBG_EXCEPTION_NOT_HANDLED)
         L ("Warning: unknown (to us) INT3 breakpoint at %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
 
-    b=SetThreadContext (t->THDL, &ctx); assert (b!=FALSE);
     MC_Flush (mc);
     MC_MemoryCache_dtor (mc, true);
     strbuf_deinit(&tmp);
@@ -221,8 +231,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 process_get_sym (p, adr, true, true, &tmp);
                 CONTEXT ctx;
                 ctx.ContextFlags = CONTEXT_ALL;
-                DWORD tmpd;
-                tmpd=GetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);           
+                BOOL B=GetThreadContext (t->THDL, &ctx); assert (B!=FALSE);           
                 MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
 
                 if (cycle_c_debug)
@@ -237,7 +246,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
 
                 MC_Flush (mc);
                 MC_MemoryCache_dtor (mc, false);
-                tmpd=SetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);
+                B=SetThreadContext (t->THDL, &ctx); assert (B!=FALSE);
                 strbuf_deinit(&tmp);
                 rt=DBG_CONTINUE; // handled
             };

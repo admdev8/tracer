@@ -29,8 +29,9 @@
 #include "cc.h"
 #include "stuff.h"
 #include "rand.h"
+#include "x86_emu.h"
 
-bool tracing_dbg=false;
+bool tracing_dbg=true;
 
 void BPF_ToString(BPF *b, strbuf *out)
 {
@@ -548,14 +549,13 @@ bool handle_tracing_should_be_skipped(process *p, MemoryCache *mc, CONTEXT *ctx,
 };
 
 static bool handle_tracing_disassemble_and_cc (process *p, thread *t, MemoryCache *mc,
-        CONTEXT *ctx, unsigned bp_no)
+        CONTEXT *ctx, unsigned bp_no, Da* da)
 {
     BP *bp=breakpoints[bp_no];
     BPF *bpf=bp->u.bpf;
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
     REG PC=CONTEXT_get_PC(ctx);
-    Da da;
-    bool disassembled=MC_disas(PC, mc, &da);
+    bool disassembled=MC_disas(PC, mc, da);
 
     if (disassembled==false)
     {
@@ -566,7 +566,7 @@ static bool handle_tracing_disassemble_and_cc (process *p, thread *t, MemoryCach
         strbuf_deinit (&sb);
     }
 
-    if (disassembled && da.ins_code==I_CALL)
+    if (disassembled && da->ins_code==I_CALL)
     {
         if (limit_trace_nestedness && di->tracing_CALLs_executed+1 >= limit_trace_nestedness)
         {
@@ -574,22 +574,22 @@ static bool handle_tracing_disassemble_and_cc (process *p, thread *t, MemoryCach
             if (BPF_c_debug)
                 L ("t->tracing_CALLs_executed=%d, limit_trace_nestedness=%d, skipping this CALL!\n",
                         di->tracing_CALLs_executed, limit_trace_nestedness);
-            address new_adr=CONTEXT_get_PC(ctx) + da.ins_len;
+            address new_adr=CONTEXT_get_PC(ctx) + da->ins_len;
             CONTEXT_setDRx_and_DR7 (ctx, bp_no, new_adr);
             if (bpf->cc)                            // redundant?
-                handle_cc(&da, p, t, ctx, mc, false, true); // redundant?
+                handle_cc(da, p, t, ctx, mc, false, true); // redundant?
             return true;
         }
         else
             di->tracing_CALLs_executed++;
     };
 
-    if (disassembled && da.ins_code==I_RETN && di->tracing_CALLs_executed>0)
+    if (disassembled && da->ins_code==I_RETN && di->tracing_CALLs_executed>0)
         di->tracing_CALLs_executed--;
 
     if (bpf->cc)
-        handle_cc(&da, p, t, ctx, mc, false, false);
-
+        handle_cc(da, p, t, ctx, mc, false, false);
+        
     return false;
 };
 
@@ -600,6 +600,8 @@ enum ht_result
     ht_need_to_skip_something
 };
 
+bool emulator_testing=true;
+
 static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 {
     bool emulated=false;
@@ -607,6 +609,7 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
     BP *bp=breakpoints[bp_no];
     BPF *bpf=bp->u.bpf;
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    DWORD tmpd;
 
     if (tracing_dbg)
     {
@@ -618,9 +621,39 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
         strbuf_deinit (&sb);
     };
 
+    if (emulator_testing && t->last_emulated_present)
+    {
+        // TODO: ... if last command was REP.... and EIPs are different - that's OK, don't check
+
+        if (CONTEXT_compare (&cur_fds, ctx, t->last_emulated_ctx)==false)
+        {
+            L ("last_emulated instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
+            L ("%s() (CPU emulator testing): CONTEXTs are different\n", __func__);
+            L ("real context:\n");
+            dump_CONTEXT (&cur_fds, ctx, false, false, false);
+            L ("emulated context:\n");
+            dump_CONTEXT (&cur_fds, t->last_emulated_ctx, false, false, false);
+            exit(0);
+        };
+
+        if (MC_CompareInternalStateWithMemory(t->last_emulated_MC)==false)
+        {
+            L ("last_emulated instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
+            die ("%s() (CPU emulator testing): memory states are different\n", __func__);
+        };
+
+        t->last_emulated_present=false;
+        DFREE(t->last_emulated_ctx);
+        MC_MemoryCache_dtor(t->last_emulated_MC, false);
+        t->last_emulated_MC=NULL;
+        DFREE(t->last_emulated_ins);
+    };
+
     do // emu cycle
     {
         PC=CONTEXT_get_PC(ctx);
+        if (tracing_dbg)
+            L ("%s() emu cycle begin. PC=0x" PRI_ADR_HEX "\n", __func__, PC);
         SP=CONTEXT_get_SP(ctx);
         // (to be implemented in future): check other BPF/BPX breakpoints. handle them if need.
 
@@ -629,12 +662,43 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
         if (PC==di->ret_adr && (SP==(di->SP_at_ret_adr)+sizeof(REG)))
             return ht_finished;
 
-        // need to skip something? are we at the start of function to skip? is SYSCALL here? depth-level reached?
-        if (handle_tracing_should_be_skipped (p, mc, ctx, bp_no))
-            return ht_need_to_skip_something;
+        Da da;
 
-        if (handle_tracing_disassemble_and_cc(p, t, mc, ctx, bp_no))
+        // need to skip something? are we at the start of function to skip? is SYSCALL here? depth-level reached?
+        if (handle_tracing_should_be_skipped (p, mc, ctx, bp_no) || 
+            handle_tracing_disassemble_and_cc(p, t, mc, ctx, bp_no, &da))
+        {
+            t->last_emulated_present=false;
             return ht_need_to_skip_something;
+        };
+
+        t->last_emulated_present=false;
+        if (da.ins_code!=I_INVALID)
+        {
+            CONTEXT *new_ctx=DMEMDUP(ctx, sizeof(CONTEXT), "CONTEXT");
+            MemoryCache *new_mc=MC_MemoryCache_copy_ctor(mc);
+
+            Da_emulate_result r=Da_emulate(&da, new_ctx, new_mc);
+            if (r==DA_EMULATED_OK && emulator_testing)
+            {
+                if (tracing_dbg)
+                    L ("instruction emulated successfully="); Da_DumpString(&cur_fds, &da); L ("\n");
+                emulated=true;
+                t->last_emulated_ins=DMEMDUP (&da, sizeof(Da), "Da");
+                t->last_emulated_present=true;
+                t->last_emulated_ctx=new_ctx;
+                oassert(t->last_emulated_MC==NULL);
+                t->last_emulated_MC=new_mc;
+            }
+            else
+            {
+                DFREE(new_ctx);
+                MC_MemoryCache_dtor(new_mc, false);
+            };
+        }
+
+        if (emulator_testing)
+            break;
 
     } while (emulated);
 
@@ -645,7 +709,7 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
 void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
 {
     if (BPF_c_debug)
-        L ("%s() begin\n", __func__);
+        L ("%s() begin. PC=0x" PRI_ADR_HEX "\n", __func__, CONTEXT_get_PC (ctx));
     BP *bp=breakpoints[bp_no];
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
     BPF_state* state=&di->BPF_states;
@@ -711,6 +775,12 @@ call_handle_tracing_etc:
             *state=BPF_state_tracing_skipping;
             break;
     };
+    /*
+    if (di->tracing)
+        set_TF(ctx);
+    else
+        clear_TF(ctx);
+    */
     goto exit;
 
 handle_finish_and_switch_to_default:
