@@ -31,7 +31,8 @@
 #include "rand.h"
 #include "x86_emu.h"
 
-bool tracing_dbg=true;
+//bool tracing_dbg=true;
+bool tracing_dbg=false;
 
 void BPF_ToString(BPF *b, strbuf *out)
 {
@@ -521,7 +522,8 @@ bool handle_tracing_should_be_skipped(process *p, MemoryCache *mc, CONTEXT *ctx,
     DWORD tmp;
     if (MC_ReadTetrabyte (mc, PC, &tmp) && tmp==0xC015FF64) // 64 FF 15 C0 00 00 00 <call large dword ptr fs:0C0h>
     {
-        L ("syscall to be skipped\n");
+        if (tracing_dbg)
+            L ("syscall to be skipped\n");
         CONTEXT_setDRx_and_DR7 (ctx, bp_no, PC+7);
         return true;
     };
@@ -605,15 +607,11 @@ bool emulator_testing=true;
 static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 {
     bool emulated=false;
-    address PC, SP;
-    BP *bp=breakpoints[bp_no];
-    BPF *bpf=bp->u.bpf;
+    address PC=CONTEXT_get_PC(ctx);
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
-    DWORD tmpd;
 
     if (tracing_dbg)
     {
-        PC=CONTEXT_get_PC(ctx);
         strbuf sb=STRBUF_INIT;
         process_get_sym(p, PC, true, true, &sb);
 
@@ -623,30 +621,39 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
 
     if (emulator_testing && t->last_emulated_present)
     {
-        // TODO: ... if last command was REP.... and EIPs are different - that's OK, don't check
+        bool last_emulated_ins_traced_by_one_step=ins_traced_by_one_step(t->last_emulated_ins->ins_code);
 
-        if (CONTEXT_compare (&cur_fds, ctx, t->last_emulated_ctx)==false)
+        // ... if last command was REP.... then check only if EIPs are different
+        if (last_emulated_ins_traced_by_one_step==false || PC==CONTEXT_get_PC(t->last_emulated_ctx))
         {
-            L ("last_emulated instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
-            L ("%s() (CPU emulator testing): CONTEXTs are different\n", __func__);
-            L ("real context:\n");
-            dump_CONTEXT (&cur_fds, ctx, false, false, false);
-            L ("emulated context:\n");
-            dump_CONTEXT (&cur_fds, t->last_emulated_ctx, false, false, false);
-            exit(0);
-        };
+            if (CONTEXT_compare (&cur_fds, ctx, t->last_emulated_ctx)==false)
+            {
+                L ("last_emulated instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
+                L ("%s() (CPU emulator testing): CONTEXTs are different\n", __func__);
+                L ("real context:\n");
+                dump_CONTEXT (&cur_fds, ctx, false, false, false);
+                L ("emulated context:\n");
+                dump_CONTEXT (&cur_fds, t->last_emulated_ctx, false, false, false);
+                exit(0);
+            };
 
-        if (MC_CompareInternalStateWithMemory(t->last_emulated_MC)==false)
-        {
-            L ("last_emulated instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
-            die ("%s() (CPU emulator testing): memory states are different\n", __func__);
-        };
+            if (MC_CompareInternalStateWithMemory(t->last_emulated_MC)==false)
+            {
+                L ("last_emulated instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
+                die ("%s() (CPU emulator testing): memory states are different\n", __func__);
+            };
 
-        t->last_emulated_present=false;
-        DFREE(t->last_emulated_ctx);
-        MC_MemoryCache_dtor(t->last_emulated_MC, false);
-        t->last_emulated_MC=NULL;
-        DFREE(t->last_emulated_ins);
+            if (tracing_dbg)
+            {
+                L ("last checked instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
+            };
+            t->last_emulated_present=false;
+            DFREE(t->last_emulated_ctx);
+            t->last_emulated_ctx=NULL;
+            MC_MemoryCache_dtor(t->last_emulated_MC, false);
+            t->last_emulated_MC=NULL;
+            DFREE(t->last_emulated_ins);
+        };
     };
 
     do // emu cycle
@@ -654,7 +661,7 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
         PC=CONTEXT_get_PC(ctx);
         if (tracing_dbg)
             L ("%s() emu cycle begin. PC=0x" PRI_ADR_HEX "\n", __func__, PC);
-        SP=CONTEXT_get_SP(ctx);
+        address SP=CONTEXT_get_SP(ctx);
         // (to be implemented in future): check other BPF/BPX breakpoints. handle them if need.
 
         // finished? PC==ret_adr and SP==SP_at_ret_adr?
@@ -672,30 +679,45 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
             return ht_need_to_skip_something;
         };
 
-        t->last_emulated_present=false;
-        if (da.ins_code!=I_INVALID)
+        // do not emulate, if PC in last emulated ctx is the same as now
+        // this is done for REP STOSx/MOVSx testing
+        if (t->last_emulated_present==false)
         {
-            CONTEXT *new_ctx=DMEMDUP(ctx, sizeof(CONTEXT), "CONTEXT");
-            MemoryCache *new_mc=MC_MemoryCache_copy_ctor(mc);
-
-            Da_emulate_result r=Da_emulate(&da, new_ctx, new_mc);
-            if (r==DA_EMULATED_OK && emulator_testing)
+            t->last_emulated_present=false;
+            if (da.ins_code!=I_INVALID)
             {
+                CONTEXT *new_ctx=DMEMDUP(ctx, sizeof(CONTEXT), "CONTEXT");
+                MemoryCache *new_mc=MC_MemoryCache_copy_ctor(mc);
+                   
                 if (tracing_dbg)
-                    L ("instruction emulated successfully="); Da_DumpString(&cur_fds, &da); L ("\n");
-                emulated=true;
-                t->last_emulated_ins=DMEMDUP (&da, sizeof(Da), "Da");
-                t->last_emulated_present=true;
-                t->last_emulated_ctx=new_ctx;
-                oassert(t->last_emulated_MC==NULL);
-                t->last_emulated_MC=new_mc;
+                {
+                    L ("instruction to be emulated="); Da_DumpString(&cur_fds, &da); L ("\n");
+                };
+
+                Da_emulate_result r=Da_emulate(&da, new_ctx, new_mc);
+                if (r==DA_EMULATED_OK && emulator_testing)
+                {
+                    if (tracing_dbg)
+                    {
+                        L ("instruction emulated successfully="); Da_DumpString(&cur_fds, &da); L ("\n");
+                    };
+                    emulated=true;
+                    t->last_emulated_ins=DMEMDUP (&da, sizeof(Da), "Da");
+                    oassert(t->last_emulated_present==false);
+                    t->last_emulated_present=true;
+                    oassert(t->last_emulated_ctx==false);
+                    t->last_emulated_ctx=new_ctx;
+                    oassert(t->last_emulated_MC==NULL);
+                    t->last_emulated_MC=new_mc;
+                }
+                else
+                {
+                    DFREE(new_ctx);
+                    MC_MemoryCache_dtor(new_mc, false);
+                    t->last_emulated_present=false;
+                };
             }
-            else
-            {
-                DFREE(new_ctx);
-                MC_MemoryCache_dtor(new_mc, false);
-            };
-        }
+        };
 
         if (emulator_testing)
             break;

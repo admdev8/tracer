@@ -175,7 +175,7 @@ DWORD handle_EXCEPTION_BREAKPOINT(DEBUG_EVENT *de)
     if (cycle_c_debug)
         L ("EXCEPTION_BREAKPOINT %s (0x" PRI_ADR_HEX ")\n", tmp.buf, adr);
 
-    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, true);
 
     if (stricmp(tmp.buf, "ntdll.dll!DbgBreakPoint")==0)
     {
@@ -232,7 +232,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 CONTEXT ctx;
                 ctx.ContextFlags = CONTEXT_ALL;
                 BOOL B=GetThreadContext (t->THDL, &ctx); assert (B!=FALSE);           
-                MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+                MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, true);
 
                 if (cycle_c_debug)
                 {
@@ -316,7 +316,7 @@ void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
     add_thread (p, TID, i->hThread, (address)i->lpStartAddress);
     rbtree_insert(processes, (void*)PID, p);
     
-    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, true);
 
     p->executable_module=add_module(p, (address)i->lpBaseOfImage, p->file_handle, mc);
     L ("PID=%d|New process %s\n", PID, get_module_name (p->executable_module));
@@ -363,7 +363,7 @@ void handle_LOAD_DLL_DEBUG_EVENT (DEBUG_EVENT *de)
         L ("%s() LOAD_DLL_DEBUG_EVENT: %s 0x%x\n", __func__, sb.buf, i->lpBaseOfDll);
     strbuf_deinit (&sb);
     
-    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+    MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, true);
 
     add_module (p, (address)i->lpBaseOfDll, i->hFile, mc);
 
