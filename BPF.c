@@ -602,7 +602,8 @@ enum ht_result
     ht_need_to_skip_something
 };
 
-bool emulator_testing=true;
+//bool emulator_testing=true;
+bool emulator_testing=false;
 
 static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 {
@@ -681,40 +682,63 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
 
         // do not emulate, if PC in last emulated ctx is the same as now
         // this is done for REP STOSx/MOVSx testing
-        if (t->last_emulated_present==false)
+        if (emulator_testing==false || t->last_emulated_present==false)
         {
             t->last_emulated_present=false;
             if (da.ins_code!=I_INVALID)
             {
-                CONTEXT *new_ctx=DMEMDUP(ctx, sizeof(CONTEXT), "CONTEXT");
-                MemoryCache *new_mc=MC_MemoryCache_copy_ctor(mc);
+                CONTEXT *new_ctx;
+                MemoryCache *new_mc;
+
+                if (emulator_testing)
+                {
+                    new_ctx=DMEMDUP(ctx, sizeof(CONTEXT), "CONTEXT");
+                    new_mc=MC_MemoryCache_copy_ctor(mc);
+                };
                    
                 if (tracing_dbg)
                 {
                     L ("instruction to be emulated="); Da_DumpString(&cur_fds, &da); L ("\n");
                 };
 
-                Da_emulate_result r=Da_emulate(&da, new_ctx, new_mc);
-                if (r==DA_EMULATED_OK && emulator_testing)
+                Da_emulate_result r;
+
+                if (emulator_testing)
+                    r=Da_emulate(&da, new_ctx, new_mc);
+                else
+                    r=Da_emulate(&da, ctx, mc);
+
+                if (r==DA_EMULATED_OK)
                 {
                     if (tracing_dbg)
                     {
                         L ("instruction emulated successfully="); Da_DumpString(&cur_fds, &da); L ("\n");
                     };
                     emulated=true;
-                    t->last_emulated_ins=DMEMDUP (&da, sizeof(Da), "Da");
-                    oassert(t->last_emulated_present==false);
-                    t->last_emulated_present=true;
-                    oassert(t->last_emulated_ctx==false);
-                    t->last_emulated_ctx=new_ctx;
-                    oassert(t->last_emulated_MC==NULL);
-                    t->last_emulated_MC=new_mc;
+                    if (emulator_testing)
+                    {
+                        t->last_emulated_ins=DMEMDUP (&da, sizeof(Da), "Da");
+                        oassert(t->last_emulated_present==false);
+                        t->last_emulated_present=true;
+                        oassert(t->last_emulated_ctx==false);
+                        t->last_emulated_ctx=new_ctx;
+                        oassert(t->last_emulated_MC==NULL);
+                        t->last_emulated_MC=new_mc;
+                    };
                 }
                 else
                 {
-                    DFREE(new_ctx);
-                    MC_MemoryCache_dtor(new_mc, false);
-                    t->last_emulated_present=false;
+                    if (tracing_dbg)
+                    {
+                        L ("instruction wasn't emulated="); Da_DumpString(&cur_fds, &da); L ("\n");
+                    };
+                    emulated=false;
+                    if (emulator_testing)
+                    {
+                        DFREE(new_ctx);
+                        MC_MemoryCache_dtor(new_mc, false);
+                        t->last_emulated_present=false;
+                    };
                 };
             }
         };
