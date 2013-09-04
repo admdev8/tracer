@@ -487,7 +487,10 @@ int main(int argc, char *argv[])
             char buf[1024];
           
             while (fgets (buf, sizeof(buf), f))
+            {
+                //str_trim_all_lf_cr_right(buf);
                 parse_option(buf);
+            };
 
             fclose(f);
         }

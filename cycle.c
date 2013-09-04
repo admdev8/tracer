@@ -68,7 +68,8 @@ void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
             assert(0);
     };
     if (cycle_c_debug)
-        L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
+        L ("%s() end. TF=%s, PC=0x" PRI_ADR_HEX "\n", 
+                __func__, bool_to_string(IS_SET(ctx->EFlags, FLAG_TF)), CONTEXT_get_PC(ctx));
 };
 
 static bool handle_OEP_breakpoint (process *p, thread *t, MemoryCache *mc)
@@ -156,7 +157,8 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
         };
 
     if (cycle_c_debug)
-        L ("%s() end. TF=%s\n", __func__, IS_SET(ctx->EFlags, FLAG_TF) ? "true" : "false");
+        L ("%s() end. TF=%s, PC=0x" PRI_ADR_HEX "\n", 
+                __func__, bool_to_string(IS_SET(ctx->EFlags, FLAG_TF)), CONTEXT_get_PC(ctx));
 };
 
 DWORD handle_EXCEPTION_BREAKPOINT(DEBUG_EVENT *de)

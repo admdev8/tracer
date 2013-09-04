@@ -55,7 +55,7 @@ bp_address* current_BPF_address; // filled while parsing
 bool run_thread_b=true;
 bool dump_all_symbols=false;
 regex_t *dump_all_symbols_re=NULL;
-bool module_c_debug=false, cycle_c_debug=false, bpx_c_debug=false, utils_c_debug=false, cc_c_debug=false, BPF_c_debug=false;
+bool module_c_debug=false, cycle_c_debug=false, bpx_c_debug=false, utils_c_debug=false, cc_c_debug=false, BPF_c_debug=false, tracing_debug=false, emulator_testing=false;
 int limit_trace_nestedness=1; // default value
 
 // from opts.l:
@@ -103,7 +103,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_
-%token MODULE_C_DEBUG CYCLE_C_DEBUG BPX_C_DEBUG UTILS_C_DEBUG CC_C_DEBUG BPF_C_DEBUG NEWLINE
+%token MODULE_DEBUG CYCLE_DEBUG BPX_DEBUG UTILS_DEBUG CC_DEBUG BPF_DEBUG EMULATOR_TESTING TRACING_DEBUG NEWLINE
 %token <num> DEC_NUMBER HEX_NUMBER HEX_BYTE
 %token <num> BPM_width CSTRING_BYTE ATTACH_PID DMALLOC_BREAK_ON LIMIT_TRACE_NESTEDNESS
 %token <num> BYTE_WORD_DWORD_DWORD64
@@ -148,12 +148,14 @@ tracer_option_without_newline
  | DUMP_XMM                { dump_xmm=true; }
  | DONT_RUN_THREAD_B       { run_thread_b=false; }
  | CMDLINE                 { load_command_line=$1; }
- | MODULE_C_DEBUG          { module_c_debug=true; }
- | CYCLE_C_DEBUG           { cycle_c_debug=true; }
- | BPX_C_DEBUG             { bpx_c_debug=true; }
- | UTILS_C_DEBUG           { utils_c_debug=true; }
- | CC_C_DEBUG              { cc_c_debug=true; }
- | BPF_C_DEBUG             { BPF_c_debug=true; }
+ | MODULE_DEBUG            { module_c_debug=true; }
+ | CYCLE_DEBUG             { cycle_c_debug=true; }
+ | BPX_DEBUG               { bpx_c_debug=true; }
+ | UTILS_DEBUG             { utils_c_debug=true; }
+ | CC_DEBUG                { cc_c_debug=true; }
+ | BPF_DEBUG               { BPF_c_debug=true; }
+ | TRACING_DEBUG           { tracing_debug=true; }
+ | EMULATOR_TESTING        { emulator_testing=true; }
  | DMALLOC_BREAK_ON        { dmalloc_break_at_seq_n ($1); }
  | LIMIT_TRACE_NESTEDNESS  { limit_trace_nestedness=$1; }
  | ALL_SYMBOLS     { 
@@ -349,6 +351,7 @@ skip_n
 
 BP* parse_option(char *s)
 {
+    //printf ("%s(%s)\n", __func__, s);
     int r;
     flex_restart();
     flex_set_str(s);

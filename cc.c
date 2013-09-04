@@ -49,7 +49,16 @@ static int compare_doubles(void* leftp, void* rightp)
     if (left > right)
         return 1;
 
+    // NaN case
+    return memcmp (leftp, rightp, sizeof(double)); // it's not correct, but what can I do
+#if 0
+    L ("left=%f, right=%f\n", left, right);
+    L ("left:\n");
+    L_print_buf ((BYTE*)&left, sizeof(double));
+    L ("right:\n");
+    L_print_buf ((BYTE*)&right, sizeof(double));
     oassert(0);
+#endif
 };
 
 unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, MemoryCache *mc)
@@ -383,7 +392,7 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
             // do nothing - yet
             //SET_BIT (rt, NOTICE_OP1);
             break;
-        
+
         case I_FSTP:
             SET_BIT (rt, NOTICE_ST0);
             break;
@@ -394,19 +403,17 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
             break;
 
         default:
+            if (ins_reported_as_unhandled[da->ins_code]==false)
             {
-                if (ins_reported_as_unhandled[da->ins_code]==false)
-                {
-                    strbuf sb=STRBUF_INIT;
-                    process_get_sym (p, PC, true, true, &sb);
-                    L ("(cc) WARNING: instruction %s (at least at %s) not handled\n", Da_ins_code_ToString(da), sb.buf);
-                    strbuf_deinit(&sb);
-                    ins_reported_as_unhandled[da->ins_code]=true;
-                };
-
-                strbuf_addstr (comments, "WARNING: this instruction wasn't handled");
+                strbuf sb=STRBUF_INIT;
+                process_get_sym (p, PC, true, true, &sb);
+                L ("(cc) WARNING: instruction %s (at least at %s) not handled\n", Da_ins_code_ToString(da), sb.buf);
+                strbuf_deinit(&sb);
+                ins_reported_as_unhandled[da->ins_code]=true;
             };
-            break;
+
+            strbuf_addstr (comments, "WARNING: this instruction wasn't handled");
+            goto exit;
     };
 
     if (da->ops_total==2)
@@ -427,8 +434,14 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
                     (Da_op_is_reg (&da->op[i], R_ESP)) || // neither in operands with ESP values
                     (da->op[i].type==DA_OP_TYPE_VALUE)) // neither in operands with values
                 REMOVE_BIT(rt, 1<<i); // these are always NOTICE_OP1, _OP2, _OP3 at lower bits
+
+            if (IS_SET(da->prefix_codes, PREFIX_FS) || 
+                    IS_SET(da->prefix_codes, PREFIX_SS) || 
+                    IS_SET(da->prefix_codes, PREFIX_GS))
+                REMOVE_BIT(rt, 1<<i);
         };
 
+exit:
     if (cc_c_debug)
         L ("%s() end\n", __func__);
     return rt;
@@ -615,7 +628,11 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
 {
     strbuf sb_txt=STRBUF_INIT, sb_common=STRBUF_INIT, sb_sym=STRBUF_INIT;
     process_get_sym(p, a, false, true, &sb_sym);
-    strbuf_addf (&sb_txt, "0x" PRI_ADR_HEX " (%s), e=%8I64d [", a, sb_sym.buf, info->executed);
+
+    module *m=find_module_for_address (p, a);
+    address adr_in_PE_file=a - m->base + m->original_base;
+    
+    strbuf_addf (&sb_txt, "0x" PRI_ADR_HEX " (%s), e=%8I64d [", adr_in_PE_file, sb_sym.buf, info->executed);
     strbuf_deinit(&sb_sym);
 
     if (info->da)
@@ -627,19 +644,18 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
 
     construct_common_string(&sb_common, a, info);
 
-    // TODO: flags?
     fputs (sb_txt.buf, f_txt);
     fputs (sb_common.buf, f_txt);
     fputs ("\n", f_txt);
 
-    fprintf (f_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffdfdf);\n", a);
+    fprintf (f_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffdfdf);\n", adr_in_PE_file);
     strbuf tmp=STRBUF_INIT;
     strbuf_cvt_to_C_string(sb_common.buf, &tmp, false);
     strbuf_trim_string_with_comment (&tmp, IDA_MAX_COMMENT_SIZE, " <too long part of comment skipped>");
-    fprintf (f_idc, "\tMakeComm (0x" PRI_ADR_HEX ", \"%s\");\n", a, tmp.buf);
+    fprintf (f_idc, "\tMakeComm (0x" PRI_ADR_HEX ", \"%s\");\n", adr_in_PE_file, tmp.buf);
     strbuf_deinit(&tmp);
-    fprintf (f_clear_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffffff);\n", a);
-    fprintf (f_clear_idc, "\tMakeComm (0x" PRI_ADR_HEX ", \"\");\n", a);
+    fprintf (f_clear_idc, "\tSetColor (0x" PRI_ADR_HEX ", CIC_ITEM, 0xffffff);\n", adr_in_PE_file);
+    fprintf (f_clear_idc, "\tMakeComm (0x" PRI_ADR_HEX ", \"\");\n", adr_in_PE_file);
 
     strbuf_deinit(&sb_txt);
     strbuf_deinit(&sb_common);
@@ -704,33 +720,55 @@ void cc_dump_and_free(module *m) // for module m
         L ("%s() end\n", __func__);
 };
 
+static op_info* allocate_op_n (PC_info *info, unsigned i)
+{
+    if (info->op[i])
+        return; // already allocated
+
+    info->op[i]=DCALLOC(op_info, 1, "op_info");
+    info->op[i]->values=rbtree_create(true, "op_info:values", compare_size_t);
+    info->op[i]->FPU_values=rbtree_create(true, "op_info:FPU_values", compare_doubles);
+    info->op[i]->ptr_to_string_set=rbtree_create(true, "op_info:ptr_to_string_set", (int(*)(void*,void*))strcmp);
+    return info->op[i];
+};
+
 static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *mc, PC_info *info)
 {
-    if (info->op[i]==NULL)
-    {
-        info->op[i]=DCALLOC(op_info, 1, "op_info");
-        info->op[i]->values=rbtree_create(true, "op_info:values", compare_size_t);
-        info->op[i]->FPU_values=rbtree_create(true, "op_info:FPU_values", compare_doubles);
-        info->op[i]->ptr_to_string_set=rbtree_create(true, "op_info:ptr_to_string_set", (int(*)(void*,void*))strcmp);
-    };
-    
-    op_info *op=info->op[i];
-
-    // FIXME: XMM?
+    op_info *op=NULL;
+    // TODO: add XMM?
     switch (val->t)
     {
-        case OBJ_BYTE: 
+        case OBJ_BYTE:
+            op=allocate_op_n(info, i);
+            info->op_t[i]=val->t;
+            rbtree_insert(op->values, (void*)obj_get_as_byte(val), NULL);
+            break;
+        
         case OBJ_WYDE: 
+            op=allocate_op_n(info, i);
+            info->op_t[i]=val->t;
+            rbtree_insert(op->values, (void*)obj_get_as_wyde(val), NULL);
+            break;
+
         case OBJ_TETRABYTE: 
+            op=allocate_op_n(info, i);
+            info->op_t[i]=val->t;
+            rbtree_insert(op->values, (void*)obj_get_as_tetrabyte(val), NULL);
+            break;
+
 #ifdef _WIN64
         case OBJ_OCTABYTE:
-#endif            
-            rbtree_insert(op->values, (void*)obj_get_as_REG(val), NULL);
+            op=allocate_op_n(info, i);
+            info->op_t[i]=val->t;
+            rbtree_insert(op->values, (void*)obj_get_as_octabyte(val), NULL);
             break;
+#endif
         
         case OBJ_DOUBLE:
             if (dump_fpu)
             {
+                op=allocate_op_n(info, i);
+                info->op_t[i]=val->t;
                 double d=obj_get_as_double(val);
                 if (rbtree_is_key_present(op->FPU_values, (void*)&d)==false)
                     rbtree_insert(op->FPU_values, DMEMDUP(&d, sizeof(double), "double"), NULL);
@@ -739,10 +777,12 @@ static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *m
         default:
             // unknown val->t type
             // wont' save (yet!)
+            obj_free_structures(val);
             return;
     };
 
-    info->op_t[i]=val->t;
+    if (op==NULL) // still NULL, probably, unsupported type like XMM or OBJ_DOUBLE when dump_fpu=false
+        return;
 
     if (val->t==
 #ifdef _WIN64
@@ -891,13 +931,15 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc,
 
     strbuf comment=STRBUF_INIT;
     address PC=CONTEXT_get_PC(ctx);
+    unsigned to_notice=0;
 
-    unsigned to_notice=what_to_notice(p, da, &comment, ctx, mc);
+    if (da->ins_code!=I_INVALID)
+        to_notice=what_to_notice(p, da, &comment, ctx, mc);
+    else
+        strbuf_addstr (&comment, "instruction wasn't disassembled");
 
     module *m=find_module_for_address (p, PC);
     oassert (m);
-    if (da==NULL)
-        strbuf_addstr (&comment, "instruction wasn't disassembled");
 
     if (CALL_to_be_skipped_due_to_trace_limit)
     {

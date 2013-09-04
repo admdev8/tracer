@@ -75,14 +75,16 @@ clean:
 
 opts.tab.h opts.tab.c: opts.y
 ifeq ($(BUILD),debug)
-	$(BISON) -d opts.y -t
+#	$(BISON) -d opts.y -t
+	$(BISON) -d opts.y
 else	
 	$(BISON) -d opts.y
 endif	
 
 opts.lex.c: opts.l opts.tab.h opts.h
 ifeq ($(BUILD),debug)
-	$(FLEX) -d -oopts.lex.c opts.l
+#	$(FLEX) -d -oopts.lex.c opts.l
+	$(FLEX) -oopts.lex.c opts.l
 else	
 	$(FLEX) -oopts.lex.c opts.l
 endif

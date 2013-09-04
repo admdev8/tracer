@@ -48,7 +48,6 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>bpf=   { 
     assert (current_BPF==NULL); 
     current_BPF=DCALLOC (BPF, 1, "BPF"); 
-    current_BPF->rt_probability=1.0; 
     BEGIN(STATE_BPF); 
     yy_push_state(STATE_ADDRESS); 
     return BPF_EQ; 
@@ -61,7 +60,12 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>-a:{DEC}      { yylval.num=strtol(yytext+3, NULL, 10); return ATTACH_PID; };
 <INITIAL>-a:{HEX}      { yylval.num=strtol(yytext+3, NULL, 16); return ATTACH_PID; };
 <INITIAL>-a:{FILEPATH_FILENAME} { yylval.str=DSTRDUP(yytext+3, "yytext"); return ATTACH_FILENAME; };
-<INITIAL>-c:.*         { yylval.str=DSTRDUP(yytext+3, "yytext"); return CMDLINE; };
+<INITIAL>-c:.*         { 
+    yylval.str=DSTRDUP(yytext+3, "yytext"); 
+    //str_trim_all_lf_cr_right(yylval.str); 
+    remove_char_begin_end_if_present(yylval.str, '"');
+    return CMDLINE; 
+    };
 <INITIAL>--child       { return CHILD; }
 <INITIAL>-q            { return DASH_Q; }
 <INITIAL>-s            { return DASH_S; }
@@ -89,12 +93,14 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
         yylval.num=strtol(yytext+25, NULL, 10); 
         return LIMIT_TRACE_NESTEDNESS;
     }
-<INITIAL>--module-c-debug   { return MODULE_C_DEBUG; }
-<INITIAL>--cycle-c-debug    { return CYCLE_C_DEBUG; }
-<INITIAL>--BPX-c-debug      { return BPX_C_DEBUG; }
-<INITIAL>--utils-c-debug    { return UTILS_C_DEBUG; }
-<INITIAL>--cc-c-debug       { return CC_C_DEBUG; }
-<INITIAL>--BPF-c-debug      { return BPF_C_DEBUG; }
+<INITIAL>--module-debug     { return MODULE_DEBUG; }
+<INITIAL>--cycle-debug      { return CYCLE_DEBUG; }
+<INITIAL>--BPX-debug        { return BPX_DEBUG; }
+<INITIAL>--utils-debug      { return UTILS_DEBUG; }
+<INITIAL>--cc-debug         { return CC_DEBUG; }
+<INITIAL>--BPF-debug        { return BPF_DEBUG; }
+<INITIAL>--tracing-debug    { return TRACING_DEBUG; }
+<INITIAL>--emulator-testing { return EMULATOR_TESTING; }
 
 <STATE_ADDRESS_OR_REG>(e|r)(ax|bx|cx|dx|si|di|bp|sp|ip)   { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>(p|s|a|z|o|c|d)f    { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }

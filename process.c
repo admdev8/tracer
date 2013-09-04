@@ -41,6 +41,12 @@ process* process_init (DWORD PID, HANDLE PHDL, HANDLE file_handle, LPVOID base_o
 
 void process_free (process *p)
 {
+#ifdef _DEBUG
+    if (p->ins_emulated)
+        L ("instructions emulated=%I64d\n", p->ins_emulated);
+    if (p->ins_not_emulated)
+        L ("instructions not emulated=%I64d\n", p->ins_not_emulated);
+#endif    
     if (process_c_debug)
     {
         L ("%s() begin\n", __func__);

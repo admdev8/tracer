@@ -41,23 +41,12 @@ bool is_there_OEP_breakpoint_for_fname(char *fname);
 // from opts.y
 extern BP* breakpoints[4];
 extern dlist *addresses_to_be_resolved;
-extern char* load_filename;
-extern char* attach_filename;
-extern char *load_command_line;
+extern char *load_filename, *attach_filename, *load_command_line;
 extern int attach_PID;
-extern bool debug_children;
-extern bool dash_s;
-extern bool quiet;
-extern bool dump_fpu;
-extern bool dump_xmm;
-bool dump_all_symbols;
+extern bool debug_children, dash_s, quiet, dump_fpu, dump_xmm, dump_all_symbols;
 regex_t *dump_all_symbols_re, *one_time_int3_bp_re;
-extern bool module_c_debug;
-extern bool cycle_c_debug;
-extern bool bpx_c_debug;
-extern bool utils_c_debug;
-extern bool cc_c_debug;
-extern bool BPF_c_debug;
+extern bool module_c_debug, cycle_c_debug, bpx_c_debug, utils_c_debug, cc_c_debug, BPF_c_debug, tracing_debug;
+extern bool emulator_testing;
 extern int limit_trace_nestedness;
 
 // you may want to disable thread B while debugging in gdb, because thread B's input
