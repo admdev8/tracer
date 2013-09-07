@@ -715,13 +715,14 @@ void cc_dump_and_free(module *m) // for module m
 
 static op_info* allocate_op_n (PC_info *info, unsigned i)
 {
-    if (info->op[i])
-        return; // already allocated
+    if (info->op[i]==NULL)
+    {
+        info->op[i]=DCALLOC(op_info, 1, "op_info");
+        info->op[i]->values=rbtree_create(true, "op_info:values", compare_size_t);
+        info->op[i]->FPU_values=rbtree_create(true, "op_info:FPU_values", compare_doubles);
+        info->op[i]->ptr_to_string_set=rbtree_create(true, "op_info:ptr_to_string_set", (int(*)(void*,void*))strcmp);
+    };
 
-    info->op[i]=DCALLOC(op_info, 1, "op_info");
-    info->op[i]->values=rbtree_create(true, "op_info:values", compare_size_t);
-    info->op[i]->FPU_values=rbtree_create(true, "op_info:FPU_values", compare_doubles);
-    info->op[i]->ptr_to_string_set=rbtree_create(true, "op_info:ptr_to_string_set", (int(*)(void*,void*))strcmp);
     return info->op[i];
 };
 
