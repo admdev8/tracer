@@ -33,6 +33,7 @@
 #define STRING_LEN 4
 
 // big enough to hold all instructions till I_MAX_INS
+// FIXME: add same thing in emulator!
 static bool ins_reported_as_unhandled[512]={ false };
 
 static int compare_doubles(void* leftp, void* rightp)
@@ -49,16 +50,8 @@ static int compare_doubles(void* leftp, void* rightp)
     if (left > right)
         return 1;
 
-    // NaN case
+    // NaNs case
     return memcmp (leftp, rightp, sizeof(double)); // it's not correct, but what can I do
-#if 0
-    L ("left=%f, right=%f\n", left, right);
-    L ("left:\n");
-    L_print_buf ((BYTE*)&left, sizeof(double));
-    L ("right:\n");
-    L_print_buf ((BYTE*)&right, sizeof(double));
-    oassert(0);
-#endif
 };
 
 unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, MemoryCache *mc)
