@@ -48,6 +48,7 @@ else
 endif
 
 all:    $(OUTDIR) $(OUTDIR)/$(TRACER_EXE_NAME) $(DEP_FILES)
+	$(OUTDIR)/$(TRACER_EXE_NAME) test
 
 $(OUTDIR):
 	mkdir $(OUTDIR)

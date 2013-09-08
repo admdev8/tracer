@@ -47,7 +47,7 @@ void BPF_ToString(BPF *b, strbuf *out)
     strbuf_addf (out, "rt: " PRI_REG_HEX " ", b->rt);
 
     //fprintf (stderr, "%s() rt_probability: %f ", __func__, b->rt_probability);
-    if (b->rt_probability!=1)
+    if (b->rt_probability!=0 && b->rt_probability!=1)
         strbuf_addf (out, "rt_probability: %f ", b->rt_probability);
 
     if (b->args)

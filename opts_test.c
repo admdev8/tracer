@@ -101,7 +101,7 @@ void opts_test()
     do_test("bpf=filename.dll!symbol1,rt_probability:50%,rt:123\0", 
             "bp_address=filename.dll!symbol1. BPF. options: rt: 7b rt_probability: 0.500000 \n");
     do_test("bpf=filename.dll!symbol1,rt_probability:0%,rt:123\0", 
-            "bp_address=filename.dll!symbol1. BPF. options: rt: 7b rt_probability: 0.000000 \n");
+            "bp_address=filename.dll!symbol1. BPF. options: rt: 7b \n");
     do_test("bpf=filename.dll!symbol1,rt_probability:1%,rt:123\0", 
             "bp_address=filename.dll!symbol1. BPF. options: rt: 7b rt_probability: 0.010000 \n");
     do_test("bpf=filename.dll!symbol1,rt_probability:100%,rt:123\0", 
