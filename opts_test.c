@@ -96,8 +96,8 @@ void opts_test()
             "bp_address=filename.dll!symbol1. BPX. options: [DUMP filename.dll!symbol3 size: 333][SET reg:EBX value:222][SET reg:EAX value:111]\n");
     do_test("bpf=filename.dll!symbol1,args:6,skip,unicode,when_called_from_func:filename.dll!func,rt:123\0", 
             "bp_address=filename.dll!symbol1. BPF. options: unicode skip rt: 7b args: 6 \nwhen_called_from_func: filename.dll!func\n");
-    do_test("bpf=filename.dll!symbol1,dump_args:6,skip_stdcall,when_called_from_address:filename.dll!func+0x1234,rt_probability:0.17,pause:700\0", 
-            "bp_address=filename.dll!symbol1. BPF. options: skip_stdcall rt: 0 rt_probability: 0.170000 dump_args: 6 pause: 700 \nwhen_called_from_address: filename.dll!func+0x1234\n");
+    do_test("bpf=filename.dll!symbol1,dump_args:6,skip_stdcall,when_called_from_address:filename.dll!func+0x1234,rt:123,rt_probability:0.17,pause:700\0", 
+            "bp_address=filename.dll!symbol1. BPF. options: skip_stdcall rt: 7b rt_probability: 0.170000 dump_args: 6 pause: 700 \nwhen_called_from_address: filename.dll!func+0x1234\n");
     do_test("bpf=filename.dll!symbol1,rt_probability:50%,rt:123\0", 
             "bp_address=filename.dll!symbol1. BPF. options: rt: 7b rt_probability: 0.500000 \n");
     do_test("bpf=filename.dll!symbol1,rt_probability:0%,rt:123\0", 

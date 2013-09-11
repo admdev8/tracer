@@ -80,7 +80,7 @@ void add_new_address_to_be_resolved (bp_address *a)
     if (addresses_to_be_resolved==NULL)
         addresses_to_be_resolved=dlist_init();
     
-    dlist_insert_at_begin (addresses_to_be_resolved, a);
+    dlist_insert_at_begin (&addresses_to_be_resolved, a);
 };
 
 %}
@@ -132,6 +132,8 @@ tracer_option_without_newline
  : bpm             { add_new_BP ($1); }
  | bpx             { add_new_BP ($1); }
  | bpf             { 
+   if (current_BPF->rt_present==false && current_BPF->rt_probability_present==true)
+       die ("rt_probability option without rt option is useless. exiting.\n");
    BP *bp=create_BP(BP_type_BPF, current_BPF_address, current_BPF);
    add_new_BP (bp); 
    current_BPF=NULL;
@@ -254,10 +256,12 @@ BPF_option
  | BPF_SKIP                         { current_BPF->skip=true; } 
  | BPF_SKIP_STDCALL                 { current_BPF->skip_stdcall=true; }
  | BPF_PAUSE DEC_OR_HEX             { current_BPF->pause=$2; }
- | BPF_RT DEC_OR_HEX                { current_BPF->rt=$2; }
+ | BPF_RT DEC_OR_HEX                { current_BPF->rt=$2; 
+    current_BPF->rt_present=true; }
  | BPF_RT_PROBABILITY float_or_perc { current_BPF->rt_probability=$2; 
+    current_BPF->rt_probability_present=true;
 #ifdef _DEBUG 
-    fprintf (stderr, "rt_probability=%f", $2); 
+    //fprintf (stderr, "rt_probability=%f", $2); 
 #endif
     }
  | BPF_ARGS DEC_OR_HEX              { current_BPF->args=$2; }

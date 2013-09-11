@@ -51,8 +51,10 @@ typedef struct _BPF
 {
     bool unicode, skip, skip_stdcall, trace, cc;
     // these params may be NULL
+    bool rt_present;
     REG rt;
     double rt_probability;
+    bool rt_probability_present;
     unsigned args, dump_args, pause /* milliseconds */;
     bp_address *when_called_from_address, *when_called_from_func;
     // variables filled by is_it_known_function

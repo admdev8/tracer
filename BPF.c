@@ -495,11 +495,17 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
 
     bool modify_AX=false;
 
-    if (bpf->rt_probability!=0.0)
+    if (bpf->rt_present && bpf->rt_probability_present==false)
+        modify_AX=true;
+
+    if (bpf->rt_present && bpf->rt_probability_present)
     {
-        L ("bpf->rt_probability=%f\n", bpf->rt_probability);
-        L_print_buf ((BYTE*)&bpf->rt_probability, sizeof(double));
-        if (bpf->rt_probability==1.0 || rand_double()<bpf->rt_probability)
+        if (BPF_c_debug)
+        {
+            L ("bpf->rt_probability=%f\n", bpf->rt_probability);
+            L_print_buf ((BYTE*)&bpf->rt_probability, sizeof(double));
+        };
+        if (rand_double()<bpf->rt_probability)
             modify_AX=true;
     };
 
@@ -708,7 +714,9 @@ static bool emulate_if_need(process *p, thread *t, Da* da, CONTEXT *ctx, MemoryC
         {
             strbuf tmp=STRBUF_INIT;
             Da_ToString(da, &tmp);
+#ifdef _DEBUG            
             L_once ("instruction wasn't emulated=%s\n", tmp.buf);
+#endif            
             strbuf_deinit(&tmp);
             p->ins_not_emulated++;
         };
