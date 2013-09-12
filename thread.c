@@ -53,7 +53,7 @@ thread *find_thread (DWORD PID, DWORD TID)
     return t;
 };
 
-void add_thread (process *p, DWORD TID, HANDLE THDL, address start)
+void add_thread (process *p, DWORD TID, HANDLE THDL, address start, address TIB)
 {
     thread *t=DCALLOC (thread, 1, "thread");
 
@@ -62,6 +62,7 @@ void add_thread (process *p, DWORD TID, HANDLE THDL, address start)
 
     t->TID=TID;
     t->THDL=THDL;
+    t->TIB=TIB;
     t->start=start;
     assert (rbtree_lookup(p->threads, (void*)TID)==NULL && "this TID is already in table");
     rbtree_insert (p->threads, (void*)TID, t);

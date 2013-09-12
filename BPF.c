@@ -625,7 +625,7 @@ enum ht_result
     ht_need_to_skip_something
 };
 
-static void check_emulator_results_if_need (thread *t, CONTEXT *ctx)
+static void check_emulator_results_if_need (process *p, thread *t, CONTEXT *ctx)
 {
     bool fail=false;
 
@@ -640,7 +640,6 @@ static void check_emulator_results_if_need (thread *t, CONTEXT *ctx)
 
     if (CONTEXT_compare (&cur_fds, ctx, t->last_emulated_ctx)==false)
     {
-        L ("last_emulated instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
         L ("%s() (CPU emulator testing): CONTEXTs are different\n", __func__);
         L ("real context:\n");
         dump_CONTEXT (&cur_fds, ctx, false, false, false);
@@ -651,18 +650,26 @@ static void check_emulator_results_if_need (thread *t, CONTEXT *ctx)
 
     if (MC_CompareInternalStateWithMemory(t->last_emulated_MC)==false)
     {
-        L ("last_emulated instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
         L ("%s() (CPU emulator testing): memory states are different\n", __func__);
         fail=true;
     };
 
+    if (fail)
+    {
+        address PC=CONTEXT_get_PC(ctx);
+        strbuf sb=STRBUF_INIT;
+        process_get_sym(p, PC, true, true, &sb);
+
+        L ("%s() PC=%s (0x%x)\n", __func__, sb.buf, PC);
+        strbuf_deinit (&sb);
+        L ("last_emulated instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
+        exit(0);
+    };
+    
     if (tracing_debug)
     {
         L ("last checked instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
     };
-
-    if (fail)
-        exit(0);
 
     t->last_emulated_present=false;
     DFREE(t->last_emulated_ctx);
@@ -700,9 +707,9 @@ static bool emulate_if_need(process *p, thread *t, Da* da, CONTEXT *ctx, MemoryC
     Da_emulate_result r;
 
     if (emulator_testing)
-        r=Da_emulate(da, new_ctx, new_mc);
+        r=Da_emulate(da, new_ctx, new_mc, true, t->TIB);
     else
-        r=Da_emulate(da, ctx, mc);
+        r=Da_emulate(da, ctx, mc, true, t->TIB);
 
     if (r==DA_EMULATED_OK)
     {
@@ -763,7 +770,7 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
     };
 
     if (emulator_testing)
-        check_emulator_results_if_need(t, ctx);
+        check_emulator_results_if_need(p, t, ctx);
     
     bool emulated;
     do // emu cycle

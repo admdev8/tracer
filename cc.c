@@ -28,6 +28,7 @@
 #include "set.h"
 #include "oassert.h"
 #include "x86.h"
+#include "thread.h"
 
 #define IDA_MAX_COMMENT_SIZE 1023
 #define STRING_LEN 4
@@ -54,7 +55,7 @@ static int compare_doubles(void* leftp, void* rightp)
     return memcmp (leftp, rightp, sizeof(double)); // it's not correct, but what can I do
 };
 
-unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, MemoryCache *mc)
+unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEXT *ctx, MemoryCache *mc)
 {
     if (cc_c_debug)
         L ("%s() begin\n", __func__);
@@ -157,7 +158,7 @@ unsigned what_to_notice (process *p, Da *da, strbuf *comments, CONTEXT *ctx, Mem
                 obj val;
 
                 strbuf_addstr (comments, "op1=");
-                if (Da_op_get_value_of_op (&da->op[0], &adr, ctx, mc, __FILE__, __LINE__, &val))
+                if (Da_op_get_value_of_op (&da->op[0], &adr, ctx, mc, __FILE__, __LINE__, &val, da->prefix_codes, t->TIB))
                     process_get_sym (p, obj_get_as_REG (&val), true, true, comments);
                 else
                     strbuf_addstr (comments, "<can't get value of op1 here>");
@@ -796,7 +797,7 @@ static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *m
     };
 };
 
-static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, Da* da, CONTEXT *ctx, 
+static void save_info_about_PC (thread *t, module *m, strbuf *comment, unsigned to_notice, Da* da, CONTEXT *ctx, 
         MemoryCache *mc)
 {
     if (cc_c_debug)
@@ -831,7 +832,7 @@ static void save_info_about_PC (module *m, strbuf *comment, unsigned to_notice, 
             {
                 address adr;
                 obj val;
-                if (Da_op_get_value_of_op (&da->op[i], &adr, ctx, mc, __FILE__, __LINE__, &val))
+                if (Da_op_get_value_of_op (&da->op[i], &adr, ctx, mc, __FILE__, __LINE__, &val, da->prefix_codes, t->TIB))
                 {
                     save_info_about_op (PC, i, &val, mc, info);
                     //assert (info->op_t[i]!=V_INVALID);
@@ -928,7 +929,7 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc,
     unsigned to_notice=0;
 
     if (da->ins_code!=I_INVALID)
-        to_notice=what_to_notice(p, da, &comment, ctx, mc);
+        to_notice=what_to_notice(p, t, da, &comment, ctx, mc);
     else
         strbuf_addstr (&comment, "instruction wasn't disassembled");
 
@@ -948,7 +949,7 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc,
                 limit_trace_nestedness);
     };
 
-    save_info_about_PC(m, &comment, to_notice, da, ctx, mc);
+    save_info_about_PC(t, m, &comment, to_notice, da, ctx, mc);
 
     strbuf_deinit(&comment);
     if (cc_c_debug)

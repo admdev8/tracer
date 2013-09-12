@@ -230,7 +230,7 @@ void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
 
     process* p=process_init (PID, i->hProcess, i->hFile, i->lpBaseOfImage);
     
-    add_thread (p, TID, i->hThread, (address)i->lpStartAddress);
+    add_thread (p, TID, i->hThread, (address)i->lpStartAddress, (address)i->lpThreadLocalBase);
     rbtree_insert(processes, (void*)PID, p);
     
     MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, true);
@@ -262,7 +262,7 @@ void handle_CREATE_THREAD_DEBUG_EVENT (DEBUG_EVENT *de)
     if (cycle_c_debug)
         L ("CREATE_THREAD_DEBUG_EVENT\n");
 
-    add_thread (p, de->dwThreadId, i->hThread, (address)i->lpStartAddress);
+    add_thread (p, de->dwThreadId, i->hThread, (address)i->lpStartAddress, (address)i->lpThreadLocalBase);
     set_or_update_all_DRx_breakpoints(p); // overkill...
 };
 

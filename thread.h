@@ -44,6 +44,7 @@ typedef struct _thread
     DWORD TID;
     HANDLE THDL;
     address start;
+    address TIB;
 
     BP_thread_specific_dynamic_info BP_dynamic_info[4];
 
@@ -56,7 +57,7 @@ typedef struct _thread
 
 void thread_free (thread *t);
 thread *find_thread (DWORD PID, DWORD TID);
-void add_thread (process *p, DWORD TID, HANDLE THDL, address start);
+void add_thread (process *p, DWORD TID, HANDLE THDL, address start, address TIB);
 void dump_stack (process *p, thread *t, CONTEXT * ctx, MemoryCache *mem);
 
 /* vim: set expandtab ts=4 sw=4 : */
