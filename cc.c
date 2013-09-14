@@ -232,8 +232,13 @@ unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEX
 
             // EAX
         case I_CDQ:
-        case I_RETN:
         case I_CPUID:
+            SET_BIT (rt, NOTICE_AX);
+            SET_BIT (rt, NOTICE_ST0);
+            break;
+
+            // EAX, ST0
+        case I_RETN:
             SET_BIT (rt, NOTICE_AX);
             SET_BIT (rt, NOTICE_ST0);
             break;

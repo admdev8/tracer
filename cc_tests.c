@@ -27,6 +27,7 @@
 
 void cc_tests()
 {
+#ifndef _WIN64	
 	CONTEXT ctx;
 	thread *t=DCALLOC(thread, 1, "thread");
 	module *m=DCALLOC(module, 1, "module");
@@ -237,4 +238,5 @@ void cc_tests()
 	DFREE (memory_test);
 	process_free (p);
 	dump_unfreed_blocks();
+#endif	
 };

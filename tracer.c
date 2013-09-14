@@ -516,13 +516,15 @@ int main(int argc, char *argv[])
     if (argc==1)
         help_and_exit();
 
-#ifdef _DEBUG
     if (argc==2 && stricmp (argv[1], "test")==0)
     {
+#ifdef _DEBUG
         tests();
+#else
+        printf ("no tests in release version\n");
+#endif
         return 0;
     };
-#endif
 
     for (int i=1; i<argc; i++)
     {

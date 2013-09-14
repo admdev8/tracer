@@ -798,7 +798,9 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
             return ht_need_to_skip_something;
         };
 
+#ifndef _WIN64        
         emulated=emulate_if_need(p, t, &da, ctx, mc);
+#endif        
 
         if (emulator_testing)
             break;

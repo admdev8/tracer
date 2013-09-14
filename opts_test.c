@@ -110,13 +110,13 @@ void opts_test()
             "bp_address=filename.dll!0x12345678. BPX. options: [DUMP reg:EAX size: 123]\n");
     do_test("bpf=filename.dll!0x14036FE50,rt:0\n\0", 
 #ifdef _WIN64
-            "");
+            "bp_address=filename.dll!0x14036fe50. BPF. options: rt: 0 \n");
 #else
             "bp_address=filename.dll!0x7fffffff. BPF. options: rt: 0 \n");
 #endif
     do_test("bpf=filename.dll!0x14036FE50,rt:0,set(byte,*(arg_5+0x123)=0x567)\0",
 #ifdef _WIN64
-            "");
+            "bp_address=filename.dll!0x14036fe50. BPF. options: rt: 0 \nset_width=1 set_arg_n=5 set_ofs=0x123 set_val=0x567\n");
 #else
             "bp_address=filename.dll!0x7fffffff. BPF. options: rt: 0 \nset_width=1 set_arg_n=5 set_ofs=0x123 set_val=0x567\n");
 #endif
