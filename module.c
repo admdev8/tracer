@@ -236,7 +236,8 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
 #endif // _WIN64
     regex_t PAT_compiled;
     regcomp_or_die(&PAT_compiled, MAP_get_all_PAT, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
-    
+
+    printf ("1) PAT_compiled.buffer=0x%p\n", PAT_compiled.buffer);
     add_symbol_params params={ p, m, SYM_TYPE_MAP, mc };
     
     strbuf sb_mapfilename=STRBUF_INIT;
@@ -256,16 +257,13 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
 
     while (fgets(buf, sizeof(buf), f))
     {
-        if (buf[strlen(buf)-1]==0x0a)
-            buf[strlen(buf)-1]=0;
-
-        if (buf[strlen(buf)-1]==0x0d)
-            buf[strlen(buf)-1]=0;
+        str_trim_all_lf_cr_right(buf);
 
         DWORD sect=0;
         address addr=0;
-        regmatch_t matches[3];
+        regmatch_t matches[4];
 
+        printf ("2) PAT_compiled.buffer=0x%p\n", PAT_compiled.buffer);
         if (regexec(&PAT_compiled, buf, 4, matches, 0)==0)
         {
             char *v1=strdup_range (buf, matches[1].rm_so, matches[1].rm_eo-matches[1].rm_so);
@@ -421,6 +419,9 @@ module* add_module (process *p, address img_base, HANDLE file_hdl, MemoryCache *
     m->symbols=rbtree_create(true, "symbols", compare_size_t);
 
     set_filename_and_path_for_module(file_hdl, m, &fullpath_filename);
+        
+    if (opt_loading)
+        L ("New module: %s%s, base=0x" PRI_ADR_HEX "\n", m->path, m->filename, img_base);
     
     PE_info* info=get_all_info_from_PE (p, m, &fullpath_filename, img_base, mc);
     if (ORACLE_HOME.strlen>0)
