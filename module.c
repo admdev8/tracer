@@ -237,7 +237,6 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
     regex_t PAT_compiled;
     regcomp_or_die(&PAT_compiled, MAP_get_all_PAT, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
 
-    printf ("1) PAT_compiled.buffer=0x%p\n", PAT_compiled.buffer);
     add_symbol_params params={ p, m, SYM_TYPE_MAP, mc };
     
     strbuf sb_mapfilename=STRBUF_INIT;
@@ -263,7 +262,6 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
         address addr=0;
         regmatch_t matches[4];
 
-        printf ("2) PAT_compiled.buffer=0x%p\n", PAT_compiled.buffer);
         if (regexec(&PAT_compiled, buf, 4, matches, 0)==0)
         {
             char *v1=strdup_range (buf, matches[1].rm_so, matches[1].rm_eo-matches[1].rm_so);
