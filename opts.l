@@ -93,6 +93,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
         yylval.num=strtol(yytext+25, NULL, 10); 
         return LIMIT_TRACE_NESTEDNESS;
     }
+<INITIAL>--loading          { return LOADING; }
 <INITIAL>--module-debug     { return MODULE_DEBUG; }
 <INITIAL>--cycle-debug      { return CYCLE_DEBUG; }
 <INITIAL>--BPX-debug        { return BPX_DEBUG; }
@@ -101,6 +102,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>--BPF-debug        { return BPF_DEBUG; }
 <INITIAL>--tracing-debug    { return TRACING_DEBUG; }
 <INITIAL>--emulator-testing { return EMULATOR_TESTING; }
+<INITIAL>--no-new-console   { return NO_NEW_CONSOLE; }
 
 <STATE_ADDRESS_OR_REG>(e|r)(ax|bx|cx|dx|si|di|bp|sp|ip)   { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>(p|s|a|z|o|c|d)f    { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }

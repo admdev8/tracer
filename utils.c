@@ -41,7 +41,7 @@ void dump_TID_if_need(process *p, thread *t)
        L ("TID=%d|", t->TID);
 };
 
-// temporary in this file!
+// FIXME: find another place for this function
 void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
 {
     assert (bp->a->resolved);
@@ -49,7 +49,8 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
     {
         strbuf sb=STRBUF_INIT;
         address_to_string(bp->a, &sb);
-        L ("%s(): begin. setting DRx-breakpoint %d for %s\n", __func__, DRx_no, sb.buf);
+        L ("%s(): begin. setting DRx-breakpoint %d for %s at 0x" PRI_ADR_HEX "\n", 
+                __func__, DRx_no, sb.buf, bp->a->abs_address);
         strbuf_deinit (&sb);
     };
 

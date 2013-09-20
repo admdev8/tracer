@@ -413,7 +413,7 @@ static unsigned handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *
     load_args(t, ctx, mc, bp_no, args);
 
     dump_PID_if_need(p); dump_TID_if_need(p, t);
-    L ("(%d) %s (", bp_no, sb_address.buf);
+    L ("(%d) %s(", bp_no, sb_address.buf);
     BPF_dump_args (mc, di->BPF_args, args, bpf->unicode, bpf->arg_types);
     L (")");
     if (got_ret_adr)
@@ -478,7 +478,7 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
 
     // dump all info in one line:
     dump_PID_if_need(p); dump_TID_if_need(p, t);
-    L ("(%d) %s () -> ", bp_no, sb_address.buf);
+    L ("(%d) %s() -> ", bp_no, sb_address.buf);
 
     if (BPF_dump_arg(mc, accum, bpf->unicode, bpf->ret_type)==false)
         L (" (0x" PRI_REG_HEX ")", accum);

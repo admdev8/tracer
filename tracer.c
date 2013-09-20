@@ -95,6 +95,7 @@ void help_and_exit()
     printf ("--one-time-INT3-bp:<regexp> - set one-time INT3 breakpoint to\n");
     printf ("\tall addresses falling under <regexp>\n");
     printf ("--all-symbols - print all symbols in all loading modules\n");
+    printf ("--loading - show each module loading information\n");
     printf ("--all-symbols:<regexp> - print all symbols in all loading modules falling under <regexp>\n");
     //printf ("--dump-fpu - dump FPU registers where it's possible\n");
     printf ("--dump-xmm - dump MMX/XMM registers\n");
@@ -128,9 +129,12 @@ void load_process()
     GetStartupInfo (&si);
 
     if (debug_children)
-        flags=DEBUG_PROCESS | CREATE_NEW_CONSOLE;
+        flags=DEBUG_PROCESS;
     else
-        flags=DEBUG_ONLY_THIS_PROCESS | CREATE_NEW_CONSOLE;
+        flags=DEBUG_ONLY_THIS_PROCESS;
+
+    if (create_new_console)
+        flags|=CREATE_NEW_CONSOLE;
 
     if (CreateProcess (load_filename, (LPSTR)cmd_line.buf, 0, 0, 0, flags, 0, 0, &si, &pi)==FALSE)
     {
@@ -550,8 +554,13 @@ int main(int argc, char *argv[])
 
     check_option_constraints();
 
-    if (quiet==false)
-        L_init ("tracer.log"); // if not initialized, all messages are suppressed
+    if (quiet==false) // if not initialized, all messages are suppressed
+
+#ifdef _WIN64
+        L_init ("tracer64.log");
+#else
+        L_init ("tracer.log");
+#endif
 
     if (load_cfg("tracer.cfg")==false)
         L ("Warning: no tracer.cfg file.\n");

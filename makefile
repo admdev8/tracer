@@ -12,6 +12,7 @@ else
 	else
 	bsuffix=release
 	CPPFLAGS_ADD=-O3
+	#CPPFLAGS_ADD=
 	endif
 endif
 
@@ -49,6 +50,7 @@ endif
 
 all:    $(OUTDIR) $(OUTDIR)/$(TRACER_EXE_NAME) $(DEP_FILES)
 	$(OUTDIR)/$(TRACER_EXE_NAME) test
+	tests/tests.sh $(CURDIR)/$(OUTDIR)/$(TRACER_EXE_NAME)
 
 $(OUTDIR):
 	mkdir $(OUTDIR)
