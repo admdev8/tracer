@@ -1,0 +1,3 @@
+-l:1.exe
+bpf=1.exe!main,trace
+--emulator-testing

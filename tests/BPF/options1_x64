@@ -1,0 +1,4 @@
+bpf=test1_x64.exe!f1,args:2,dump_args:0x10
+bpf=test1_x64.exe!f2,unicode,args:2,dump_args:0x10
+bpf=test1_x64.exe!to_be_skipped1,args:2,skip
+bpf=test1_x64.exe!to_be_skipped2,args:2,skip

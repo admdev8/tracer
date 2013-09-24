@@ -1,0 +1,6 @@
+-l:1_x64.exe
+bpx=1_x64.exe!p1,set(st0,2.3456)
+bpx=1_x64.exe!p2,set(r8d,0x29a)
+bpx=1_x64.exe!p3,copy(r9,"abc\x64\x65fgh")
+bpf=1_x64.exe!f2,args:1,dump_args:0x10
+--no-new-console
