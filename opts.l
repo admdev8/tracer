@@ -106,8 +106,8 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 
 <STATE_ADDRESS_OR_REG>(e|r)(ax|bx|cx|dx|si|di|bp|sp|ip)   { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }
 <STATE_ADDRESS_OR_REG>(p|s|a|z|o|c|d)f    { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r(8|9)d?    { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }
-<STATE_ADDRESS_OR_REG>r1[0-5]d?   { yylval.x86reg=X86_register_from_string(yytext); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r(8|9)d?l?w?    { yylval.x86reg=X86_register_from_string(yytext); yy_pop_state(); return REGISTER; }
+<STATE_ADDRESS_OR_REG>r1[0-5]d?l?w?   { yylval.x86reg=X86_register_from_string(yytext); return REGISTER; }
 <STATE_ADDRESS_OR_REG>st[0-7]   { yylval.x86reg=X86_register_from_string(yytext); BEGIN(STATE_FLOAT_NUMBER); return FPU_REGISTER; }
 
 <STATE_ADDRESS,STATE_ADDRESS_OR_REG>"bytemask:\""             { yy_push_state(STATE_BYTEMASK); return BYTEMASK; }
@@ -133,7 +133,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
     yylval.num = strtol_or_strtoll(yytext, NULL, 10); 
     return DEC_NUMBER; 
    }
-<STATE_BPF,STATE_FLOAT_NUMBER>-?[0-9]+\.([0-9]+)?   { 
+<STATE_BPF,STATE_FLOAT_NUMBER>-?[0-9]+(\.[0-9]+)?   { 
     if (YYSTATE==STATE_FLOAT_NUMBER)
         yy_pop_state(); /* switch back to what was before */
     yylval.dbl = atof(yytext); 
