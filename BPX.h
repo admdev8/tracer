@@ -41,7 +41,7 @@ typedef struct _BPX_option
 
     // in case of DUMP or SET
     REG size_or_value;
-    double float_value; // in case reg is FPU register
+    double float_value; // in case if register is FPU register
     
     // in case of COPY
     byte *copy_string; // may be NULL if absent

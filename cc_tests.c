@@ -110,8 +110,10 @@ void cc_tests()
 	double ST0_array_at_0[]={ 1234.1, 666.7, 0.1, 1, 100, 100 };
 	for (unsigned i=0; i<sizeof(ST0_array_at_0)/sizeof(double); i++)
 	{
-		CONTEXT_set_reg_STx (&ctx, R_ST0, ST0_array_at_0[i]);
-		FPU_set_tag (&ctx, 0); // ST0 is present
+		CONTEXT_set_reg_STx (&ctx, 0, ST0_array_at_0[i]);
+#ifdef THIS_CODE_IS_NOT_WORKING		
+		_FPU_set_tag (&ctx, 0, FPU_TAG_NON_ZERO); // ST0 is present
+#endif		
 		//cur_fds.fd1=stdout;
 		//dump_CONTEXT (&cur_fds, &ctx, true, false, false);
 		ctx.Esi=0x30;
@@ -124,8 +126,10 @@ void cc_tests()
 	// addr 7
 	for (double i=0; i<1000; i+=0.1)
 	{
-		CONTEXT_set_reg_STx (&ctx, R_ST0, i);
-		FPU_set_tag (&ctx, 0); // ST0 is present
+		CONTEXT_set_reg_STx (&ctx, 0, i);
+#ifdef THIS_CODE_IS_NOT_WORKING		
+		_FPU_set_tag (&ctx, 0, FPU_TAG_NON_ZERO); // ST0 is present
+#endif		
 		//cur_fds.fd1=stdout;
 		//dump_CONTEXT (&cur_fds, &ctx, true, false, false);
 		ctx.Esi=0x30;

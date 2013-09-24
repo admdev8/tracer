@@ -483,7 +483,10 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     if (BPF_dump_arg(mc, accum, bpf->unicode, bpf->ret_type)==false)
         L (" (0x" PRI_REG_HEX ")", accum);
 
+#ifdef THIS_CODE_IS_NOT_WORKING
     if (dump_fpu && STx_present_in_tag(ctx, 0))
+#endif        
+    if (dump_fpu)
         L (", ST0=%.1f", get_STx(ctx, 0));
     
     L ("\n");
@@ -512,7 +515,7 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     if (modify_AX)
     {
         dump_PID_if_need(p); dump_TID_if_need(p, t);
-        L ("(%d) Modifying %s register to 0x%x\n", bp_no, get_AX_register_name(), bpf->rt);
+        L ("(%d) Modifying %s register to 0x%x\n", bp_no, AX_register_name, bpf->rt);
         CONTEXT_set_Accum(ctx, bpf->rt);
     };
 

@@ -115,7 +115,7 @@ static void dump_stack_EBP_frame (process *p, thread *t, CONTEXT * ctx, MemoryCa
     if (TIB_is_ptr_in_stack_limits (THDL, next_BP, mem)==false)
     {
         L ("Current frame pointer %s (0x" PRI_ADR_HEX ") is not within current stack limits (top=0x" PRI_ADR_HEX ", bottom=0x" PRI_ADR_HEX ")\n", 
-                get_BP_register_name(),
+                BP_register_name,
                 CONTEXT_get_BP (ctx), stack_top, stack_bottom);
         goto exit;
     };

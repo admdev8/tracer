@@ -157,12 +157,19 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                     dump_DR6 (&cur_fds, ctx.Dr6); L(" (0x%x)\n", ctx.Dr6);
                     //L ("DR7="); dump_DR7 (&cur_fds, ctx.Dr7); L("\n");
                     //L ("DR0=0x" PRI_REG_HEX "\n", ctx.Dr0);
+                    L ("ctx before handle_Bx:\n");
+                    dump_CONTEXT (&cur_fds, &ctx, dump_fpu, false /*DRx?*/, dump_xmm);
                 };
 
                 handle_Bx (p, t, &ctx, mc);
 
                 MC_Flush (mc);
                 MC_MemoryCache_dtor (mc, false);
+                if (cycle_c_debug)
+                {
+                    L ("ctx before writing:\n");
+                    dump_CONTEXT (&cur_fds, &ctx, dump_fpu, false /*DRx?*/, dump_xmm);
+                };
                 B=SetThreadContext (t->THDL, &ctx); assert (B!=FALSE);
                 strbuf_deinit(&tmp);
                 rt=DBG_CONTINUE; // handled

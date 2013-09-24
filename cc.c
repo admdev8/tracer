@@ -466,15 +466,15 @@ static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
             break;
 
         case WORKOUT_AX:
-            strbuf_addstr (out, get_AX_register_name());
+            strbuf_addstr (out, AX_register_name);
             break;
 
         case WORKOUT_CX:
-            strbuf_addstr (out, get_CX_register_name());
+            strbuf_addstr (out, CX_register_name);
             break;
 
         case WORKOUT_DX:
-            strbuf_addstr (out, get_DX_register_name());
+            strbuf_addstr (out, DX_register_name);
             break;
         
         case WORKOUT_ST0:

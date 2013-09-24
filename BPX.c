@@ -13,8 +13,7 @@
  *
  */
 
-#include <assert.h>
-
+#include "oassert.h"
 #include "bp_address.h"
 #include "dmalloc.h"
 #include "BPX.h"
@@ -70,7 +69,7 @@ void BPX_option_ToString(BPX_option *b, strbuf *out)
             break;
 
         case BPX_option_SET:
-            assert (b->a==NULL); // must be always register
+            oassert (b->a==NULL); // must be always register
             strbuf_addf (out, "[SET reg:%s ", X86_register_ToString(b->reg));
             if (X86_register_is_STx(b->reg))
                 strbuf_addf (out, "float_value:%f]", b->float_value);
@@ -84,7 +83,7 @@ void BPX_option_ToString(BPX_option *b, strbuf *out)
                 address_to_string(b->a, out);
             else
                 strbuf_addf (out, "reg:%s", X86_register_ToString(b->reg));
-            assert(b->copy_string);
+            oassert(b->copy_string);
             strbuf_addstr (out, "[");
             for (int i=0; i<b->copy_string_len; i++)
                 strbuf_addf (out, "0x%02X ", b->copy_string[i]);
@@ -92,7 +91,8 @@ void BPX_option_ToString(BPX_option *b, strbuf *out)
             break;
 
         default:
-            assert(0);
+            oassert(0);
+            fatal_error();
     };
 };
 
@@ -123,7 +123,7 @@ static bool BPX_get_address_for_DUMP_SET_COPY (BPX_option *o, CONTEXT *ctx, addr
     return true;
 };
 
-static void handle_BPX_option (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, BPX_option *o)
+static void handle_BPX_option (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, BPX_option *o, unsigned bp_no)
 {
     switch (o->t)
     {
@@ -133,32 +133,47 @@ static void handle_BPX_option (process *p, thread *t, CONTEXT *ctx, MemoryCache 
                 if (BPX_get_address_for_DUMP_SET_COPY(o, ctx, &a))
                 {
                     if (MC_L_print_buf_in_mem_ofs (mc, a, o->size_or_value, a)==false)
-                        L ("Can't read buffer of size %d at address 0x" PRI_ADR_HEX "\n", o->size_or_value, a);
+                        L ("(%d) Can't read buffer of size %d at address 0x" PRI_ADR_HEX "\n", 
+                                bp_no, o->size_or_value, a);
                 };
             };
             break;
 
         case BPX_option_SET:
-            assert (o->a==NULL); // only reg allowed (yet)
+            oassert (o->a==NULL); // only reg allowed (yet)
             obj val;
-            obj_REG2_and_set_type (X86_register_get_type(o->reg), o->size_or_value, &val);
+            obj_REG2_and_set_type (X86_register_get_type(o->reg), o->size_or_value, o->float_value, &val);
+            if (X86_register_is_STx(o->reg))
+                L ("Setting %s register to %f\n", X86_register_ToString(o->reg), o->float_value);
+            else
+                L ("Setting %s register to 0x" PRI_REG_HEX "\n", X86_register_ToString(o->reg), o->size_or_value);
             X86_register_set_value(o->reg, ctx, &val);
-            L ("Set %s register to 0x" PRI_REG_HEX "\n", X86_register_ToString(o->reg), o->size_or_value);
             break;
 
         case BPX_option_COPY:
-            assert (!"not implemented");
+            {
+                address a;
+                if (BPX_get_address_for_DUMP_SET_COPY(o, ctx, &a))
+                {
+                    if (MC_WriteBuffer (mc, a, o->copy_string_len, o->copy_string))
+                        L ("(%d) C-string copied to memory at 0x" PRI_ADR_HEX "\n", bp_no, a);
+                    else
+                        L ("(%d) Can't write C-string to memory at 0x" PRI_ADR_HEX "\n", bp_no, a);
+
+                };
+            };
             break;
         default:
-            assert(0);
+            oassert(0);
+            fatal_error();
             break;
     };
 
     if (o->next)
-        handle_BPX_option(p, t, ctx, mc, o->next);
+        handle_BPX_option(p, t, ctx, mc, o->next, bp_no);
 };
 
-static void handle_BPX_default_state(BP *bp, process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
+static void handle_BPX_default_state(unsigned bp_no, BP *bp, process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
 {
     BPX *bpx=bp->u.bpx;
     if (bpx_c_debug)
@@ -172,7 +187,7 @@ static void handle_BPX_default_state(BP *bp, process *p, thread *t, int DRx_no, 
     dump_CONTEXT (&cur_fds, ctx, dump_fpu, false /*DRx?*/, dump_xmm);
 
     if (bpx->opts)
-        handle_BPX_option (p, t, ctx, mc, bpx->opts);
+        handle_BPX_option (p, t, ctx, mc, bpx->opts, bp_no);
 
     // remove DRx
     CONTEXT_clear_bp_in_DR7 (ctx, DRx_no);
@@ -205,7 +220,7 @@ void handle_BPX(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc
    
     if (*state==BPX_state_default)
     {
-        handle_BPX_default_state(bp, p, t, DRx_no, ctx, mc);
+        handle_BPX_default_state(DRx_no, bp, p, t, DRx_no, ctx, mc);
         *state=BPX_state_skipping_first_instruction;
     }
     else if (*state==BPX_state_skipping_first_instruction)
@@ -215,7 +230,7 @@ void handle_BPX(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc
     }
     else
     {
-        assert(0);
+        fatal_error();
     };
     if (bpx_c_debug)
         L ("%s() end\n", __func__);
