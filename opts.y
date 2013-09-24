@@ -234,7 +234,7 @@ BPX_option
  | SET_OP FPU_REGISTER ',' FLOAT_NUMBER ')'
  { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->float_value=$4; }
  | COPY_OP address ',' '"' cstring '"' ')'
- { 
+ {
     $$=DCALLOC(BPX_option, 1, "BPX_option"); 
     $$->t=BPX_option_COPY; 
     $$->a=$2; 
@@ -242,7 +242,7 @@ BPX_option
     obj_free($5);
  }
  | COPY_OP REGISTER ',' '"' cstring '"' ')'
- { 
+ {
     $$=DCALLOC(BPX_option, 1, "BPX_option"); 
     $$->t=BPX_option_COPY; 
     $$->reg=$2; 
