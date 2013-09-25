@@ -13,7 +13,7 @@
  *
  */
 
-#include <assert.h>
+#include "oassert.h"
 #include <signal.h>
 
 #include "files.h"
@@ -169,11 +169,11 @@ void clean_all_DRx()
             CONTEXT ctx;
             ctx.ContextFlags = CONTEXT_ALL;
             DWORD tmpd;
-            tmpd=GetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);           
+            tmpd=GetThreadContext (t->THDL, &ctx); oassert (tmpd!=FALSE);           
 
             ctx.Dr0=ctx.Dr1=ctx.Dr2=ctx.Dr3=ctx.Dr7=0;
 
-            tmpd=SetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);
+            tmpd=SetThreadContext (t->THDL, &ctx); oassert (tmpd!=FALSE);
         };
     };
 };
@@ -341,7 +341,7 @@ void detach_from_all_processes()
         {
             L ("kernel32.dll!DebugActiveProcessStop() was not found, we have to kill process (PID=%d)\n", p->PID);
             BOOL b=TerminateProcess (p->PHDL, 0);
-            assert (b);
+            oassert (b);
         };
     };
 };
@@ -362,6 +362,15 @@ void set_ORACLE_HOME()
         strbuf_addc(&ORACLE_HOME, '\\');
 
     strbuf tmp2;
+
+    strbuf_init(&tmp2, 0);
+    strbuf_addf (&tmp2, "%sBIN\\oravsn12.dll", ORACLE_HOME.buf);
+    if (file_exist(tmp2.buf))
+    {
+        L ("Oracle RDBMS version 12.x\n");
+        oracle_version=12;
+    };
+    strbuf_deinit(&tmp2);
 
     strbuf_init(&tmp2, 0);
     strbuf_addf (&tmp2, "%sBIN\\oravsn11.dll", ORACLE_HOME.buf);
@@ -454,7 +463,7 @@ bool load_cfg(const char *fname)
         };
     };
     int t_i=fclose (f);
-    assert (t_i==0);
+    oassert (t_i==0);
     rt=true;
 
 exit:
