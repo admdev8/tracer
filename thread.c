@@ -21,6 +21,7 @@
 #include "logging.h"
 
 #include "process.h"
+#include "x86.h"
 #include "bolt_stuff.h"
 
 bool thread_c_debug=false;
@@ -115,7 +116,7 @@ static void dump_stack_EBP_frame (process *p, thread *t, CONTEXT * ctx, MemoryCa
     if (TIB_is_ptr_in_stack_limits (THDL, next_BP, mem)==false)
     {
         L ("Current frame pointer %s (0x" PRI_ADR_HEX ") is not within current stack limits (top=0x" PRI_ADR_HEX ", bottom=0x" PRI_ADR_HEX ")\n", 
-                BP_register_name,
+                BP_REGISTER_NAME,
                 CONTEXT_get_BP (ctx), stack_top, stack_bottom);
         goto exit;
     };

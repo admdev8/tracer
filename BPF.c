@@ -515,7 +515,7 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     if (modify_AX)
     {
         dump_PID_if_need(p); dump_TID_if_need(p, t);
-        L ("(%d) Modifying %s register to 0x%x\n", bp_no, AX_register_name, bpf->rt);
+        L ("(%d) Modifying %s register to 0x%x\n", bp_no, AX_REGISTER_NAME, bpf->rt);
         CONTEXT_set_Accum(ctx, bpf->rt);
     };
 
