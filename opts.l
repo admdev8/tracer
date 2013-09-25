@@ -15,7 +15,7 @@
  *
  */
 
-#include <assert.h>
+#include "oassert.h"
 
 #include "stuff.h"
 #include "dmalloc.h"
@@ -46,7 +46,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 
 <INITIAL>bpx=   { BEGIN(STATE_BPX); yy_push_state(STATE_ADDRESS); return BPX_EQ; }
 <INITIAL>bpf=   { 
-    assert (current_BPF==NULL); 
+    oassert (current_BPF==NULL); 
     current_BPF=DCALLOC (BPF, 1, "BPF"); 
     BEGIN(STATE_BPF); 
     yy_push_state(STATE_ADDRESS); 

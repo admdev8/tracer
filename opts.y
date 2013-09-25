@@ -15,7 +15,7 @@
  *
  */
 
-#include <assert.h>
+#include "oassert.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -166,7 +166,7 @@ tracer_option_without_newline
     dump_all_symbols=true;
     if ($1)
     {
-        assert(dump_all_symbols_re==NULL);
+        oassert(dump_all_symbols_re==NULL);
         dump_all_symbols_re=DCALLOC(regex_t, 1, "regex_t");
         regcomp_or_die(dump_all_symbols_re, $1, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
         DFREE($1);
@@ -174,7 +174,7 @@ tracer_option_without_newline
     }
     }
  | ONE_TIME_INT3_BP     { 
-    assert(one_time_int3_bp_re==NULL);
+    oassert(one_time_int3_bp_re==NULL);
     one_time_int3_bp_re=DCALLOC(regex_t, 1, "regex_t");
     regcomp_or_die(one_time_int3_bp_re, $1, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
     DFREE($1);
@@ -207,7 +207,7 @@ BPX_options
  : BPX_option ',' BPX_options
  { 
      BPX_option *o;
-     assert(current_BPX_option);
+     oassert(current_BPX_option);
      for (o=current_BPX_option; o->next; o=o->next);
      o->next=$1;
  }

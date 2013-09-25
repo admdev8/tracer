@@ -13,7 +13,7 @@
  *
  */
 
-#include <assert.h>
+#include "oassert.h"
 #include <windows.h>
 #include <dbghelp.h>
 
@@ -55,7 +55,7 @@ static bool search_for_symbol_re_in_module(module *m, regex_t *symbol_re, addres
 
 static bool try_to_resolve_bytemask(bp_address *a)
 {
-    assert(!"not implemented");
+    oassert(!"not implemented");
     return false; // TMCH
 };
 
@@ -68,7 +68,7 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
         printf ("\n");
     };
 
-    assert (a->resolved==false);
+    oassert (a->resolved==false);
 
     if (a->t==OPTS_ADR_TYPE_BYTEMASK)
         return try_to_resolve_bytemask(a);
@@ -125,7 +125,7 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
         };
     };
 
-    assert(!"unknown bp_address type");
+    oassert(!"unknown bp_address type");
     return false; // TMCH
 };
 
@@ -271,10 +271,10 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
 
 
             t_i=sscanf (v1, "%X", &sect); // DWORD
-            assert (t_i==1);
+            oassert (t_i==1);
             sect--;
             t_i=sscanf (v2, "%X", &addr); // REG
-            assert (t_i==1);
+            oassert (t_i==1);
             
             //L ("v1=[%s] v2=[%s] v3=[%s]\n", v1, v2, v3);
 
@@ -523,7 +523,7 @@ bool address_in_module (module *m, address a)
 // may return some symbol or NULL
 symbol* module_sym_exist_at (module *m, address a)
 {
-    assert (address_in_module (m, a));
+    oassert (address_in_module (m, a));
 
     return rbtree_lookup(m->symbols, (void*)a);
 };
@@ -531,7 +531,7 @@ symbol* module_sym_exist_at (module *m, address a)
 // may return module.dll!symbol+0x1234
 void module_get_sym (module *m, address a, bool add_module_name, bool add_offset, strbuf *out)
 {
-    assert (address_in_module (m, a));
+    oassert (address_in_module (m, a));
 
     address prev_k;
     symbol *prev_v;
@@ -566,7 +566,7 @@ char *get_module_name (module *m)
 
 static IMAGE_SECTION_HEADER* find_section (module *m, address a)
 {
-    assert(m->sections && "PE sections info wasn't yet loaded to module structure");
+    oassert(m->sections && "PE sections info wasn't yet loaded to module structure");
     for (unsigned i=0; i<m->sections_total; i++)
     {
         IMAGE_SECTION_HEADER *s=&m->sections[i];
@@ -584,7 +584,7 @@ bool module_adr_in_executable_section (module *m, address a)
     if (module_c_debug)
         L ("%s() module=%s, a=0x" PRI_ADR_HEX "\n", __func__, get_module_name(m), a);
     // find specific section
-    assert(m->sections && "PE sections info wasn't yet loaded to module structure");
+    oassert(m->sections && "PE sections info wasn't yet loaded to module structure");
     IMAGE_SECTION_HEADER* s=find_section(m, a);
     if (s==NULL)
         return false;
@@ -602,7 +602,7 @@ address module_get_next_sym_address_after (module *m, address a)
     address rt=0;
     void *tmp;
     tmp=rbtree_lookup2(m->symbols, (void*)a, NULL, NULL, (void**)&rt, NULL); 
-    assert (tmp && "module_get_next_sym_address_after(): address should be symbol start!");
+    oassert (tmp && "module_get_next_sym_address_after(): address should be symbol start!");
     //printf ("%s(a=0x" PRI_ADR_HEX ") rt=0x" PRI_ADR_HEX "\n", __func__, a, rt);
     //printf ("(module %s, tmp=0x%p)\n", get_module_name(m), tmp);
     return rt;

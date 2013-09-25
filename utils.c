@@ -13,7 +13,7 @@
  *
  */
 
-#include <assert.h>
+#include "oassert.h"
 
 #include "logging.h"
 #include "utils.h"
@@ -44,7 +44,7 @@ void dump_TID_if_need(process *p, thread *t)
 // FIXME: find another place for this function
 void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
 {
-    assert (bp->a->resolved);
+    oassert (bp->a->resolved);
     if (utils_c_debug)
     {
         strbuf sb=STRBUF_INIT;
@@ -60,7 +60,8 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
         BPM_set_or_update_DRx_breakpoint(bp->u.bpm, bp->a->abs_address, DRx_no, ctx);
     else
     {
-        assert(0);
+        oassert(0);
+        fatal_error();
     };
     if (utils_c_debug)
         L ("%s() end\n", __func__);
@@ -71,13 +72,13 @@ void set_or_update_DRx_for_thread(thread *t, BP *bp, unsigned DRx_no)
     CONTEXT ctx;
     ctx.ContextFlags = CONTEXT_ALL;
     DWORD rt;
-    rt=GetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);      
+    rt=GetThreadContext (t->THDL, &ctx); oassert (rt!=FALSE);      
 
     if (utils_c_debug)
         L ("%s() going to call set_or_update_DRx_breakpoint for TID %d\n", __func__, t->TID);
     set_or_update_DRx_breakpoint(bp, &ctx, DRx_no);
 
-    rt=SetThreadContext (t->THDL, &ctx); assert (rt!=FALSE);
+    rt=SetThreadContext (t->THDL, &ctx); oassert (rt!=FALSE);
 };
 
 void set_or_update_all_DRx_breakpoints(process *p)

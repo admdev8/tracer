@@ -13,7 +13,7 @@
  *
  */
 
-#include <assert.h>
+#include "oassert.h"
 
 #include "opts.h"
 #include "CONTEXT_utils.h"
@@ -71,7 +71,7 @@ void BPM_set_or_update_DRx_breakpoint(BPM *bpm, address a, unsigned DRx_no, CONT
                 DR7_idx=28;
                 break;
         default:
-                assert (0);
+                oassert (0);
                 break;
     };
 
@@ -87,7 +87,7 @@ void BPM_set_or_update_DRx_breakpoint(BPM *bpm, address a, unsigned DRx_no, CONT
     }
     else
     {
-        assert (0);
+        oassert (0);
     };
 
     switch (bpm->width)
@@ -109,11 +109,11 @@ void BPM_set_or_update_DRx_breakpoint(BPM *bpm, address a, unsigned DRx_no, CONT
             REMOVE_BIT (ctx->Dr7, REG_1<<(DR7_idx+2));
             SET_BIT (ctx->Dr7, REG_1<<(DR7_idx+3));
 #else
-            assert (!"64-bit memory breakpoints can't be implemented in win32 version");
+            oassert (!"64-bit memory breakpoints can't be implemented in win32 version");
 #endif
             break;
         default:
-            assert (0);
+            oassert (0);
             break;
     };
 };
@@ -135,7 +135,7 @@ void handle_BPM(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
                 v_type="BYTE"; 
                 byte tmp;
                 b=MC_ReadByte (mc, a, &tmp);
-                assert(b);
+                oassert(b);
                 val=tmp;
             };
             break;
@@ -145,7 +145,7 @@ void handle_BPM(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
                 v_type="WORD"; 
                 wyde tmp;
                 b=MC_ReadWyde (mc, a, &tmp);
-                assert(b);
+                oassert(b);
                 val=tmp;
             };
             break;
@@ -155,7 +155,7 @@ void handle_BPM(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
                 v_type="DWORD"; 
                 DWORD tmp;
                 b=MC_ReadTetrabyte (mc, a, &tmp);
-                assert(b);
+                oassert(b);
                 val=tmp;
             };
             break;
@@ -166,16 +166,17 @@ void handle_BPM(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
                 v_type="QWORD"; 
                 DWORD64 tmp;
                 b=MC_ReadOctabyte (mc, a, &tmp);
-                assert(b);
+                oassert(b);
                 val=tmp;
 #else
-                assert (0);
+                oassert (0);
 #endif
             };
             break;
 
         default:
-            assert(0);
+            oassert(0);
+            fatal_error();
     };
 
     strbuf sb_sym=STRBUF_INIT, sb_bp_adr=STRBUF_INIT;

@@ -1,4 +1,4 @@
-#include <assert.h>
+#include "oassert.h"
 
 #include "module.h"
 #include "process.h"
@@ -16,7 +16,7 @@ void set_onetime_INT3_BP(address a, process *p, module *m, char *name, MemoryCac
 
 	//L ("%s(a=0x" PRI_ADR_HEX " m->filename=%s name=%s)\n", __func__, a, m->filename, name);
 	b=MC_ReadByte (mc, a, &byte_to_save);
-	assert(b && "can't read byte at breakpoint start");
+	oassert(b && "can't read byte at breakpoint start");
 	if (byte_to_save==0xCC)
 	{
 		//L ("%s() bp is probably already set\n", __func__);
@@ -25,7 +25,7 @@ void set_onetime_INT3_BP(address a, process *p, module *m, char *name, MemoryCac
 	{
 		L ("Setting one-time INT3 breakpoint on %s!%s (0x" PRI_ADR_HEX ")\n", m->filename, name, a);
 		b=MC_WriteByte (mc, a, 0xCC);
-		assert(b && "can't write 0xCC byte at breakpoint start");
+		oassert(b && "can't write 0xCC byte at breakpoint start");
 		rbtree_insert(m->INT3_BP_bytes, (void*)a, (void*)byte_to_save);
 	};
 };
@@ -35,7 +35,7 @@ bool check_for_onetime_INT3_BP(process *p, thread *t, address a, MemoryCache *mc
 	//L ("%s(a=0x" PRI_ADR_HEX ", resolved_name=%s)\n", __func__, a, resolved_name);
 
 	module *m=find_module_for_address (p, a);
-	assert (m);
+	oassert (m);
 
 	if (rbtree_is_key_present(m->INT3_BP_bytes, (void*)a)==false)
 		return false;
@@ -46,7 +46,7 @@ bool check_for_onetime_INT3_BP(process *p, thread *t, address a, MemoryCache *mc
 	rbtree_delete (m->INT3_BP_bytes, (void*)a);
 
 	bool b=MC_WriteByte (mc, a, byte_to_restore);
-	assert(b && "can't restore byte at INT3 breakpoint");
+	oassert(b && "can't restore byte at INT3 breakpoint");
 
 	// print info about it
 

@@ -13,7 +13,7 @@
  *
  */
 
-#include <assert.h>
+#include "oassert.h"
 
 #include "stuff.h"
 #include "bp_address.h"
@@ -37,7 +37,7 @@ bool is_address_fname_OEP(bp_address* a, char *fname)
 
 void address_to_string (bp_address *a, strbuf *out)
 {
-    assert(a);
+    oassert(a);
 
     switch (a->t)
     {
@@ -65,14 +65,15 @@ void address_to_string (bp_address *a, strbuf *out)
             strbuf_addstr (out, "\"");
             break;
         default:
-            assert(0);
+            oassert(0);
+            fatal_error();
             break;
     };
 };
 
 void dump_address (bp_address *a)
 {
-    assert(a);
+    oassert(a);
     strbuf sb=STRBUF_INIT;
 
     address_to_string (a, &sb);

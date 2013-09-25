@@ -14,7 +14,7 @@
  */
 
 #include <windows.h>
-#include <assert.h>
+#include "oassert.h"
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -55,15 +55,15 @@ static bool handle_OEP_breakpoint (process *p, thread *t, MemoryCache *mc)
     CONTEXT ctx;
     ctx.ContextFlags = CONTEXT_ALL;
     BOOL B;
-    B=GetThreadContext (t->THDL, &ctx); assert (B!=FALSE);
+    B=GetThreadContext (t->THDL, &ctx); oassert (B!=FALSE);
 
     CONTEXT_decrement_PC(&ctx);
     address PC=CONTEXT_get_PC(&ctx);
 
-    B=SetThreadContext (t->THDL, &ctx); assert (B!=FALSE);
+    B=SetThreadContext (t->THDL, &ctx); oassert (B!=FALSE);
 
     bool b=MC_WriteByte (mc, PC, p->executable_module->saved_OEP_byte);
-    assert (b && "cannot restore original byte at OEP");
+    oassert (b && "cannot restore original byte at OEP");
 
     if (load_filename)
         p->we_are_loading_and_OEP_was_executed=true;
@@ -113,12 +113,12 @@ DWORD handle_EXCEPTION_BREAKPOINT(DEBUG_EVENT *de)
         CONTEXT ctx;
         ctx.ContextFlags = CONTEXT_ALL;
         BOOL b;
-        b=GetThreadContext (t->THDL, &ctx); assert (b!=FALSE);
+        b=GetThreadContext (t->THDL, &ctx); oassert (b!=FALSE);
 
         if (check_for_onetime_INT3_BP(p, t, adr, mc, tmp.buf, &ctx))
             rt=DBG_CONTINUE; // handled
 
-        b=SetThreadContext (t->THDL, &ctx); assert (b!=FALSE);
+        b=SetThreadContext (t->THDL, &ctx); oassert (b!=FALSE);
     };
 
     if (rt==DBG_EXCEPTION_NOT_HANDLED)
@@ -148,7 +148,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 process_get_sym (p, adr, true, true, &tmp);
                 CONTEXT ctx;
                 ctx.ContextFlags = CONTEXT_ALL;
-                BOOL B=GetThreadContext (t->THDL, &ctx); assert (B!=FALSE);           
+                BOOL B=GetThreadContext (t->THDL, &ctx); oassert (B!=FALSE);           
                 MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, true);
 
                 if (cycle_c_debug)
@@ -170,7 +170,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                     L ("ctx before writing:\n");
                     dump_CONTEXT (&cur_fds, &ctx, dump_fpu, false /*DRx?*/, dump_xmm);
                 };
-                B=SetThreadContext (t->THDL, &ctx); assert (B!=FALSE);
+                B=SetThreadContext (t->THDL, &ctx); oassert (B!=FALSE);
                 strbuf_deinit(&tmp);
                 rt=DBG_CONTINUE; // handled
             };
@@ -193,7 +193,7 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 CONTEXT ctx;
                 ctx.ContextFlags = CONTEXT_ALL;
                 DWORD tmpd;
-                tmpd=GetThreadContext (t->THDL, &ctx); assert (tmpd!=FALSE);           
+                tmpd=GetThreadContext (t->THDL, &ctx); oassert (tmpd!=FALSE);           
 
                 dump_CONTEXT (&cur_fds, &ctx, dump_fpu, false /* dump_DRx */, dump_xmm);
             };
@@ -222,9 +222,9 @@ void save_OEP_byte_and_set_INT3_breakpoint (MemoryCache *mc, module *m)
         L ("Setting INT3 at OEP\n");
 
     b=MC_ReadByte (mc, m->OEP, &m->saved_OEP_byte);
-    assert(b && "can't read byte at breakpoint start");
+    oassert(b && "can't read byte at breakpoint start");
     b=MC_WriteByte (mc, m->OEP, 0xCC);
-    assert(b && "can't write 0xCC byte at breakpoint start");
+    oassert(b && "can't write 0xCC byte at breakpoint start");
 };
 
 void handle_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *de)
@@ -281,7 +281,7 @@ void handle_LOAD_DLL_DEBUG_EVENT (DEBUG_EVENT *de)
     strbuf sb=STRBUF_INIT;
 
     bool b=GetFileNameFromHandle(de->u.LoadDll.hFile, &sb);
-    assert (b);
+    oassert (b);
 
     if (cycle_c_debug)
         L ("%s() LOAD_DLL_DEBUG_EVENT: %s 0x%x\n", __func__, sb.buf, i->lpBaseOfDll);
@@ -347,10 +347,10 @@ DWORD handle_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *de)
     process *p=find_process(PID);
 
     char *buf=DMALLOC(char, de->u.DebugString.nDebugStringLength, "char");
-    assert (de->u.DebugString.fUnicode==0); // TODO
+    oassert (de->u.DebugString.fUnicode==0); // TODO
     MemoryCache* mc=MC_MemoryCache_ctor(p->PHDL, true);
     bool b=MC_ReadBuffer(mc, (address)de->u.DebugString.lpDebugStringData, de->u.DebugString.nDebugStringLength, (BYTE*)buf);
-    assert (b);
+    oassert (b);
 
     strbuf tmp=STRBUF_INIT;
     strbuf_cvt_to_C_string (buf, &tmp, false);
@@ -407,7 +407,7 @@ DWORD handle_debug_event (DEBUG_EVENT *de)
             break;
 
         default:
-            assert(!"unknown dwDebugEventCode");
+            oassert(!"unknown dwDebugEventCode");
             break;
     };
     if (cycle_c_debug)

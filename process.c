@@ -13,7 +13,7 @@
  *
  */
 
-#include <assert.h>
+#include "oassert.h"
 
 #include "process.h"
 #include "tracer.h"
@@ -64,7 +64,7 @@ void process_free (process *p)
 process *find_process(DWORD PID)
 {
     process *p=(process*)rbtree_lookup(processes, (void*)PID);
-    assert (p!=NULL && "PID not found in processes table");
+    oassert (p!=NULL && "PID not found in processes table");
     return p;
 };
 
@@ -76,7 +76,7 @@ module *find_module_for_address (process *p, address a)
         return m;
     else
     {
-        //assert (prev_v && "address $a$ is not in limits of any registered module");
+        //oassert (prev_v && "address $a$ is not in limits of any registered module");
         if (prev_v==NULL)
             return NULL;
 

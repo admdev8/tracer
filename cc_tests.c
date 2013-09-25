@@ -228,6 +228,7 @@ void cc_tests()
 				   break;
 			default:
 				   oassert(0);
+				   fatal_error();
 				   break;
 		};
 		oassert(strcmp(should_be, sb.buf)==0);

@@ -14,7 +14,7 @@
  */
 
 #include <stdbool.h>
-#include <assert.h>
+#include "oassert.h"
 
 #include "dmalloc.h"
 #include "BP.h"
@@ -46,7 +46,8 @@ void BP_free(BP* b)
             BPF_free(b->u.bpf);
             break;
         default:
-            assert(0);
+            oassert(0);
+            fatal_error();
     };
     DFREE(b->ins);
     DFREE(b);
@@ -83,7 +84,8 @@ void BP_ToString (BP* b, strbuf* out)
             BPF_ToString(b->u.bpf, out);
             break;
         default:
-            assert(0);
+            oassert(0);
+            fatal_error();
     };
 };
 
@@ -114,7 +116,8 @@ void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
             handle_BPM(p, t, bp_no, ctx, mc);
             break;
         default:
-            assert(0);
+            oassert(0);
+            fatal_error();
     };
     if (cycle_c_debug)
         L ("%s() end. TF=%s, PC=0x" PRI_ADR_HEX "\n", 
@@ -145,25 +148,25 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
 
     if (IS_SET(ctx->Dr6, FLAG_DR6_B0) && bp_handled_in_SS_mode[0]==false)
     {
-        assert (breakpoints[0]);
+        oassert (breakpoints[0]);
         handle_BP(p, t, 0, ctx, mc);
     };
 
     if (IS_SET(ctx->Dr6, FLAG_DR6_B1) && bp_handled_in_SS_mode[0]==false)
     {
-        assert (breakpoints[1]);
+        oassert (breakpoints[1]);
         handle_BP(p, t, 1, ctx, mc);
     };
 
     if (IS_SET(ctx->Dr6, FLAG_DR6_B2) && bp_handled_in_SS_mode[0]==false)
     {
-        assert (breakpoints[2]);
+        oassert (breakpoints[2]);
         handle_BP(p, t, 2, ctx, mc);
     };
 
     if (IS_SET(ctx->Dr6, FLAG_DR6_B3) && bp_handled_in_SS_mode[0]==false)
     {
-        assert (breakpoints[3]);
+        oassert (breakpoints[3]);
         handle_BP(p, t, 3, ctx, mc);
     };
     

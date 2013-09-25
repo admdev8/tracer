@@ -13,7 +13,7 @@
  *
  */
 
-#include <assert.h>
+#include "oassert.h"
 
 #include "thread.h"
 #include "dmalloc.h"
@@ -49,7 +49,7 @@ thread *find_thread (DWORD PID, DWORD TID)
 {
     process *p=find_process(PID);
     thread *t=(thread*)rbtree_lookup (p->threads, (void*)TID);
-    assert (t!=NULL && "TID not found in threads table");
+    oassert (t!=NULL && "TID not found in threads table");
     return t;
 };
 
@@ -64,7 +64,7 @@ void add_thread (process *p, DWORD TID, HANDLE THDL, address start, address TIB)
     t->THDL=THDL;
     t->TIB=TIB;
     t->start=start;
-    assert (rbtree_lookup(p->threads, (void*)TID)==NULL && "this TID is already in table");
+    oassert (rbtree_lookup(p->threads, (void*)TID)==NULL && "this TID is already in table");
     rbtree_insert (p->threads, (void*)TID, t);
     
     if (thread_c_debug)
@@ -124,10 +124,10 @@ static void dump_stack_EBP_frame (process *p, thread *t, CONTEXT * ctx, MemoryCa
     {
         REG tmp;
         bool b=MC_ReadREG(mem, next_BP, &tmp);
-        assert (b);
+        oassert (b);
         address ret_adr;
         b=MC_ReadREG(mem, next_BP+sizeof(REG), &ret_adr);
-        assert (b);
+        oassert (b);
 
         if (ret_adr==0)
             break;

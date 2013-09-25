@@ -13,7 +13,7 @@
  *
  */
 
-#include <assert.h>
+#include "oassert.h"
 #include <stdbool.h>
 
 #include "CONTEXT_utils.h"
@@ -264,7 +264,7 @@ unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEX
                     SET_BIT (rt, NOTICE_OP3);
                     break;
                 default:
-                    assert (!"unknown IMUL instruction format");
+                    oassert (!"unknown IMUL instruction format");
             };
 
             break;
@@ -483,7 +483,8 @@ static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
             break;
 
         default:
-            assert(0);
+            oassert(0);
+            fatal_error();
     };
     //L ("%s() end\n", __func__);
 };
@@ -506,7 +507,7 @@ static void cc_free_op(op_info *op, unsigned tmp_i, address tmp_a)
 static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out, address tmp_a)
 {
     //L ("%s() begin\n", __func__);
-    assert(da);
+    oassert(da);
     op_info *op=info->op[i];
     enum obj_type op_t=info->op_t[i];
 
@@ -547,7 +548,8 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out,
             break;
 
         default:
-            assert(0);
+            oassert(0);
+            fatal_error();
             break;
     };
 
@@ -840,7 +842,7 @@ static void save_info_about_PC (thread *t, module *m, strbuf *comment, unsigned 
                 if (Da_op_get_value_of_op (&da->op[i], &adr, ctx, mc, __FILE__, __LINE__, &val, da->prefix_codes, t->TIB))
                 {
                     save_info_about_op (PC, i, &val, mc, info);
-                    //assert (info->op_t[i]!=V_INVALID);
+                    //oassert (info->op_t[i]!=V_INVALID);
                 };
             }
             else
@@ -911,7 +913,8 @@ static void save_info_about_PC (thread *t, module *m, strbuf *comment, unsigned 
                         break;
 
                     default:
-                        assert(0);
+                        oassert(0);
+                        fatal_error();
                 };
             };
         };
@@ -927,7 +930,7 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc,
     if (cc_c_debug)
         L ("%s() begin\n", __func__);
 
-    assert (sizeof(ins_reported_as_unhandled)/sizeof(bool) > I_MAX_INS);
+    oassert (sizeof(ins_reported_as_unhandled)/sizeof(bool) > I_MAX_INS);
 
     strbuf comment=STRBUF_INIT;
     address PC=CONTEXT_get_PC(ctx);
@@ -943,13 +946,13 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc,
 
     if (CALL_to_be_skipped_due_to_trace_limit)
     {
-        assert (da && da->ins_code==I_CALL);
+        oassert (da && da->ins_code==I_CALL);
         strbuf_addf (&comment, "tracing nested maximum level (%d) reached, skipping this CALL",
                 limit_trace_nestedness);
     };
     if (CALL_to_be_skipped_due_to_module) // not used (so far).
     {
-        assert (da && da->ins_code==I_CALL);
+        oassert (da && da->ins_code==I_CALL);
         strbuf_addf (&comment, "skipping this CALL: all functions in this module is to be skipped",
                 limit_trace_nestedness);
     };
