@@ -520,7 +520,7 @@ void free_all_globals()
     strbuf_deinit(&ORACLE_HOME);
 };
 
-#define VERSION_STRING "version " VERSION " built " __DATE__ " " __TIME__ 
+#define VERSION_STRING "version " VERSION " built " __DATE__ 
 #define LVERSION_STRING WIDEN(VERSION_STRING)
 
 #ifdef _WIN64
