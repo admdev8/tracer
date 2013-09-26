@@ -1,0 +1,2 @@
+-l:1_x64.exe
+--one-time-INT3-bp:msvcr.*.dll!f.*

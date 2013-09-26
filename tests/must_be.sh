@@ -10,6 +10,16 @@ function must_be
 	fi
 }
 
+function must_not_be
+{
+	if grep --quiet "$1" $2 > /dev/null; then
+		echo [$1] found in $2 but should not. exiting
+		exit 1;
+	else
+		true
+	fi
+}
+
 function diff_must_be_successful
 {
 	diff $1 $2

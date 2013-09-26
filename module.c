@@ -36,6 +36,12 @@
 #include "bitfields.h"
 #include "cycle.h"
 
+static bool is_it_code_section (IMAGE_SECTION_HEADER *s)
+{
+    return IS_SET (s->Characteristics, IMAGE_SCN_CNT_CODE) ||
+        IS_SET (s->Characteristics, IMAGE_SCN_MEM_EXECUTE);
+};
+
 static address module_translate_adr_to_abs_address(module *m, address original_adr)
 {
     return m->base + (original_adr - m->original_base);
@@ -52,12 +58,38 @@ static bool search_for_symbol_re_in_module(module *m, regex_t *symbol_re, addres
 
     return false;
 };
-
-static bool try_to_resolve_bytemask(bp_address *a)
+               
+#ifdef THIS_CODE_IS_NOT_WORKING
+static bool search_bytemask_in_PE_section(LOADED_IMAGE *im, module *m, IMAGE_SECTION_HEADER *sect, wyde bytemask, 
+        unsigned bytemask_len, address *out)
 {
-    oassert(!"not implemented");
-    return false; // TMCH
+        address begin=sect->VirtualAddress;
+        oassert(sect->Misc.VirtualSize);
+        SIZE_T=sect->Misc.VirtualSize;
 };
+
+static bool try_to_resolve_bytemask(module *m, bp_address *a)
+{
+    LOADED_IMAGE im;
+    bool rt=false;
+
+    MapAndLoad_or_die (m->filename, m->path, &im, true, true);
+    for (unsigned i=0; i<m->sections_total; i++)
+    {
+        IMAGE_SECTION_HEADER *sect=m->sections[i];
+
+        if (is_it_code_section(sect) && 
+                search_bytemask_in_PE_section(&im, m, sect, a->bytemask, a->bytemask_len, &a->abs_address))
+        {
+            rt=a->resolved=true;
+            goto exit;
+        };
+    };
+exit:
+    UnMapAndLoad_or_die(&im);
+    return rt;
+};
+#endif
 
 static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_address *a)
 {
@@ -71,7 +103,10 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
     oassert (a->resolved==false);
 
     if (a->t==OPTS_ADR_TYPE_BYTEMASK)
-        return try_to_resolve_bytemask(a);
+    {
+        die ("bytemasks are not implemented yet\n");
+        //return try_to_resolve_bytemask(module_just_loaded, a);
+    };
 
     if (a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL || a->t==OPTS_ADR_TYPE_FILENAME_ADR)
     {
@@ -126,7 +161,7 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
     };
 
     oassert(!"unknown bp_address type");
-    return false; // TMCH
+    fatal_error();
 };
 
 static bool try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
@@ -579,6 +614,7 @@ static IMAGE_SECTION_HEADER* find_section (module *m, address a)
     return NULL;
 };
 
+
 bool module_adr_in_executable_section (module *m, address a)
 {
     if (module_c_debug)
@@ -588,8 +624,8 @@ bool module_adr_in_executable_section (module *m, address a)
     IMAGE_SECTION_HEADER* s=find_section(m, a);
     if (s==NULL)
         return false;
-    return IS_SET (s->Characteristics, IMAGE_SCN_CNT_CODE) ||
-        IS_SET (s->Characteristics, IMAGE_SCN_MEM_EXECUTE);
+
+    return is_it_code_section (s);
 };
 
 address get_module_end(module *m)
