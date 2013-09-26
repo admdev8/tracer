@@ -1,1 +1,4 @@
+Simple win32 command-line debugger.
+Read more at http://yurichev.com/tracer
+
 Requires C11 compiler, like GCC >= 4.7.
