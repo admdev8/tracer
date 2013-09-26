@@ -61,3 +61,21 @@ return address=0x77e66063 (KERNEL32.dll!GetModuleFileNameA+0xeb)
 
 \IFRU{Читайте больше тут: \url{http://blog.yurichev.com/node/3} о параметре \TT{\_disable\_txn\_alert} и значении переменной \TT{ktsmgd}.}{Visit \url{http://blog.yurichev.com/node/3} for more information about \TT{\_disable\_txn\_alert} parameter and \TT{ktsmgd} value.}
 
+\subsection{\IFRU{Проверяет ли программа целостность своего кода?}{Does process checks its own integrity?}}
+
+\IFRU{Такие точки прерываний удобно устанавливать не только на переменные в памяти, 
+но также и на участки исполняемого кода,
+чтобы узнать, проверяет ли программа целостность своего кода, был ли он модифицирован?}
+{Such breakpoints are also useful not only for monitoring variables in memory, but they also can be set on regions of 
+executable code, to get to know, if the process checks integrity of its code, was it modified?}
+
+\IFRU{Часто, в таких случаях,
+некая функция просто вычисляет контрольную сумму всего исполняемого файла, либо исполняемых PE-секций, либо отдельных
+функций.}
+{In such cases, often, some function just calculates checksum of the whole executable file, or executable PE-sections,
+or specific functions.}
+\IFRU{Устанавливая \TT{BPMB} с параметром \TT{R} на начало какой-либо функции, можно быстро узнать, 
+происходят такие проверки, или нет.}
+{By setting \TT{BPMB} with \TT{R} parameter at the beginning of some functions, it's possible
+to see, if such checks are happens or not.}
+
