@@ -34,6 +34,10 @@
 #include "bp_address.h"
 #include "tracer.h"
 #include "rand.h"
+#include "HTTP.h"
+
+#define URL "http://yurichev.com/tracer-en.html"
+#define VERSION "0.7"
 
 rbtree *processes=NULL; // PID, ptr to process
 
@@ -516,9 +520,36 @@ void free_all_globals()
     strbuf_deinit(&ORACLE_HOME);
 };
 
+#define VERSION_STRING "version " VERSION " built " __DATE__ " " __TIME__ 
+#define LVERSION_STRING WIDEN(VERSION_STRING)
+
+#ifdef _WIN64
+#define TRACER_NAME L"tracer64"
+#else
+#define TRACER_NAME L"tracer"
+#endif
+
+void version()
+{
+    printf ("%s\n", VERSION_STRING);
+    printf ("\n");
+    printf ("checking for updates...\n");
+    char *new_ver=HTTP_get_first_block_if_possible (L"www.yurichev.com", 
+            L"/tracer/VERSION.txt", 
+            TRACER_NAME L" [" LVERSION_STRING L"]/1.0");
+    if (new_ver)
+    {
+        if (strcmp(new_ver, VERSION_STRING)!=0)
+            printf ("There are new version available: [%s] at " URL "\n", new_ver);
+        free(new_ver);
+    }
+    else
+        printf ("error while connecting and/or retrieving update information\n");
+};
+
 int main(int argc, char *argv[])
 {
-    printf ("tracer 0.7 %s by Dennis Yurichev\n", 
+    printf ("tracer %s %s by Dennis Yurichev http://yurichev.com/tracer-en.html\n", VERSION,
 #ifdef _WIN64
             "WIN64"
 #else
@@ -536,6 +567,12 @@ int main(int argc, char *argv[])
 #else
         printf ("no tests in release version\n");
 #endif
+        return 0;
+    };
+
+    if (argc==2 && stricmp (argv[1], "--version")==0)
+    {
+        version();
         return 0;
     };
 

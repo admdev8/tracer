@@ -49,7 +49,11 @@ else
 endif
 
 all:    $(OUTDIR) $(OUTDIR)/$(TRACER_EXE_NAME) $(DEP_FILES)
+ifeq ($(bsuffix),debug)
 	$(OUTDIR)/$(TRACER_EXE_NAME) test
+else
+	strip $(OUTDIR)/$(TRACER_EXE_NAME)
+endif
 	tests/tests.sh $(CURDIR)/$(OUTDIR)/$(TRACER_EXE_NAME)
 
 $(OUTDIR):
@@ -62,7 +66,7 @@ $(OUTDIR)/%.o: %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(OUTDIR)/$(TRACER_EXE_NAME): $(OBJECTS) $(LIBS)
-	$(CC) $(GCOV_FLAGS) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -ldbghelp -limagehlp
+	$(CC) $(GCOV_FLAGS) $(GPROF_FLAG) $^ $(LIBS) -o $@ -L$(FLEX_PATH) -lfl -lpsapi -ldbghelp -limagehlp -lwinhttp
 ifeq ($(BUILD),release)
 	strip $(OUTDIR)/$(TRACER_EXE_NAME)
 endif

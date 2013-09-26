@@ -71,12 +71,14 @@ return address=77C9D1FF (ntdll.dll!RtlCreateProcessParameters+0x4e)
 \IFRU{Замечание: эта возможность пока не очень хорошо работает в x64.}{Note: this feature doesn't working in x64 version very well (yet).}
 
 %*
-\IFRU{Если указана опция \IT{--dump-fpu}, состояние регистров FPU будут показываться там где это возможно.}{If \TT{--dump-fpu} option is set, FPU registers state will be dumped wherever it's possible.}
+%\IFRU{Если указана опция \IT{--dump-fpu}, состояние регистров FPU будут показываться там где это возможно.}{If \TT{--dump-fpu} option is set, FPU registers state will be dumped wherever it's possible.}
 %*
 \IFRU{Если указана опция \IT{--dump-xmm}, состояние всех регистров XMM также будут выводиться, если только регистр не пуст.}{If \TT{--dump-xmm} option is set, each XMM registers state will be dumped (if needed) too, unless it is empty.}
 
 %*
 \TT{-t}: \IFRU{записывать дату и время перед каждой строкой в лог:}{write timestamp at each log line:}
+
+\TT{--version}: \IFRU{вывести номер текущей версии и дату/время компиляции, а также проверить наличие новой версии доступной для скачивания.}{print current version and date/time of compilation, and also, check for update available for download.}
 
 \forexample{}
 
