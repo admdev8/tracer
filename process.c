@@ -91,6 +91,9 @@ symbol *process_sym_exist_at (process *p, address a)
 {
     module *m=find_module_for_address (p, a);
 
+    if (m==NULL)
+        return NULL;
+
     return module_sym_exist_at (m, a);
 };
 

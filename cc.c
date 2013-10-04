@@ -942,7 +942,8 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc,
         strbuf_addstr (&comment, "instruction wasn't disassembled");
 
     module *m=find_module_for_address (p, PC);
-    oassert (m);
+    if (m==NULL)
+        goto exit; // we don't handle anything for unknown modules
 
     if (CALL_to_be_skipped_due_to_trace_limit)
     {
@@ -959,6 +960,7 @@ void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc,
 
     save_info_about_PC(t, m, &comment, to_notice, da, ctx, mc);
 
+exit:
     strbuf_deinit(&comment);
     if (cc_c_debug)
         L ("%s() end\n", __func__);

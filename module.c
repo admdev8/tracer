@@ -552,12 +552,14 @@ void remove_module (process *p, address img_base)
 
 bool address_in_module (module *m, address a)
 {
+    oassert(m);
     return (a >= m->base) && (a < (m->base + m->size));
 };
 
 // may return some symbol or NULL
 symbol* module_sym_exist_at (module *m, address a)
 {
+    oassert(m);
     oassert (address_in_module (m, a));
 
     return rbtree_lookup(m->symbols, (void*)a);
