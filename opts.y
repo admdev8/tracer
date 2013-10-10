@@ -100,7 +100,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 
 %token SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
 %token _EOF DUMP_OP SET SET_OP COPY_OP BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
-%token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM
+%token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B NO_DUMP_FPU DUMP_XMM
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_ LOADING NO_NEW_CONSOLE
 %token MODULE_DEBUG CYCLE_DEBUG BPX_DEBUG UTILS_DEBUG CC_DEBUG BPF_DEBUG EMULATOR_TESTING TRACING_DEBUG NEWLINE
@@ -146,7 +146,7 @@ tracer_option_without_newline
  | DASH_S                  { dash_s=true; }
  | DASH_Q                  { quiet=true; }
  | DASH_T                  { L_timestamp=true; }
- | DUMP_FPU                { dump_fpu=true; }
+ | NO_DUMP_FPU             { dump_fpu=false; }
  | DUMP_XMM                { dump_xmm=true; }
  | DONT_RUN_THREAD_B       { run_thread_b=false; }
  | CMDLINE                 { load_command_line=$1; }

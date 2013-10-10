@@ -426,6 +426,7 @@ unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEX
             REMOVE_BIT(rt, NOTICE_OP1);
     };
 
+#if 0
     for (int i=0; i<3; i++)
         if (op_present[i])
         {
@@ -439,6 +440,7 @@ unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEX
                     IS_SET(da->prefix_codes, PREFIX_GS))
                 REMOVE_BIT(rt, 1<<i);
         };
+#endif
 
 exit:
     if (cc_c_debug)

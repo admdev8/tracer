@@ -70,9 +70,9 @@ return address=77C9D1FF (ntdll.dll!RtlCreateProcessParameters+0x4e)
 
 \IFRU{Замечание: эта возможность пока не очень хорошо работает в x64.}{Note: this feature doesn't working in x64 version very well (yet).}
 
-%*
-%\IFRU{Если указана опция \IT{--dump-fpu}, состояние регистров FPU будут показываться там где это возможно.}{If \TT{--dump-fpu} option is set, FPU registers state will be dumped wherever it's possible.}
-%*
+*
+\IFRU{Если указана опция \IT{--no-dump-fpu}, состояние регистров FPU не будут показываться.}{If \TT{--no-dump-fpu} option is set, FPU registers state will not be dumped.}
+*
 \IFRU{Если указана опция \IT{--dump-xmm}, состояние всех регистров XMM также будут выводиться, если только регистр не пуст.}{If \TT{--dump-xmm} option is set, each XMM registers state will be dumped (if needed) too, unless it is empty.}
 
 %*
