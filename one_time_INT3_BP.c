@@ -58,7 +58,8 @@ bool check_for_onetime_INT3_BP(process *p, thread *t, address a, MemoryCache *mc
 		process_get_sym (p, ret_adr, true, true, &sb);
 
 	dump_PID_if_need(p); dump_TID_if_need(p, t);
-	L ("One-time INT3 breakpoint: %s (0x" PRI_ADR_HEX ")", resolved_name, a);
+	//L ("One-time INT3 breakpoint: %s (0x" PRI_ADR_HEX ")", resolved_name, a); // why would I need it here?
+	L ("One-time INT3 breakpoint: %s", resolved_name);
 	if (got_ret_adr)
 		L (" (called from %s (0x" PRI_ADR_HEX "))", sb.buf, ret_adr);
 	L ("\n");
