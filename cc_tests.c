@@ -47,8 +47,7 @@ void cc_tests()
 
     	rbtree_insert (p->threads, (void*)0, (void*)t);
 
-	add_symbol_params sym_params={ p, m, SYM_TYPE_MAP, mc };
-	add_symbol (0x1000, "dummy_symbol", &sym_params);
+	add_symbol (0x1000, "dummy_symbol", &(add_symbol_params){ p, m, SYM_TYPE_MAP, mc });
 
 	// addr 0
 

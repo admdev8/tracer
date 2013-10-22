@@ -232,8 +232,6 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
 {
     PE_info *info=DCALLOC(PE_info, 1, "PE_info");
 
-    add_symbol_params params={p, m, SYM_TYPE_PE_EXPORT, mc};
-
     PE_get_sections_info (fullpath_filename->buf, &m->sections, &m->sections_total);
     m->base=img_base;
 
@@ -242,7 +240,7 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
     // that's weird, I know.
 
     PE_get_info (fullpath_filename->buf, img_base, info, (void (*)(address,  char *, void *))add_symbol, 
-            (void*)&params);
+            (void*)&(add_symbol_params){p, m, SYM_TYPE_PE_EXPORT, mc});
     m->original_base=info->original_base;
     m->OEP=info->OEP;
     m->size=info->size;
@@ -253,11 +251,9 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
     //PE_add_symbols(p, m, fullpath_filename->buf, img_base, info);
 
     // add OEP
-    params.t=SYM_TYPE_OEP;
-    add_symbol(info->OEP, "OEP", &params);
+    add_symbol(info->OEP, "OEP", &(add_symbol_params){p, m, SYM_TYPE_OEP, mc});
     // add BASE
-    params.t=SYM_TYPE_BASE;
-    add_symbol(img_base, "BASE", &params);
+    add_symbol(img_base, "BASE", &(add_symbol_params){p, m, SYM_TYPE_BASE, mc});
     return info;
 };
 
@@ -271,9 +267,7 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
 #endif // _WIN64
     regex_t PAT_compiled;
     regcomp_or_die(&PAT_compiled, MAP_get_all_PAT, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
-
-    add_symbol_params params={ p, m, SYM_TYPE_MAP, mc };
-    
+  
     strbuf sb_mapfilename=STRBUF_INIT;
     strbuf_addf (&sb_mapfilename, "%s.map", m->filename_without_ext);
     if (file_exist(sb_mapfilename.buf)==false)
@@ -315,7 +309,7 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
 
             if (sect < m->sections_total)
             {
-                add_symbol (m->sections[sect].VirtualAddress + img_base + addr, v3, &params);
+                add_symbol (m->sections[sect].VirtualAddress + img_base + addr, v3, &(add_symbol_params){ p, m, SYM_TYPE_MAP, mc });
                 loaded++;
             }
             else
@@ -359,9 +353,7 @@ static BOOL CALLBACK MyEnumSymbolsCallback(SYMBOL_INFO* pSymInfo, ULONG SymbolSi
 
 static void add_symbols_from_PDB_if_exist (process *p, module *m, address img_base, PE_info *info, 
         const char* short_PE_name, MemoryCache *mc)
-{ 
-    add_symbol_params params={ p, m, SYM_TYPE_PDB, mc };
-    
+{    
     strbuf sb_pdbfilename=STRBUF_INIT;
     strbuf_addf (&sb_pdbfilename, "%s.pdb", m->filename_without_ext);
     if (file_exist(sb_pdbfilename.buf)==false)
@@ -392,7 +384,7 @@ static void add_symbols_from_PDB_if_exist (process *p, module *m, address img_ba
         PDB_load_callback_info info2;
         info2.cur_module_base=img_base;
         info2.MyEnumSymbolsCallback_total=0;
-        info2.params=&params;
+        info2.params=&(add_symbol_params){ p, m, SYM_TYPE_PDB, mc };
 
         b=SymEnumSymbols(GetCurrentProcess(), ModBase, NULL, MyEnumSymbolsCallback, (PVOID)&info2); 
         if (b==FALSE)
@@ -417,7 +409,6 @@ static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address
         const char* short_PE_name, MemoryCache *mc)
 {
     strbuf sb=STRBUF_INIT;
-    add_symbol_params params={ p, m, SYM_TYPE_ORACLE_SYM, mc };
 
     strbuf_addf (&sb, "%sRDBMS\\ADMIN\\%s.sym", ORACLE_HOME.buf, m->filename_without_ext);
 
@@ -425,7 +416,7 @@ static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address
         goto exit;
 
     int err=get_symbols_from_ORACLE_SYM (sb.buf, img_base, info->size, info->timestamp, true, 
-            (void (*)(address,  char *, void *))add_symbol, (void*)&params, oracle_version);
+            (void (*)(address,  char *, void *))add_symbol, (void*)&(add_symbol_params){ p, m, SYM_TYPE_ORACLE_SYM, mc }, oracle_version);
 
     if (err==ORACLE_SYM_IMPORTER_ERROR_FILE_OPENING_ERROR)
         die ("Can't open %s\n", sb.buf);
