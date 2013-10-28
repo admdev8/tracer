@@ -168,6 +168,18 @@ and get debug PDB file for it).}
 
 \IFRU{Если DLL содержит экспорты только по ординалам, т.е., без имен (например, DLL-файлы MFC), имя символа будет получено из ординала в таком формате: \TT{ordinal\_<number>}, например, \TT{ordinal\_12}.}{If DLL contain only exports by ordinals, e.g., without names (MFC DLLs, for example), the name of ordinal will be generated in compliance with \TT{ordinal\_<number>} format, for example, \TT{ordinal\_12}.}
 
+\chapter{\IFRU{Известные проблемы}{Known issues}}
+
+\section{Windows 2000}
+
+\IFRU{Для работы под Windows 2000, библиотека Octothorpe должна быть скомпилирована с флагом}
+{For running in Windows 2000, Octothorpe library should be compiled with this flag:} \\
+TARGET\_IS\_WINDOWS\_2000.
+
+\IFRU{Во-вторых, файл}{Also}, dbghelp.dll \IFRU{из}{file from} Windows XP 
+\IFRU{должен находится в той же директории что и}{should be located in the same
+folder as} tracer.exe.
+
 \chapter{\IFRU{Заключение}{Conclusion}}
 
 \IFRU{Эта версия еще не была протестирована как следует. Так что будьте готовы к неожиданным падениям. Я очень рекомендую проводить все эксперименты в виртуальной машине.}{This release is not tested properly yet. So please be prepared for any possible crash. I strongly advice to do all experimentation in virtual machine.}
