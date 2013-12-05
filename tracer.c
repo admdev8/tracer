@@ -98,9 +98,9 @@ void help_and_exit()
     printf ("-s - print stack on each BPF breakpoint\n");
     printf ("--one-time-INT3-bp:<regexp> - set one-time INT3 breakpoint to\n");
     printf ("\tall addresses falling under <regexp>\n");
-    printf ("--all-symbols - print all symbols in all loading modules\n");
+    printf ("--allsymbols - print all symbols in all loading modules\n");
     printf ("--loading - show each module loading information\n");
-    printf ("--all-symbols:<regexp> - print all symbols in all loading modules falling under <regexp>\n");
+    printf ("--allsymbols:<regexp> - print all symbols in all loading modules falling under <regexp>\n");
     //printf ("--dump-fpu - dump FPU registers where it's possible\n");
     printf ("--dump-xmm - dump MMX/XMM registers\n");
     printf ("--one-time-INT3-bp:<symbol_mask> - set multiple one-time INT3 breakpoints\n");
@@ -549,6 +549,12 @@ void version()
 
 int main(int argc, char *argv[])
 {
+    if (argc==2 && stricmp (argv[1], "--short-version")==0) // undocumented
+    {
+        printf ("%s", VERSION_STRING);
+        return 0;
+    };
+
     printf ("tracer %s %s by Dennis Yurichev http://yurichev.com/tracer-en.html\n", VERSION,
 #ifdef _WIN64
             "WIN64"
