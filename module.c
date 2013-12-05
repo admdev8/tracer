@@ -293,9 +293,9 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
 
         if (regexec(&PAT_compiled, buf, 4, matches, 0)==0)
         {
-            char *v1=strdup_range (buf, matches[1].rm_so, matches[1].rm_eo-matches[1].rm_so);
-            char *v2=strdup_range (buf, matches[2].rm_so, matches[2].rm_eo-matches[2].rm_so);
-            char *v3=strdup_range (buf, matches[3].rm_so, matches[3].rm_eo-matches[3].rm_so);
+            char *v1=strndup (buf + matches[1].rm_so, matches[1].rm_eo-matches[1].rm_so);
+            char *v2=strndup (buf + matches[2].rm_so, matches[2].rm_eo-matches[2].rm_so);
+            char *v3=strndup (buf + matches[3].rm_so, matches[3].rm_eo-matches[3].rm_so);
             unsigned t_i;
 
 
