@@ -78,6 +78,7 @@ unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEX
     if (da->ops_total==3)
         op_present[2]=true;
 
+    oassert (da->ins_code < I_MAX_INS);
     switch (da->ins_code)
     {
         // single operand
@@ -837,7 +838,7 @@ static void save_info_about_PC (thread *t, module *m, strbuf *comment, unsigned 
         info->comment=DSTRDUP(comment->buf, "char*");
     info->executed++;
 
-    if (info->da==NULL && da)
+    if (info->da==NULL && da && da->ins_code!=I_INVALID)
         info->da=DMEMDUP (da, da->struct_size, "Da");
 
     // TODO: add flags
