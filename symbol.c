@@ -19,6 +19,9 @@
 #include "utils.h"
 #include "one_time_INT3_BP.h"
 #include "oassert.h"
+#include "ostrings.h"
+#include "opts.h"
+#include "memorycache.h"
 
 static symbol *create_symbol (symbol_type t, char *n)
 {
@@ -47,6 +50,14 @@ void add_symbol (address a, char *name, add_symbol_params *params)
             set_onetime_INT3_BP(a, params->p, m, name, mc);
 
         strbuf_deinit (&sb);
+    };
+
+    if (dump_seh && string_is_ends_with (name, "security_cookie"))
+    {
+        m->security_cookie_adr=a;
+        m->security_cookie_adr_known=true;
+        if (symbol_c_debug)
+            L ("%s() got address of security_cookie (0x" PRI_REG_HEX ") for %s!%s\n", __FUNCTION__, a, get_module_name(m), name);
     };
 
     bool dump_symbol=false;

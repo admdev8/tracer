@@ -13,8 +13,10 @@
  *
  */
 
+#include <stdbool.h>
+#include "ostrings.h"
 #include "oassert.h"
-
+#include "datatypes.h"
 #include "logging.h"
 #include "utils.h"
 #include "tracer.h"

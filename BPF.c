@@ -14,6 +14,7 @@
  */
 
 #include "oassert.h"
+#include "ostrings.h"
 #include "BPF.h"
 #include "bp_address.h"
 #include "dmalloc.h"

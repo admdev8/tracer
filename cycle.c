@@ -38,6 +38,7 @@
 #include "utils.h"
 #include "bp_address.h"
 #include "one_time_INT3_BP.h"
+#include "SEH.h"
 
 bool detaching=false;
 
@@ -196,6 +197,12 @@ DWORD handle_EXCEPTION_DEBUG_INFO(DEBUG_EVENT *de)
                 tmpd=GetThreadContext (t->THDL, &ctx); oassert (tmpd!=FALSE);           
 
                 dump_CONTEXT (&cur_fds, &ctx, dump_fpu, false /* dump_DRx */, dump_xmm);
+                MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, true);
+    
+                if (dump_seh)
+                    dump_SEH_chain (&cur_fds, p, t, &ctx, mc);
+
+                MC_MemoryCache_dtor (mc, false);
             };
             break;
 

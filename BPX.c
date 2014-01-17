@@ -19,6 +19,7 @@
 #include "BPX.h"
 #include "thread.h"
 #include "opts.h"
+#include "SEH.h"
 #include "utils.h"
 #include "X86_register_helpers.h"
 
@@ -188,6 +189,9 @@ static void handle_BPX_default_state(unsigned bp_no, BP *bp, process *p, thread 
 
     if (bpx->opts)
         handle_BPX_option (p, t, ctx, mc, bpx->opts, bp_no);
+
+    if (dump_seh)
+        dump_SEH_chain (&cur_fds, p, t, ctx, mc);
 
     // remove DRx
     CONTEXT_clear_bp_in_DR7 (ctx, DRx_no);

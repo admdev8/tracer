@@ -28,6 +28,7 @@
 #include "x86.h"
 #include "bitfields.h"
 #include "thread.h"
+#include "ostrings.h"
 
 void BP_free(BP* b)
 {

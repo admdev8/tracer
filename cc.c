@@ -341,6 +341,14 @@ unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEX
             SET_BIT (rt, NOTICE_ZF);
             break;
 
+        case I_CMOVLE: 
+        case I_CMOVG:  
+            SET_BIT (rt, NOTICE_OP2);
+            SET_BIT (rt, NOTICE_ZF);
+            SET_BIT (rt, NOTICE_SF);
+            SET_BIT (rt, NOTICE_OF);
+            break;
+
         case I_CMOVNS: 
         case I_CMOVS:  
             SET_BIT (rt, NOTICE_OP2);

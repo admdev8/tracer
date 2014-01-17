@@ -16,6 +16,7 @@
  */
 
 #include "oassert.h"
+#include "ostrings.h"
 
 #include "stuff.h"
 #include "dmalloc.h"
@@ -24,6 +25,9 @@
 #include "opts.tab.h"
 #include "opts.h"
 #include "BPF.h"
+
+// BCC mangled names may be started with @
+
 %}
 
 %option stack
@@ -32,10 +36,10 @@ DEC            (0|[1-9][[:digit:]]*)
 HEX            0[Xx][[:xdigit:]]+
 FILENAME       [[:alnum:]_\+]+\.[[:alnum:]_]+
 FILEPATH_FILENAME ([[:alnum:]\\:]+)?[[:alnum:]_\+]+\.[[:alnum:]_]+
-SYMBOL_NAME    [[:alpha:]][[:alnum:]_@]*
-REGEXP         [[:alnum:]_@.|*^$?\\]*
-REGEXP_EXCL    [[:alnum:]_@.|*^$?\\!]*
-SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
+SYMBOL_NAME    @?[[:alpha:]][[:alnum:]_@$]*
+REGEXP         @?[[:alnum:]_@$.|*^$?\\]*
+REGEXP_EXCL    @?[[:alnum:]_@$.|*^$?\\!]*
+SYMBOL_NAME_RE @?[[:alpha:]\\?_$]{REGEXP}
 
 %x STATE_BPM STATE_BPX STATE_BPF
 %x STATE_ADDRESS STATE_ADDRESS_OR_REG STATE_BYTEMASK STATE_BYTEMASK_SKIP_OPT STATE_READ_ADR_OFS
@@ -71,6 +75,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <INITIAL>-s            { return DASH_S; }
 <INITIAL>-t            { return DASH_T; }
 <INITIAL>--dump-xmm    { return DUMP_XMM; }
+<INITIAL>--dump-seh    { return DUMP_SEH; }
 <INITIAL>-dont-run-thread-b { return DONT_RUN_THREAD_B; }
 <INITIAL>--one-time-INT3-bp:{REGEXP_EXCL}  {
         yylval.str=DSTRDUP(yytext+strlen("--one-time-INT3-bp:"), "yytext");
@@ -95,6 +100,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
     }
 <INITIAL>--loading          { return LOADING; }
 <INITIAL>--module-debug     { return MODULE_DEBUG; }
+<INITIAL>--symbol-debug     { return SYMBOL_DEBUG; }
 <INITIAL>--cycle-debug      { return CYCLE_DEBUG; }
 <INITIAL>--BPX-debug        { return BPX_DEBUG; }
 <INITIAL>--utils-debug      { return UTILS_DEBUG; }
@@ -124,7 +130,7 @@ SYMBOL_NAME_RE [[:alpha:]\\?_]{REGEXP}
 <STATE_READ_ADR_OFS,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BPM,INITIAL,STATE_BPX,STATE_BPF>{HEX} {
     if ((YYSTATE==STATE_ADDRESS) || (YYSTATE==STATE_READ_ADR_OFS))
         yy_pop_state(); /* switch back to what was before STATE_ADDRESS */
-    yylval.num = strtol_or_strtoll(yytext, NULL, 16); 
+    yylval.num=strtol_or_strtoll(yytext, NULL, 16); 
     return HEX_NUMBER; 
    }
 <STATE_READ_ADR_OFS,INITIAL,STATE_ADDRESS,STATE_ADDRESS_OR_REG,STATE_BYTEMASK_SKIP_OPT,STATE_BPX,STATE_BPF>{DEC}   { 

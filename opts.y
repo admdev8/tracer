@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "datatypes.h"
 #include "stuff.h"
 #include "opts.h"
 #include "dmalloc.h"
@@ -48,14 +49,14 @@ char *load_command_line=NULL;
 int attach_PID=-1;
 bool debug_children=false;
 bool dash_s=false, quiet=false;
-bool dump_fpu=true, dump_xmm=false;
+bool dump_fpu=true, dump_xmm=false, dump_seh=false;
 BPX_option *current_BPX_option=NULL; // temporary, while parsing...
 BPF* current_BPF=NULL; // filled while parsing
 bp_address* current_BPF_address; // filled while parsing
 bool run_thread_b=true;
 bool dump_all_symbols=false;
 regex_t *dump_all_symbols_re=NULL;
-bool module_c_debug=false, cycle_c_debug=false, bpx_c_debug=false, utils_c_debug=false, cc_c_debug=false, BPF_c_debug=false, tracing_debug=false, emulator_testing=false, opt_loading=false, create_new_console=true;
+bool module_c_debug=false, symbol_c_debug=false, cycle_c_debug=false, bpx_c_debug=false, utils_c_debug=false, cc_c_debug=false, BPF_c_debug=false, tracing_debug=false, emulator_testing=false, opt_loading=false, create_new_console=true;
 int limit_trace_nestedness=1; // default value
 
 // from opts.l:
@@ -100,10 +101,10 @@ void add_new_address_to_be_resolved (bp_address *a)
 
 %token SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
 %token _EOF DUMP_OP SET SET_OP COPY_OP BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
-%token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B NO_DUMP_FPU DUMP_XMM
+%token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B NO_DUMP_FPU DUMP_XMM DUMP_SEH
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_ LOADING NO_NEW_CONSOLE
-%token MODULE_DEBUG CYCLE_DEBUG BPX_DEBUG UTILS_DEBUG CC_DEBUG BPF_DEBUG EMULATOR_TESTING TRACING_DEBUG NEWLINE
+%token MODULE_DEBUG SYMBOL_DEBUG CYCLE_DEBUG BPX_DEBUG UTILS_DEBUG CC_DEBUG BPF_DEBUG EMULATOR_TESTING TRACING_DEBUG NEWLINE
 %token <num> DEC_NUMBER HEX_NUMBER HEX_BYTE
 %token <num> BPM_width CSTRING_BYTE ATTACH_PID DMALLOC_BREAK_ON LIMIT_TRACE_NESTEDNESS
 %token <num> BYTE_WORD_DWORD_DWORD64
@@ -148,10 +149,12 @@ tracer_option_without_newline
  | DASH_T                  { L_timestamp=true; }
  | NO_DUMP_FPU             { dump_fpu=false; }
  | DUMP_XMM                { dump_xmm=true; }
+ | DUMP_SEH                { dump_seh=true; }
  | DONT_RUN_THREAD_B       { run_thread_b=false; }
  | CMDLINE                 { load_command_line=$1; }
  | LOADING                 { opt_loading=true; }
  | MODULE_DEBUG            { module_c_debug=true; }
+ | SYMBOL_DEBUG            { symbol_c_debug=true; }
  | CYCLE_DEBUG             { cycle_c_debug=true; }
  | BPX_DEBUG               { bpx_c_debug=true; }
  | UTILS_DEBUG             { utils_c_debug=true; }

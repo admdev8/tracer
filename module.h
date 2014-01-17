@@ -21,6 +21,7 @@
 typedef struct _process process;
 typedef struct _symbol symbol;
 typedef struct _MemoryCache MemoryCache;
+
 typedef struct _module
 {
     process *parent_process;
@@ -46,6 +47,10 @@ typedef struct _module
 
     // for one-time INT3 breakpoints
     rbtree* INT3_BP_bytes; // address, byte
+
+    // if dump_seh is true
+    bool security_cookie_adr_known;
+    address security_cookie_adr;
 } module;
 
 module* add_module (process *p, address img_base, HANDLE file_hdl, MemoryCache *mc);
