@@ -1,8 +1,8 @@
 \chapter{\IFRU{Общие опции}{General options}}
 
-\TT{-l:<fname.exe>}: \IFRU{загрузка процесса}{load process}.
+\verb|-l:<fname.exe>|: \IFRU{загрузка процесса}{load process}.
 
-\TT{-c:<cmd\_line>}: \IFRU{задание командной строки для загружаемого процесса}{define command line for loading process}.
+\verb|-c:<cmd_line>|: \IFRU{задание командной строки для загружаемого процесса}{define command line for loading process}.
 
 \forexample{}
 
@@ -16,7 +16,7 @@ tracer.exe -l:bzip2.exe -c:--help
 tracer.exe -l:rar.exe "-c:a archive.rar *"
 \end{lstlisting}
 
-\TT{-a:<fname.exe|PID>}: \IFRU{присоединение к запущенному процессу по его имени или PID}{attach to running process by file name or PID number}.
+\verb|-a:<fname.exe or PID>|: \IFRU{присоединение к запущенному процессу по его имени или PID}{attach to running process by file name or PID number}.
 
 \IFRU{Процесс с таким именем должен быть загружен. Если процессов с таким имененем загружено несколько, tracer присоеденяется ко всем сразу одновременно.}{Process with that filename should be already loaded. If there're several processes with the same name, tracer will attach to all of them simultaneously.}
 
@@ -41,11 +41,11 @@ New symbol. Module=[msvcrt.dll], address=[0x75726649], name=[vwprintf]
 New symbol. Module=[msvcrt.dll], address=[0x756C3D68], name=[wprintf]
 \end{lstlisting}
 
-\TT{-s}: \IFRU{вывод стека вызовов перед каждым прерыванием}{dump call stack before each breakpoint}.
+\verb|-s|: \IFRU{вывод стека вызовов перед каждым прерыванием}{dump call stack before each breakpoint}.
 
 \forexample{}
 
-\TT{tracer.exe -l:hello.exe -s bpf=kernel32.dll!WriteFile,args:5}
+\verb|tracer.exe -l:hello.exe -s bpf=kernel32.dll!WriteFile,args:5|
 
 \IFRU{Мы увидим}{We will see}:
 
@@ -64,12 +64,13 @@ return address=77C9D1FF (ntdll.dll!RtlCreateProcessParameters+0x4e)
 23B4 (0) KERNEL32.dll!WriteFile -> 1
 \end{lstlisting}
 
-\IFRU{Вывод стека вызова очень удобен, например, мы имеем программу показывающую окно с сообщением и перехватывая вызов \TT{USER32.DLL!MessageBoxA} мы можем увидеть путь к этому вызову.}{Stack dump can be very handy, for example, we have a program showing Message Box once and by intercepting \TT{USER32.DLL!MessageBoxA} call we can see a path to this call.}
+\IFRU{Вывод стека вызова очень удобен, например, мы имеем программу показывающую окно с сообщением и перехватывая вызов \verb|USER32.DLL!MessageBoxA| мы можем увидеть путь к этому вызову.}{Stack dump can be very handy, for example, we have a program showing Message Box once and by intercepting \verb|USER32.DLL!MessageBoxA| call we can see a path to this call.}
 
 \IFRU{Возможность вывода стека доступна для всех типов прерываний BPF/BPX/BPM.}{Stack dump feature available for all BPF/BPX/BPM features.}
 
 \IFRU{Замечание: эта возможность пока не очень хорошо работает в x64.}{Note: this feature doesn't working in x64 version very well (yet).}
 
+<<<<<<< HEAD
 \IFRU{Если указана опция \IT{-{}-no-dump-fpu}, состояние регистров FPU не будут показываться.}{If \TT{-{}-no-dump-fpu} option is set, FPU registers state will not be dumped.}
 
 \IFRU{Если указана опция \IT{-{}-dump-xmm}, состояние всех регистров XMM также будут выводиться, если только регистр не пуст.}{If \TT{-{}-dump-xmm} option is set, each XMM registers state will be dumped (if needed) too, unless it is empty.}
@@ -77,6 +78,17 @@ return address=77C9D1FF (ntdll.dll!RtlCreateProcessParameters+0x4e)
 \TT{-t}: \IFRU{записывать дату и время перед каждой строкой в лог:}{write timestamp at each log line:}
 
 \TT{-{}-version}: \IFRU{вывести номер текущей версии и дату/время компиляции, а также проверить наличие новой версии доступной для скачивания.}{print current version and date/time of compilation, and also, check for update available for download.}
+=======
+\IFRU{Если указана опция \verb|--no-dump-fpu|, состояние регистров FPU не будут показываться.}
+{If \verb|--no-dump-fpu| option is set, FPU registers state will not be dumped.}
+
+\IFRU{Если указана опция \verb|--dump-xmm|, состояние всех регистров XMM также будут выводиться, если только регистр не пуст.}
+{If \verb|--dump-xmm| option is set, each XMM registers state will be dumped (if needed) too, unless it is empty.}
+
+\verb|-t|: \IFRU{записывать дату и время перед каждой строкой в лог:}{write timestamp at each log line:}
+
+\verb|--version|: \IFRU{вывести номер текущей версии и дату/время компиляции, а также проверить наличие новой версии доступной для скачивания.}{print current version and date/time of compilation, and also, check for update available for download.}
+>>>>>>> 22f45717f310560d7b616fdafb38838ffb60ed62
 
 \forexample{}
 
@@ -91,11 +103,19 @@ tracer.exe -l:bzip2.exe bpf=cygwin1.dll!fprintf,args:2 -t
 
 \IFRU{Эта возможность полезна тогда, когда нужно записывать в журнал время каких-то событий, например, когда именно некая программа обращается к сети.}{This feature is useful when one need to log time of some events into journal, like, when exactly some program accessed network.}
 
+<<<<<<< HEAD
 \TT{-{}-help}: \IFRU{помощь.}{print help.}
 
 \TT{-q}: \IFRU{запрет любого вывода в консоль и лог.}{be quiet, no output to console and log file.}
 
 \TT{@}: \IFRU{опция позволяет сохранить все опции в текстовом файле и использовать их многократно:}{option can be used along with any other options:}
+=======
+\verb|--help|: \IFRU{помощь.}{print help.}
+
+\verb|-q|: \IFRU{запрет любого вывода в консоль и лог.}{be quiet, no output to console and log file.}
+
+\verb|@|: \IFRU{опция позволяет сохранить все опции в текстовом файле и использовать их многократно:}{option can be used along with any other options:}
+>>>>>>> 22f45717f310560d7b616fdafb38838ffb60ed62
 
 \begin{lstlisting}
 tracer.exe @filename
@@ -103,7 +123,8 @@ tracer.exe @filename
 
 \IFRU{Каждая строка файла представляет опцию. Это очень удобно для длинных и/или часто используемых опций, как байтмаски (смотрите ниже).}{Each line in the profile represents an option. This can be handy for lengthy and/or often used options, like bytemasks (see below).}
 
-\IFRU{Опция \TT{@} также может использоваться с любыми другими опциями:}{\TT{@} option can be used along with any other options:}
+\IFRU{Опция \verb|@| также может использоваться с любыми другими опциями:}
+{\verb|@| option can be used along with any other options:}
 
 \begin{lstlisting}
 tracer.exe -l:filename.exe @additional_options @even_more_options
