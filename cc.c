@@ -433,6 +433,10 @@ unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEX
         // XOR with same operands - we do not interesting in them
         if (da->ins_code==I_XOR || da->ins_code==I_PXOR)
             REMOVE_BIT(rt, NOTICE_OP1);
+
+        // if the second operand is value, do not notice it
+        if (da->op[1].type==DA_OP_TYPE_VALUE)
+            REMOVE_BIT(rt, NOTICE_OP2); // do not report second
     };
 
 #if 0

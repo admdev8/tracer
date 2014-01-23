@@ -202,6 +202,13 @@ void cc_tests()
 		};
 	CONTEXT_add_to_PC(&ctx, X86_OR_X64_CMP_xAX_xBX_LEN);
 
+	// addr 32 (0x20)
+	CONTEXT_set_PC (&ctx, 0x20);
+	CONTEXT_set_xCX(&ctx, 0x11223344);
+	b=Da_Da(Fuzzy_Undefined, (BYTE*)X86_OR_X64_CMP_xCX_1, CONTEXT_get_PC(&ctx), &da);
+	handle_cc(&da, p, t, &ctx, mc, false, false);
+	CONTEXT_add_to_PC(&ctx, X86_OR_X64_CMP_xCX_1_LEN);
+
 	for (rbtree_node *i=rbtree_minimum(m->PC_infos); i; i=rbtree_succ(i))
 	{
 		strbuf sb=STRBUF_INIT;
@@ -235,6 +242,8 @@ void cc_tests()
 				  break;
 			case 0x11: should_be=AX_REGISTER_NAME "=0x100..0x114(step=4) (54 items skipped) 0x1ec..0x1fc(step=4) " BX_REGISTER_NAME "=0x200..0x205 (22 items skipped) 0x21b..0x21f";
 				   break;
+			case 0x20: should_be=CX_REGISTER_NAME "=0x11223344";
+				  break;
 			default:
 				   fatal_error();
 				   break;
