@@ -49,7 +49,7 @@ char *load_command_line=NULL;
 int attach_PID=-1;
 bool debug_children=false;
 bool dash_s=false, quiet=false;
-bool dump_fpu=true, dump_xmm=false, dump_seh=false;
+bool dump_fpu=false, dump_xmm=false, dump_seh=false;
 BPX_option *current_BPX_option=NULL; // temporary, while parsing...
 BPF* current_BPF=NULL; // filled while parsing
 bp_address* current_BPF_address; // filled while parsing
@@ -101,7 +101,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 
 %token SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
 %token _EOF DUMP_OP SET SET_OP COPY_OP BPF_CC BPF_PAUSE BPF_RT_PROBABILITY CHILD
-%token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B NO_DUMP_FPU DUMP_XMM DUMP_SEH
+%token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM DUMP_SEH
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE 
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_ LOADING NO_NEW_CONSOLE
 %token MODULE_DEBUG SYMBOL_DEBUG CYCLE_DEBUG BPX_DEBUG UTILS_DEBUG CC_DEBUG BPF_DEBUG EMULATOR_TESTING TRACING_DEBUG NEWLINE
@@ -147,7 +147,7 @@ tracer_option_without_newline
  | DASH_S                  { dash_s=true; }
  | DASH_Q                  { quiet=true; }
  | DASH_T                  { L_timestamp=true; }
- | NO_DUMP_FPU             { dump_fpu=false; }
+ | DUMP_FPU                { dump_fpu=true; }
  | DUMP_XMM                { dump_xmm=true; }
  | DUMP_SEH                { dump_seh=true; }
  | DONT_RUN_THREAD_B       { run_thread_b=false; }

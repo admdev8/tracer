@@ -70,7 +70,7 @@ SYMBOL_NAME_RE @?[[:alpha:]\\?_$]{REGEXP}
     return CMDLINE; 
     };
 <INITIAL>--child       { return CHILD; }
-<INITIAL>--no-dump-fpu    { return NO_DUMP_FPU; }
+<INITIAL>--dump-fpu    { return DUMP_FPU; }
 <INITIAL>-q            { return DASH_Q; }
 <INITIAL>-s            { return DASH_S; }
 <INITIAL>-t            { return DASH_T; }

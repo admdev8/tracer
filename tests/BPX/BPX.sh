@@ -17,7 +17,7 @@ fi
 
 rm -f output
 
-$1 -l:$TEST_EXE @$OPTIONS --no-new-console > /dev/null
+$1 -l:$TEST_EXE @$OPTIONS --no-new-console --dump-fpu > /dev/null
 
 # check all
 diff_must_be_successful output output_mustbe

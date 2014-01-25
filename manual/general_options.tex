@@ -70,25 +70,13 @@ return address=77C9D1FF (ntdll.dll!RtlCreateProcessParameters+0x4e)
 
 \IFRU{Замечание: эта возможность пока не очень хорошо работает в x64.}{Note: this feature doesn't working in x64 version very well (yet).}
 
-<<<<<<< HEAD
-\IFRU{Если указана опция \IT{-{}-no-dump-fpu}, состояние регистров FPU не будут показываться.}{If \TT{-{}-no-dump-fpu} option is set, FPU registers state will not be dumped.}
+\IFRU{Если указана опция \IT{-{}-dump-fpu}, состояние регистров FPU будут показываться.}{If \TT{-{}-dump-fpu} option is set, FPU registers state will be dumped.}
 
 \IFRU{Если указана опция \IT{-{}-dump-xmm}, состояние всех регистров XMM также будут выводиться, если только регистр не пуст.}{If \TT{-{}-dump-xmm} option is set, each XMM registers state will be dumped (if needed) too, unless it is empty.}
 
 \TT{-t}: \IFRU{записывать дату и время перед каждой строкой в лог:}{write timestamp at each log line:}
 
 \TT{-{}-version}: \IFRU{вывести номер текущей версии и дату/время компиляции, а также проверить наличие новой версии доступной для скачивания.}{print current version and date/time of compilation, and also, check for update available for download.}
-=======
-\IFRU{Если указана опция \verb|--no-dump-fpu|, состояние регистров FPU не будут показываться.}
-{If \verb|--no-dump-fpu| option is set, FPU registers state will not be dumped.}
-
-\IFRU{Если указана опция \verb|--dump-xmm|, состояние всех регистров XMM также будут выводиться, если только регистр не пуст.}
-{If \verb|--dump-xmm| option is set, each XMM registers state will be dumped (if needed) too, unless it is empty.}
-
-\verb|-t|: \IFRU{записывать дату и время перед каждой строкой в лог:}{write timestamp at each log line:}
-
-\verb|--version|: \IFRU{вывести номер текущей версии и дату/время компиляции, а также проверить наличие новой версии доступной для скачивания.}{print current version and date/time of compilation, and also, check for update available for download.}
->>>>>>> 22f45717f310560d7b616fdafb38838ffb60ed62
 
 \forexample{}
 
@@ -103,19 +91,11 @@ tracer.exe -l:bzip2.exe bpf=cygwin1.dll!fprintf,args:2 -t
 
 \IFRU{Эта возможность полезна тогда, когда нужно записывать в журнал время каких-то событий, например, когда именно некая программа обращается к сети.}{This feature is useful when one need to log time of some events into journal, like, when exactly some program accessed network.}
 
-<<<<<<< HEAD
 \TT{-{}-help}: \IFRU{помощь.}{print help.}
 
 \TT{-q}: \IFRU{запрет любого вывода в консоль и лог.}{be quiet, no output to console and log file.}
 
 \TT{@}: \IFRU{опция позволяет сохранить все опции в текстовом файле и использовать их многократно:}{option can be used along with any other options:}
-=======
-\verb|--help|: \IFRU{помощь.}{print help.}
-
-\verb|-q|: \IFRU{запрет любого вывода в консоль и лог.}{be quiet, no output to console and log file.}
-
-\verb|@|: \IFRU{опция позволяет сохранить все опции в текстовом файле и использовать их многократно:}{option can be used along with any other options:}
->>>>>>> 22f45717f310560d7b616fdafb38838ffb60ed62
 
 \begin{lstlisting}
 tracer.exe @filename
