@@ -49,7 +49,7 @@ typedef enum _function_type
 
 typedef struct _BPF
 {
-    bool unicode, skip, skip_stdcall, trace, cc;
+    bool unicode, borland_fastcall, skip, skip_stdcall, trace, cc;
     // these params may be NULL
     bool rt_present;
     REG rt;

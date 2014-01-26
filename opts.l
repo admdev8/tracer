@@ -162,6 +162,7 @@ SYMBOL_NAME_RE @?[[:alpha:]\\?_$]{REGEXP}
 <STATE_BPX>"\\x"[[:xdigit:]][[:xdigit:]]   { yylval.num = strtol(yytext+2, NULL, 16); return CSTRING_BYTE ; }
 <STATE_BPX>[^\\\",)\n]                         { yylval.num = yytext[0]; return CSTRING_BYTE ; }
 <STATE_BPF>unicode                   { return BPF_UNICODE; }
+<STATE_BPF>borland_fastcall          { return BPF_BORLAND_FASTCALL; }
 <STATE_BPF>trace:                    { return BPF_TRACE_COLON; }
 <STATE_BPF>trace                     { return BPF_TRACE; }
 <STATE_BPF>skip                      { return BPF_SKIP; }

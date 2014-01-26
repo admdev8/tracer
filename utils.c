@@ -158,4 +158,16 @@ exit:
     strbuf_deinit(&sb);
 };
 
+// idx may be negative
+bool read_REG_from_stack (MemoryCache *mc, CONTEXT *ctx, int idx, REG * out)
+{
+    address SP=CONTEXT_get_SP(ctx);
+    return MC_ReadREG (mc, SP + idx*sizeof(REG), out);
+};
+
+bool read_argument_from_stack (MemoryCache *mc, CONTEXT *ctx, unsigned arg, REG * out)
+{
+    return read_REG_from_stack (mc, ctx, arg+1, out);
+};
+
 /* vim: set expandtab ts=4 sw=4 : */

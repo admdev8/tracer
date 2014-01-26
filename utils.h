@@ -33,5 +33,7 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no);
 void set_or_update_all_DRx_breakpoints(process *p);
 bool MC_disas(address a, MemoryCache *mc, Da* out);
 void dump_buf_as_array_of_strings(MemoryCache *mc, address a, size_t size);
-        
+bool read_REG_from_stack (MemoryCache *mc, CONTEXT *ctx, int idx, REG * out);
+bool read_argument_from_stack (MemoryCache *mc, CONTEXT *ctx, unsigned arg, REG * out);
+
 /* vim: set expandtab ts=4 sw=4 : */

@@ -27,6 +27,8 @@
 
 void cc_tests()
 {
+	dump_fpu=true;
+
 	CONTEXT ctx;
 	thread *t=DCALLOC(thread, 1, "thread");
 	module *m=DCALLOC(module, 1, "module");

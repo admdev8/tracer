@@ -37,6 +37,8 @@ void BPF_ToString(BPF *b, strbuf *out)
     strbuf_addstr (out, "BPF. options: ");
     if (b->unicode)
         strbuf_addstr (out, "unicode ");
+    if (b->borland_fastcall)
+        strbuf_addstr (out, "borland_fastcall ");
     if (b->skip)
         strbuf_addstr (out, "skip ");
     if (b->skip_stdcall)
@@ -184,13 +186,10 @@ static void BPF_dump_args (MemoryCache *mc, REG* args, unsigned args_n, bool uni
     };
 };
 
-static void load_args(thread *t, CONTEXT *ctx, MemoryCache *mc, unsigned bp_no, unsigned args)
-{
-    address SP=CONTEXT_get_SP(ctx);
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
-    di->BPF_args=DMALLOC(REG, args, "REG");
-
 #ifdef _WIN64
+static bool read_MS_x64_arguments (MemoryCache *mc, CONTEXT *ctx, unsigned args,
+        BP_thread_specific_dynamic_info *di)
+{
     for (unsigned a=0; a<args; a++)
     {
         switch (a)
@@ -204,14 +203,61 @@ static void load_args(thread *t, CONTEXT *ctx, MemoryCache *mc, unsigned bp_no, 
             case 3: di->BPF_args[a]=ctx->R9;
                     break;
             default:
-                    if (MC_ReadOctabyte (mc, SP+(a+1+4)*sizeof(REG), &di->BPF_args[a])==false)
-                        goto read_failed;
+                    if (read_argument_from_stack (mc, ctx, a+4, &di->BPF_args[a])==false)
+                        return false;
                     break;
         };
     };
-#else
-    if (MC_ReadBuffer(mc, SP+REG_SIZE, args*REG_SIZE, (BYTE*)di->BPF_args)==false)
+    return true;
+};
+#endif
+
+#ifndef _WIN64
+static bool read_borland_fastcall_arguments (MemoryCache *mc, CONTEXT *ctx, unsigned args,
+        BP_thread_specific_dynamic_info *di)
+{
+    unsigned arguments_in_stack=(args<3) ? 0 : args-3;
+
+    for (unsigned a=0; a<args; a++)
+    {
+        switch (a)
+        {
+            case 0: di->BPF_args[a]=ctx->Eax;
+                    break;
+            case 1: di->BPF_args[a]=ctx->Edx;
+                    break;
+            case 2: di->BPF_args[a]=ctx->Ecx;
+                    break;
+            default:
+                    if (read_argument_from_stack (mc, ctx, arguments_in_stack - (a-3), &di->BPF_args[a])==false)
+                        return false;
+                    break;
+        };
+    };
+    return true;
+};
+#endif
+
+static void load_args(thread *t, CONTEXT *ctx, MemoryCache *mc, unsigned bp_no, unsigned args, BPF* bpf)
+{
+    address SP=CONTEXT_get_SP(ctx);
+    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    di->BPF_args=DMALLOC(REG, args, "REG");
+
+#ifdef _WIN64
+    if (read_MS_x64_arguments (mc, ctx, args, di)==false)
         goto read_failed;
+#else
+    if (bpf->borland_fastcall)
+    {
+        if (read_borland_fastcall_arguments (mc, ctx, args, di)==false)
+            goto read_failed;
+    }
+    else
+    { // default:
+        if (MC_ReadBuffer(mc, SP+REG_SIZE, args*REG_SIZE, (BYTE*)di->BPF_args)==false)
+            goto read_failed;
+    };
 #endif
     return;
 
@@ -411,7 +457,7 @@ static unsigned handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *
 
     unsigned args=bpf->known_function==Fuzzy_True ? bpf->args_n : bpf->args;
 
-    load_args(t, ctx, mc, bp_no, args);
+    load_args(t, ctx, mc, bp_no, args, bpf);
 
     dump_PID_if_need(p); dump_TID_if_need(p, t);
     L ("(%d) %s(", bp_no, sb_address.buf);
