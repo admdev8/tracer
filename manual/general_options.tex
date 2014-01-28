@@ -64,15 +64,25 @@ return address=77C9D1FF (ntdll.dll!RtlCreateProcessParameters+0x4e)
 23B4 (0) KERNEL32.dll!WriteFile -> 1
 \end{lstlisting}
 
-\IFRU{Вывод стека вызова очень удобен, например, мы имеем программу показывающую окно с сообщением и перехватывая вызов \verb|USER32.DLL!MessageBoxA| мы можем увидеть путь к этому вызову.}{Stack dump can be very handy, for example, we have a program showing Message Box once and by intercepting \verb|USER32.DLL!MessageBoxA| call we can see a path to this call.}
+\IFRU{Вывод стека вызова очень удобен, например, мы имеем программу показывающую окно с сообщением и перехватывая вызов \TT{USER32.DLL!MessageBoxA} мы можем увидеть путь к этому вызову.}
+{Stack dump can be very handy, for example, we have a program showing Message Box once and by intercepting \TT{USER32.DLL!MessageBoxA} call we can see a path to this call.}
 
 \IFRU{Возможность вывода стека доступна для всех типов прерываний BPF/BPX/BPM.}{Stack dump feature available for all BPF/BPX/BPM features.}
 
 \IFRU{Замечание: эта возможность пока не очень хорошо работает в x64.}{Note: this feature doesn't working in x64 version very well (yet).}
 
-\IFRU{Если указана опция \IT{-{}-dump-fpu}, состояние регистров FPU будут показываться.}{If \TT{-{}-dump-fpu} option is set, FPU registers state will be dumped.}
+\IFRU{Если указана опция \IT{-{}-dump-fpu}, состояние регистров FPU будут показываться.}
+{If \TT{-{}-dump-fpu} option is set, FPU registers state will be dumped.}
 
-\IFRU{Если указана опция \IT{-{}-dump-xmm}, состояние всех регистров XMM также будут выводиться, если только регистр не пуст.}{If \TT{-{}-dump-xmm} option is set, each XMM registers state will be dumped (if needed) too, unless it is empty.}
+\IFRU{Если указана опция \IT{-{}-dump-xmm}, состояние всех регистров XMM также будут выводиться, если только регистр не пуст.}
+{If \TT{-{}-dump-xmm} option is set, each XMM registers state will be dumped (if needed) too, unless it is empty.}
+
+\IFRU{Если указана опция \IT{-{}-dump-seh}, вся доступна информация о SEH будет выведена.
+Для отображения информации SEH4, нужен доступ к переменной \TT{security\_cookie}, 
+tracer будет искать её по имени в файле \TT{.MAP} или \TT{.PDB}.}
+{If \TT{-{}-dump-seh} option is set, all SEH related information will be dumped.
+For SEH4 information dumping, tracer will use \TT{security\_cookie} variable, it will search for it
+by name in \TT{.MAP} or \TT{.PDB} files.}
 
 \TT{-t}: \IFRU{записывать дату и время перед каждой строкой в лог:}{write timestamp at each log line:}
 
@@ -103,8 +113,8 @@ tracer.exe @filename
 
 \IFRU{Каждая строка файла представляет опцию. Это очень удобно для длинных и/или часто используемых опций, как байтмаски (смотрите ниже).}{Each line in the profile represents an option. This can be handy for lengthy and/or often used options, like bytemasks (see below).}
 
-\IFRU{Опция \verb|@| также может использоваться с любыми другими опциями:}
-{\verb|@| option can be used along with any other options:}
+\IFRU{Опция \TT{@} также может использоваться с любыми другими опциями:}
+{\TT{@} option can be used along with any other options:}
 
 \begin{lstlisting}
 tracer.exe -l:filename.exe @additional_options @even_more_options

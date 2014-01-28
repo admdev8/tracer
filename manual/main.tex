@@ -5,15 +5,17 @@
 \ifdefined\RUSSIAN
 \usepackage[english,russian]{babel}
 \usepackage[T2A]{fontenc}
-\usepackage{paratype}
-\renewcommand*\familydefault{\sfdefault}
+%\usepackage{paratype}
+%\renewcommand*\familydefault{\sfdefault}
 % http://www.emerson.emory.edu/services/latex/latex_169.html
-\newcommand{\lstlistingsize}{\scriptsize}
+%\newcommand{\lstlistingsize}{\scriptsize}
 \else
-\usepackage[russian,english]{babel}
-\usepackage[T2A]{fontenc}
+\usepackage[english]{babel}
+%\usepackage[russian,english]{babel}
+%\usepackage[T2A]{fontenc}
+\usepackage[T1]{fontenc}
 \usepackage[default]{sourcesanspro}
-\newcommand{\lstlistingsize}{\footnotesize}
+%\newcommand{\lstlistingsize}{\footnotesize}
 \fi
 
 \usepackage[utf8]{inputenc}
@@ -53,7 +55,8 @@
 
 \lstset{
     backgroundcolor=\color{lstbgcolor},
-    basicstyle=\ttfamily\footnotesize,
+%    basicstyle=\ttfamily\footnotesize,
+    basicstyle=\ttfamily,
     breaklines=true,
     frame=single,
     inputencoding=cp1251,

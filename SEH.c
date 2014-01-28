@@ -17,7 +17,7 @@ struct my_VC_EXCEPTION_REGISTRATION_RECORD
 	address prev;
 	address handler;
 	address scopetable;
-	REG current_trylevel; // -1 for SEH3, -2 for SEH4
+	REG previous_trylevel; // -1 for SEH3, -2 for SEH4
 	address EBP;
 };
 
@@ -72,6 +72,30 @@ void dump_scopetable(MemoryCache *mc, process *p, address a, size_t total)
 	{
 		dump_scopetable_entry (mc, p, i, a);
 		a+=sizeof(struct my_SCOPETABLE_ENTRY);
+	};
+};
+
+void check_SEH4_cookie(MemoryCache *mc, address adr_of_EBP, 
+		address CookieOffset, address CookieXOROffset, REG security_cookie, const char *name)
+{
+	REG value_in_stack=0;
+	// CookieOffset is a distance between stack frame begin and ebp^security_cookie
+	address adr_in_stack=adr_of_EBP + CookieOffset;
+	if (MC_ReadREG(mc, adr_in_stack, &value_in_stack)==false)
+	{
+		L ("%s() cannot read at %sCookieOffset+EBP (0x" PRI_ADR_HEX ")\n", __FUNCTION__, name, adr_in_stack);
+		return;
+	};
+	// CookieXOROffset is additional difference between ebp^security_cookie value and what is
+	// stored in the stack
+	REG shifted_EBP=CookieXOROffset + adr_of_EBP;
+
+	if ((security_cookie^shifted_EBP) != value_in_stack)
+	{
+		L ("%s security cookie is not correct\n", name);
+		L ("%s() adr_in_stack=0x" PRI_ADR_HEX " value_in_stack=0x" PRI_REG_HEX " adr_of_EBP=0x" PRI_REG_HEX " shifted_EBP=0x" PRI_REG_HEX "\n",
+				__FUNCTION__, adr_in_stack, value_in_stack, adr_of_EBP, shifted_EBP);
+		L ("%s() security_cookie=0x" PRI_REG_HEX "\n", __FUNCTION__, security_cookie);
 	};
 };
 
@@ -130,12 +154,12 @@ address dump_SEH_frame (fds* s, process* p, thread* t, MemoryCache *mc, address 
 			sizeof(struct my_VC_EXCEPTION_REGISTRATION_RECORD), (BYTE*)&current_SEH3_frame);
 	if (b==false)
 	{
-		L ("%s() cannot read current SEH3 frame\n", __FUNCTION__);
+		L ("%s() cannot read current SEH3/4 frame\n", __FUNCTION__);
 		return REG_MAX;
 	};
 
-	int current_trylevel=current_SEH3_frame.current_trylevel;
-	L ("SEH%d frame. current trylevel=%d\n", SEH3 ? 3 : 4, current_trylevel);
+	int previous_trylevel=current_SEH3_frame.previous_trylevel;
+	L ("SEH%d frame. previous trylevel=%d\n", SEH3 ? 3 : 4, previous_trylevel);
 	address scopetable_address=current_SEH3_frame.scopetable;
 	if (SEH4 && security_cookie_known)
 	{
@@ -151,10 +175,18 @@ address dump_SEH_frame (fds* s, process* p, thread* t, MemoryCache *mc, address 
 		};
 		L ("SEH4 header:\tGSCookieOffset=0x%x GSCookieXOROffset=0x%x\n", EH4_header.GSCookieOffset, EH4_header.GSCookieXOROffset);
 		L ("\t\tEHCookieOffset=0x%x EHCookieXOROffset=0x%x\n", EH4_header.EHCookieOffset, EH4_header.EHCookieXOROffset);
+
+		unsigned adr_of_EBP=a + ((byte*)&current_SEH3_frame.EBP - (byte*)&current_SEH3_frame.prev);
+
+		if (EH4_header.EHCookieOffset!=-2)
+			check_SEH4_cookie (mc, adr_of_EBP, EH4_header.EHCookieOffset, EH4_header.EHCookieXOROffset, security_cookie, "EH");
+		if (EH4_header.GSCookieOffset!=-2)
+			check_SEH4_cookie (mc, adr_of_EBP, EH4_header.GSCookieOffset, EH4_header.GSCookieXOROffset, security_cookie, "GS");
+
 		scopetable_address+=sizeof(struct my_EH4_SCOPETABLE_HEADER);
 	};
-	if (current_trylevel>=0 && (SEH3 || (SEH4 && security_cookie_known)))
-		dump_scopetable(mc, p, scopetable_address, current_trylevel+1);
+	if (previous_trylevel>=0 && (SEH3 || (SEH4 && security_cookie_known)))
+		dump_scopetable(mc, p, scopetable_address, previous_trylevel+1);
 
 exit:
 	strbuf_deinit (&sb);
