@@ -58,7 +58,7 @@ typedef struct _bp_address
 
 bp_address *create_address_filename_symbol_re(const char *filename, const char *symbol_re, unsigned ofs);
 bp_address *create_address_filename_address(const char *filename, address adr);
-bp_address *create_address_abs(unsigned adr);
+bp_address *create_address_abs(address adr);
 bp_address *create_address_bytemask(obj *bytemask);
 void bp_address_free(bp_address *a);
 bool is_address_OEP(bp_address *a);

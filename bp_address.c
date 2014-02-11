@@ -112,7 +112,7 @@ bp_address *create_address_filename_address(const char *filename, address adr)
     return rt;
 };
 
-bp_address *create_address_abs(unsigned adr)
+bp_address *create_address_abs(address adr)
 {
     bp_address *rt=DCALLOC (bp_address, 1, "bp_address");
 
