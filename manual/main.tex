@@ -127,6 +127,60 @@ Alex Ionescu.
 
 \include{one-time-INT3}
 
+\chapter{\IFRU{Общее для BPX и BPF}{Things shared in BPX and BPF}}
+
+\IFRU{Во время дампа памяти, этот участок анализируется на наличие в нем известных символов, и они
+выводятся, если это возможно}{While memory dumping, the memory region to be dumped is analysed 
+for known symbols inside, and they printed if possible}.
+
+\IFRU{Это может быть крайне полезно если некая структура имеет указатели на функции}
+{This may be very useful if some structure contain pointers to functions}.
+
+\IFRU{Пример}{Example}:
+
+\begin{lstlisting}
+#include <stdio.h>
+
+int global_var_1;
+int global_var_2;
+int global_var_3;
+
+void f(void** a)
+{
+	a[3]=&global_var_3;
+};
+
+int main()
+{
+	void* a[5];
+	int i;
+
+	a[0]=a[1]=a[2]=a[3]=a[4]=NULL;
+	a[1]=&global_var_1;
+	a[3]=&global_var_2;
+	f(a);
+	for (i=0; i<5; i++)
+		printf ("0x%p\n", a[i]);
+};
+\end{lstlisting}
+
+\begin{lstlisting}
+tracer.exe -l:1.exe bpf=1.exe!f,args:1,dump_args:0x10
+\end{lstlisting}
+
+\begin{lstlisting}
+(0) 1.exe!f(0x3ffa74) (called from 1.exe!func3+0x2c (0x2519dc))
+Argument 1/1 
+003FFA74: 00 00 00 00 80 54 25 00-00 00 00 00 84 54 25 00 ".....T%......T%."
+Argument 1/1 +0x4: 1.exe!global_var_1
+Argument 1/1 +0xC: 1.exe!global_var_2
+(0) 1.exe!f() -> 0x3ffa74
+Argument 1/1 difference
+00000000:                        -            7C          "            |   "
+Argument 1/1 before +0xC: 1.exe!global_var_2
+Argument 1/1 after +0xC: 1.exe!global_var_3
+\end{lstlisting}
+
 \chapter{\IFRU{Взаимодействие во время работы}{Interacting while running}}
 
 1) \IFRU{Нажмите ESC или Ctrl-C для отсоединения от запущенного процесса.}{Press ESC or Ctrl-C to detach from the running process.}

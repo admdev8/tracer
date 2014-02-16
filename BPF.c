@@ -282,7 +282,7 @@ static void handle_set (BPF* bpf, unsigned bp_no, process *p, thread *t, CONTEXT
             bpf->set_val, succ ? "" : "cannot be ", adr, bpf->set_arg_n, bpf->set_ofs);
 };
 
-static void dump_bufs_if_need(thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args, unsigned bp_no)
+static void dump_bufs_if_need(process *p, thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args, unsigned bp_no)
 {
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
     oassert (di->BPF_buffers_at_start==NULL);
@@ -294,16 +294,20 @@ static void dump_bufs_if_need(thread *t, MemoryCache *mc, unsigned size, unsigne
         BYTE *buf=DMALLOC(BYTE, size, "buf");
         if (MC_ReadBuffer (mc, args[i], size, buf))
         {
-            L ("Argument %d/%d\n", i+1, args_n);
+            strbuf sb=STRBUF_INIT;
+            strbuf_addf (&sb, "Argument %d/%d ", i+1, args_n);
+            L ("%s\n", sb.buf);
             L_print_buf_ofs (buf, size, args[i]);
+            print_symbols_in_buf_if_possible (p, mc, buf, size, sb.buf);
             di->BPF_buffers_at_start[i]=buf;
+            strbuf_deinit (&sb);
         }
         else
             DFREE(buf);
     };
 };
 
-static void dump_args_diff_if_need(thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args, unsigned bp_no)
+static void dump_args_diff_if_need(process *p, thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args, unsigned bp_no)
 {
     BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
     oassert (di->BPF_buffers_at_start);
@@ -320,6 +324,14 @@ static void dump_args_diff_if_need(thread *t, MemoryCache *mc, unsigned size, un
         {
             L ("Argument %d/%d difference\n", i+1, args_n);
             L_print_bufs_diff (di->BPF_buffers_at_start[i], buf2, size);
+            // print symbols in changed buf, if possible
+            strbuf sb1=STRBUF_INIT, sb2=STRBUF_INIT;
+            strbuf_addf (&sb1, "Argument %d/%d before ", i+1, args_n);
+            strbuf_addf (&sb2, "Argument %d/%d after ", i+1, args_n);
+            print_symbols_in_intersection_of_bufs (p, mc, 
+                    di->BPF_buffers_at_start[i], buf2, sb1.buf, sb2.buf, size);
+            strbuf_deinit (&sb1);
+            strbuf_deinit (&sb2);
         };
         DFREE(buf2);
         DFREE(di->BPF_buffers_at_start[i]);
@@ -439,7 +451,7 @@ static unsigned handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *
     };
 
     if (got_ret_adr)
-        process_get_sym (p, di->ret_adr, true, true, &sb);
+        process_get_sym (p, di->ret_adr, /* add_module_name */ true, /* add_offset */ true, &sb);
     else
         L ("Cannot read a register at SP, so, BPF return will not be handled\n");
 
@@ -470,7 +482,7 @@ static unsigned handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *
     dump_object_info_if_needed(bpf, mc, ctx);
 
     if (bpf->dump_args)
-        dump_bufs_if_need(t, mc, bpf->dump_args, bpf->args, di->BPF_args, bp_no);
+        dump_bufs_if_need(p, t, mc, bpf->dump_args, bpf->args, di->BPF_args, bp_no);
 
     if (dash_s)
         dump_stack (p, t, ctx, mc);
@@ -539,7 +551,7 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     L ("\n");
 
     if (bpf->dump_args)
-        dump_args_diff_if_need(t, mc, bpf->dump_args, bpf->args, di->BPF_args, bp_no);
+        dump_args_diff_if_need(p, t, mc, bpf->dump_args, bpf->args, di->BPF_args, bp_no);
 
     DFREE(di->BPF_args); di->BPF_args=NULL;
 

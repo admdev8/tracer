@@ -35,6 +35,7 @@
 #include "cc.h"
 #include "bitfields.h"
 #include "cycle.h"
+#include "ostrings.h"
 
 static bool is_it_code_section (IMAGE_SECTION_HEADER *s)
 {
@@ -251,9 +252,20 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
     //PE_add_symbols(p, m, fullpath_filename->buf, img_base, info);
 
     // add OEP
-    add_symbol(info->OEP, "OEP", &(add_symbol_params){p, m, SYM_TYPE_OEP, mc});
+    add_symbol(info->OEP, "OEP", &(add_symbol_params){p, m, SYM_TYPE_SPECIAL, mc});
     // add BASE
-    add_symbol(img_base, "BASE", &(add_symbol_params){p, m, SYM_TYPE_BASE, mc});
+    add_symbol(img_base, "BASE", &(add_symbol_params){p, m, SYM_TYPE_SPECIAL, mc});
+
+    // add special symbols like .data, etc
+    for (unsigned i=0; i<m->sections_total; i++)
+    {
+        IMAGE_SECTION_HEADER *sect=m->sections + i;
+        address new_a=sect->VirtualAddress + m->base;
+        //L ("adding %s!%s at 0x" PRI_ADR_HEX " (sect->VA=0x" PRI_ADR_HEX ")\n", 
+        //        m->filename, sect->Name, new_a, sect->VirtualAddress);
+        add_symbol(new_a, (char*)sect->Name, &(add_symbol_params){p, m, SYM_TYPE_SPECIAL, mc});
+    };
+
     return info;
 };
 
@@ -559,6 +571,8 @@ symbol* module_sym_exist_at (module *m, address a)
 // may return module.dll!symbol+0x1234
 void module_get_sym (module *m, address a, bool add_module_name, bool add_offset, strbuf *out)
 {
+    if (module_c_debug)
+        L ("%s(a=0x" PRI_ADR_HEX ")\n", __FUNCTION__, a);
     oassert (address_in_module (m, a));
 
     address prev_k;

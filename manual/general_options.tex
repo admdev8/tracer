@@ -65,7 +65,7 @@ return address=77C9D1FF (ntdll.dll!RtlCreateProcessParameters+0x4e)
 \end{lstlisting}
 
 \IFRU{Вывод стека вызова очень удобен, например, мы имеем программу показывающую окно с сообщением и перехватывая вызов \TT{USER32.DLL!MessageBoxA} мы можем увидеть путь к этому вызову.}
-{Stack dump can be very handy, for example, we have a program showing Message Box once and by intercepting \TT{USER32.DLL!MessageBoxA} call we can see a path to this call.}
+{Stack dump can be very useful, for example, we have a program showing Message Box once and by intercepting \TT{USER32.DLL!MessageBoxA} call we can see a path to this call.}
 
 \IFRU{Возможность вывода стека доступна для всех типов прерываний BPF/BPX/BPM.}{Stack dump feature available for all BPF/BPX/BPM features.}
 
@@ -111,7 +111,7 @@ tracer.exe -l:bzip2.exe bpf=cygwin1.dll!fprintf,args:2 -t
 tracer.exe @filename
 \end{lstlisting}
 
-\IFRU{Каждая строка файла представляет опцию. Это очень удобно для длинных и/или часто используемых опций, как байтмаски (смотрите ниже).}{Each line in the profile represents an option. This can be handy for lengthy and/or often used options, like bytemasks (see below).}
+\IFRU{Каждая строка файла представляет опцию. Это очень удобно для длинных и/или часто используемых опций, как байтмаски (смотрите ниже).}{Each line in the profile represents an option. This can be useful for lengthy and/or often used options, like bytemasks (see below).}
 
 \IFRU{Опция \TT{@} также может использоваться с любыми другими опциями:}
 {\TT{@} option can be used along with any other options:}

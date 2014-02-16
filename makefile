@@ -50,6 +50,7 @@ endif
 
 all:    $(OUTDIR) $(OUTDIR)/$(TRACER_EXE_NAME) $(DEP_FILES)
 ifeq ($(bsuffix),debug)
+	echo running $(TRACER_EXE_NAME) test
 	$(OUTDIR)/$(TRACER_EXE_NAME) test
 else
 	strip $(OUTDIR)/$(TRACER_EXE_NAME)

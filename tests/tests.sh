@@ -9,6 +9,8 @@ cd ../BPX
 BPX.sh $1
 cd ../one-time-INT3
 one-time-INT3.sh $1
+cd ../symbols_in_buf
+symbols_in_buf.sh $1
 cd ..
 cd ..
 

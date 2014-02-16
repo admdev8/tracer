@@ -170,4 +170,46 @@ bool read_argument_from_stack (MemoryCache *mc, CONTEXT *ctx, unsigned arg, REG 
     return read_REG_from_stack (mc, ctx, arg+1, out);
 };
 
+void print_symbol_if_possible (process *p, MemoryCache *mc, address a, char *name)
+{
+    module *m=find_module_for_address (p, a);
+    if (m==NULL)
+        return;
+
+    strbuf sb=STRBUF_INIT;
+    module_get_sym (m, a, true /*add_module_name*/, true /*add_offset*/, &sb);
+    L ("%s: %s\n", name, sb.buf);
+    strbuf_deinit (&sb);
+};
+
+void print_symbols_in_buf_if_possible (process *p, MemoryCache *mc, byte *buf, size_t s, char *name)
+{
+    for (size_t i=0; i*sizeof(address)<s; i++)
+    {
+        strbuf tmp=STRBUF_INIT;
+        strbuf_addf(&tmp, "%s+0x%X", name, i*sizeof(address));
+        print_symbol_if_possible (p, mc, ((REG*)buf)[i], tmp.buf);
+        strbuf_deinit (&tmp);
+    };
+};
+
+void print_symbols_in_intersection_of_bufs (process *p, MemoryCache *mc, 
+        byte *buf1, byte* buf2, char *buf1name, char *buf2name, size_t bufsize)
+{
+    for (size_t i=0; (i*sizeof(address))<bufsize; i++)
+    {
+        REG val_in_buf1=((REG*)buf1)[i];
+        REG val_in_buf2=((REG*)buf2)[i];
+        if (val_in_buf1==val_in_buf2)
+            continue;
+        strbuf tmp1=STRBUF_INIT, tmp2=STRBUF_INIT;
+        strbuf_addf(&tmp1, "%s+0x%X", buf1name, i*sizeof(address));
+        strbuf_addf(&tmp2, "%s+0x%X", buf2name, i*sizeof(address));
+        print_symbol_if_possible (p, mc, val_in_buf1, tmp1.buf);
+        print_symbol_if_possible (p, mc, val_in_buf2, tmp2.buf);
+        strbuf_deinit (&tmp1);
+        strbuf_deinit (&tmp2);
+    };
+};
+
 /* vim: set expandtab ts=4 sw=4 : */

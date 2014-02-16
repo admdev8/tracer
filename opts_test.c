@@ -88,13 +88,13 @@ void opts_test()
     do_test("bpx=0x123123\0", 
             "bp_address=0x123123. BPX.\n");
     do_test("bpx=0x123123,dump(eax,1234)\0", 
-            "bp_address=0x123123. BPX. options: [DUMP reg:EAX size: 1234]\n");
+            "bp_address=0x123123. BPX. options: [DUMP EAX size: 1234]\n");
     do_test("bpx=0x123123,dump(filename.dll!symbol,0x29a)\0", 
             "bp_address=0x123123. BPX. options: [DUMP filename.dll!symbol size: 666]\n");
     do_test("bpx=filename.dll!symbol1,dump(filename.dll!symbol2,0x29a)\0", 
             "bp_address=filename.dll!symbol1. BPX. options: [DUMP filename.dll!symbol2 size: 666]\n");
     do_test("bpx=filename.dll!symbol1,dump(filename.dll!symbol3),dump(eax,123)\0", 
-            "bp_address=filename.dll!symbol1. BPX. options: [DUMP reg:EAX size: 123][DUMP filename.dll!symbol3 size: 16]\n");
+            "bp_address=filename.dll!symbol1. BPX. options: [DUMP EAX size: 123][DUMP filename.dll!symbol3 size: 16]\n");
     do_test("bpx=filename.dll!symbol1,copy(eax,\"hahaha\\x00\\x11hoho\")\0", 
             "bp_address=filename.dll!symbol1. BPX. options: [COPY reg:EAX[0x68 0x61 0x68 0x61 0x68 0x61 0x00 0x11 0x68 0x6F 0x68 0x6F ]\n");
     do_test("bpx=bytemask:\"001122..3355[skip:2]1166..77\",copy(eax,\"hahaha\\x00\\x11hoho\")\0", 
@@ -116,7 +116,7 @@ void opts_test()
     do_test("bpf=filename.dll!symbol1,rt_probability:100%,rt:123\0", 
             "bp_address=filename.dll!symbol1. BPF. options: rt: 7b \n");
     do_test("bpx=filename.dll!0x12345678,dump(eax,123)\0", 
-            "bp_address=filename.dll!0x12345678. BPX. options: [DUMP reg:EAX size: 123]\n");
+            "bp_address=filename.dll!0x12345678. BPX. options: [DUMP EAX size: 123]\n");
     do_test("bpf=filename.dll!0x14036FE50,rt:0\n\0", 
 #ifdef _WIN64
             "bp_address=filename.dll!0x14036fe50. BPF. options: rt: 0 \n");

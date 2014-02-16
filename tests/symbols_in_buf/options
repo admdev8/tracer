@@ -1,0 +1,2 @@
+-l:1.exe
+bpf=1.exe!f,args:1,dump_args:0x10

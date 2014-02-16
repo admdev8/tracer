@@ -35,5 +35,9 @@ bool MC_disas(address a, MemoryCache *mc, Da* out);
 void dump_buf_as_array_of_strings(MemoryCache *mc, address a, size_t size);
 bool read_REG_from_stack (MemoryCache *mc, CONTEXT *ctx, int idx, REG * out);
 bool read_argument_from_stack (MemoryCache *mc, CONTEXT *ctx, unsigned arg, REG * out);
+void print_symbol_if_possible (process *p, MemoryCache *mc, address a, char *name);
+void print_symbols_in_buf_if_possible (process *p, MemoryCache *mc, byte *buf, size_t s, char *name);
+void print_symbols_in_intersection_of_bufs (process *p, MemoryCache *mc, 
+        byte *buf1, byte* buf2, char *buf1name, char *buf2name, size_t bufsize);
 
 /* vim: set expandtab ts=4 sw=4 : */

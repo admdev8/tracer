@@ -22,6 +22,7 @@
 #include "SEH.h"
 #include "utils.h"
 #include "X86_register_helpers.h"
+#include "process.h"
 
 void BPX_option_free(BPX_option *o)
 {
@@ -56,16 +57,21 @@ void BPX_ToString(BPX *b, strbuf *out)
     strbuf_addstr (out, "\n");
 };
 
+static void BPX_DUMP_option_address_ToString(BPX_option *b, strbuf *out)
+{
+    if (b->a)
+        address_to_string(b->a, out);
+    else
+        strbuf_addstr (out, X86_register_ToString(b->reg));
+};
+
 void BPX_option_ToString(BPX_option *b, strbuf *out)
 {
     switch (b->t)
     {
         case BPX_option_DUMP:
             strbuf_addstr (out, "[DUMP ");
-            if (b->a)
-                address_to_string(b->a, out);
-            else
-                strbuf_addf (out, "reg:%s", X86_register_ToString(b->reg));
+            BPX_DUMP_option_address_ToString (b, out);
             strbuf_addf (out, " size: %d]", b->size_or_value);
             break;
 
@@ -133,9 +139,24 @@ static void handle_BPX_option (process *p, thread *t, CONTEXT *ctx, MemoryCache 
                 address a;
                 if (BPX_get_address_for_DUMP_SET_COPY(o, ctx, &a))
                 {
-                    if (MC_L_print_buf_in_mem_ofs (mc, a, o->size_or_value, a)==false)
+                    size_t size=o->size_or_value;
+
+                    byte* buf=DMALLOC (byte, size, "buf");
+
+                    if (MC_ReadBuffer (mc, a, size, buf))
+                    {
+                        L_print_buf_ofs (buf, size, a);
+
+                        strbuf sb=STRBUF_INIT;
+                        BPX_DUMP_option_address_ToString (o, &sb);
+                        print_symbols_in_buf_if_possible (p, mc, buf, size, sb.buf);
+                        strbuf_deinit(&sb);
+                    }
+                    else
                         L ("(%d) Can't read buffer of size %d at address 0x" PRI_ADR_HEX "\n", 
-                                bp_no, o->size_or_value, a);
+                                bp_no, size, a);
+
+                    DFREE (buf);
                 };
             };
             break;

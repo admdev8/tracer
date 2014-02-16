@@ -28,8 +28,7 @@ typedef struct _module module;
 
 typedef enum _symbol_type
 {
-    SYM_TYPE_OEP,
-    SYM_TYPE_BASE,
+    SYM_TYPE_SPECIAL,
     SYM_TYPE_PE_EXPORT,
     SYM_TYPE_MAP,
     SYM_TYPE_ORACLE_SYM,
