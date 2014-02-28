@@ -32,6 +32,33 @@
 #include "rand.h"
 #include "x86_emu.h"
 
+static const char* function_type_ToString (function_type f)
+{
+    switch (f)
+    {
+        case TY_UNKNOWN: 
+            return "unknown";
+        case TY_VOID: 
+            return "void";
+        case TY_UNINTERESTING: 
+            return "uninteresting";
+        case TY_REG:
+            return "REG";
+        case TY_INT:
+            return "int";
+        case TY_PTR:
+            return "ptr";
+        case TY_TETRABYTE:
+            return "tetrabyte";
+        case TY_QSTRING:
+            return "QString";
+        case TY_PTR_TO_QSTRING:
+            return "QString*";
+        default:
+            oassert(0);
+    };
+};
+
 void BPF_ToString(BPF *b, strbuf *out)
 {
     strbuf_addstr (out, "BPF. options: ");
@@ -80,6 +107,9 @@ void BPF_ToString(BPF *b, strbuf *out)
         strbuf_addf (out, "set_width=%d set_arg_n=%d set_ofs=0x" PRI_REG_HEX " set_val=0x" PRI_REG_HEX "\n", b->set_width, b->set_arg_n, b->set_ofs, b->set_val);
     };
     // NOTE: args_n, arg_types, ret_type, this_type not dumped
+    if (b->arg_types)
+        for (int i=0; i<b->args; i++)
+            strbuf_addf(out, "arg%d_type=%s ", i+1, function_type_ToString(b->arg_types[i]));
 };
 
 void BPF_free(BPF* o)
@@ -90,6 +120,14 @@ void BPF_free(BPF* o)
         bp_address_free(o->when_called_from_func);
     DFREE (o->arg_types);
     DFREE (o);
+};
+
+struct QString_obj
+{
+    REG QBasicAtomicInt;
+    tetrabyte alloc;
+    tetrabyte size;
+    address data;
 };
 
 static void dump_QString (address a, MemoryCache *mc)
@@ -109,17 +147,23 @@ static void dump_QString (address a, MemoryCache *mc)
     ushort array[1];
     };
     */
-    REG r2;
+    //REG r2;
+    struct QString_obj o;
     L ("QString: ");
-    if (MC_ReadREG(mc, a+sizeof(REG)+sizeof(tetrabyte)*2, &r2))
+    if (MC_ReadBuffer (mc, a, sizeof(struct QString_obj), &o))
     {
         strbuf sb=STRBUF_INIT;
-        if (MC_GetString (mc, r2, true, &sb))
+        if (MC_GetString (mc, o.data, /* unicode */ true, &sb))
+        {
             L ("(data=\"%s\")", sb.buf);
+            // replace string with mine
+            //wchar_t* newstr=L"...";
+            //MC_WriteBuffer(mc, o.data, (wcslen(newstr)+1)*sizeof(wchar_t), newstr);
+        }
         else
         {
             BYTE buf[4];
-            if (MC_ReadBuffer (mc, r2, 4, buf))
+            if (MC_ReadBuffer (mc, o.data, 4, buf))
                 L ("(data=(0x%x 0x%x 0x%x 0x%x ... ))", buf[0], buf[1], buf[2], buf[3]);
             else
                 L ("(data=(read error))");
@@ -156,6 +200,16 @@ static bool BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type 
 
         case TY_QSTRING:
             dump_QString(arg, mc);
+            break;
+        
+        case TY_PTR_TO_QSTRING:
+            {
+                address tmp;
+                if (MC_ReadREG (mc, arg, &tmp))
+                    dump_QString(tmp, mc);
+                else
+                    L ("(while dumping TY_PTR_TO_QSTRING: cannot read at 0x" PRI_ADR_HEX "\n", arg);
+            };
             break;
 
         case TY_PTR: // get sym?
@@ -359,11 +413,14 @@ static void is_it_known_function (const char *fn_name, BPF* bpf)
     if (BPF_c_debug)
         L ("%s(fn_name=%s)\n", __func__, fn_name);
 
-    // demangler should be here!
+    if (bpf->arg_types)
+        return; // already overriden by BPF option
+
+    // FIXME: demangler should be here!
     if (strstr(fn_name, "?information@QMessageBox@@SAHPEAVQWidget@@AEBVQString@@1111HH@Z"))
     {
-        bpf->args_n=8;
-        bpf->arg_types=DCALLOC(function_type, bpf->args_n, "function_type");
+        bpf->args=8;
+        bpf->arg_types=DCALLOC(function_type, bpf->args, "function_type");
         bpf->arg_types[0]=TY_PTR; // QWidget
         bpf->arg_types[1]=bpf->arg_types[2]=bpf->arg_types[3]=bpf->arg_types[4]=bpf->arg_types[5]=TY_QSTRING;
         bpf->arg_types[6]=bpf->arg_types[7]=TY_INT;
@@ -467,7 +524,7 @@ static unsigned handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *
         strbuf_deinit(&sb_symbol_name);
     };
 
-    unsigned args=bpf->known_function==Fuzzy_True ? bpf->args_n : bpf->args;
+    unsigned args=bpf->known_function==Fuzzy_True ? bpf->args : bpf->args;
 
     load_args(t, ctx, mc, bp_no, args, bpf);
 

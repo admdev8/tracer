@@ -44,7 +44,8 @@ typedef enum _function_type
     TY_INT,
     TY_PTR,
     TY_TETRABYTE,
-    TY_QSTRING
+    TY_QSTRING,
+    TY_PTR_TO_QSTRING
 } function_type;
 
 typedef struct _BPF
@@ -59,7 +60,6 @@ typedef struct _BPF
     bp_address *when_called_from_address, *when_called_from_func;
     // variables filled by is_it_known_function
     TrueFalseUndefined known_function;
-    unsigned args_n;
     function_type ret_type, this_type;
     function_type *arg_types;
     // variables filled if when_called_from_func

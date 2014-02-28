@@ -139,6 +139,9 @@ void opts_test()
             "bp_address=bytemask:\"DC45E883EC08DD1C2483EC08DD45E8DD1C24\". BPX. options: [SET reg:ST0 float_value:2.345679]\n");
     do_test("bpx=bytemask:\"DC45E883EC08DD1C2483EC08DD45E8DD1C24\",set(st0,2.34567890)\n\0",
             "bp_address=bytemask:\"DC45E883EC08DD1C2483EC08DD45E8DD1C24\". BPX. options: [SET reg:ST0 float_value:2.345679]\n");
+    do_test("bpf=filename.dll!symbol1,args:2,arg2_type:int,arg1_type:QString\0", 
+            "bp_address=filename.dll!symbol1. BPF. options: rt: 0 args: 2 \n"
+            "arg1_type=QString arg2_type=int ");
     dlist_free(addresses_to_be_resolved, NULL);
     DFREE(load_filename);
     DFREE(attach_filename);

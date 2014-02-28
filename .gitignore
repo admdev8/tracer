@@ -10,3 +10,4 @@ opts.lex.c
 opts.tab.*
 tags
 *.gcov
+*blotters*

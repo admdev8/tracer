@@ -1,3 +1,4 @@
 2013-Sep-26 This is a first public version (0.7), uploaded to github.com.
 2014-Jan-28 --dump-seh option
 2014-Feb-16 (BPX, BPF) analyze buffers to be dumped for symbols in it
+2014-Feb-28 (BPF) new option: ARGn_TYPE

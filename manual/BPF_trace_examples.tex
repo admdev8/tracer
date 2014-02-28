@@ -1,6 +1,6 @@
-\section{\IFRU{Примеры опции TRACE}{TRACE feature examples}}
+\subsection{\IFRU{Примеры опции TRACE}{TRACE feature examples}}
 
-\subsection{\IFRU{Трассировка строковых функций}{Tracing string functions}}
+\subsubsection{\IFRU{Трассировка строковых функций}{Tracing string functions}}
 
 \IFRU{Возьмем пример применения strtok():}{Let's take strtok() example:}
 
@@ -42,7 +42,7 @@ tracer.exe -l:trace_test1.exe bpf=0x00401000,trace:cc
 
 \IFRU{Замечание: "a" это слишком короткая строка для автоматического детектора строк в tracer, поэтому её здесь нет, вместо нее адрес этой строки.}{Note: "a" is too short string for automatic string detector in tracer, that is why it is absent and its address here instead.}
 
-\subsection{\IFRU{Трассируем quicksort()}{Let's trace quicksort()}}
+\subsubsection{\IFRU{Трассируем quicksort()}{Let's trace quicksort()}}
 
 \IFRU{Возьмем известный пример:}{Use well-known example:}
 

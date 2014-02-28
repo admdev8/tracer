@@ -17,6 +17,7 @@
 
 #include "oassert.h"
 #include "ostrings.h"
+#include "BPF.h"
 
 #include "stuff.h"
 #include "dmalloc.h"
@@ -24,7 +25,6 @@
 
 #include "opts.tab.h"
 #include "opts.h"
-#include "BPF.h"
 
 // BCC mangled names may be started with @
 
@@ -161,6 +161,7 @@ SYMBOL_NAME_RE @?[[:alpha:]\\?_$]{REGEXP}
 <STATE_BPX>"copy("  { yy_push_state(STATE_ADDRESS_OR_REG); return COPY_OP; }
 <STATE_BPX>"\\x"[[:xdigit:]][[:xdigit:]]   { yylval.num = strtol(yytext+2, NULL, 16); return CSTRING_BYTE ; }
 <STATE_BPX>[^\\\",)\n]                         { yylval.num = yytext[0]; return CSTRING_BYTE ; }
+
 <STATE_BPF>unicode                   { return BPF_UNICODE; }
 <STATE_BPF>borland_fastcall          { return BPF_BORLAND_FASTCALL; }
 <STATE_BPF>trace:                    { return BPF_TRACE_COLON; }
@@ -183,7 +184,11 @@ SYMBOL_NAME_RE @?[[:alpha:]\\?_$]{REGEXP}
     if (stricmp(yytext, "dword64")==0) { yylval.num=8; return BYTE_WORD_DWORD_DWORD64; };
     }
 <STATE_BPF>arg_                     { return ARG_; }
-
+<STATE_BPF>arg                      { return ARG; }
+<STATE_BPF>type                     { return TYPE; }
+<STATE_BPF>int                      { return TYPE_INT; }
+<STATE_BPF>\*QString                { return TYPE_PTR_TO_QSTRING; /* FIXME: do something with asterisk! */ }
+<STATE_BPF>QString                  { return TYPE_QSTRING; }
 
 <*>. { 
     //fprintf (stderr, "Catch-all symbol: '%c'\n", yytext[0]); 

@@ -97,6 +97,7 @@ void add_new_address_to_be_resolved (bp_address *a)
     struct _BP *bp;
     struct _BPX_option *bpx_option;
     X86_register x86reg;
+    function_type func_type;
 }
 
 %token SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
@@ -104,7 +105,9 @@ void add_new_address_to_be_resolved (bp_address *a)
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM DUMP_SEH
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE  BPF_BORLAND_FASTCALL
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_ LOADING NO_NEW_CONSOLE
-%token MODULE_DEBUG SYMBOL_DEBUG CYCLE_DEBUG BPX_DEBUG UTILS_DEBUG CC_DEBUG BPF_DEBUG EMULATOR_TESTING TRACING_DEBUG NEWLINE
+%token MODULE_DEBUG SYMBOL_DEBUG CYCLE_DEBUG BPX_DEBUG UTILS_DEBUG CC_DEBUG BPF_DEBUG EMULATOR_TESTING 
+%token TRACING_DEBUG NEWLINE
+%token ARG TYPE TYPE_INT TYPE_QSTRING TYPE_PTR_TO_QSTRING
 %token <num> DEC_NUMBER HEX_NUMBER HEX_BYTE
 %token <num> BPM_width CSTRING_BYTE ATTACH_PID DMALLOC_BREAK_ON LIMIT_TRACE_NESTEDNESS
 %token <num> BYTE_WORD_DWORD_DWORD64
@@ -119,6 +122,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 %type <bp> bpm bpx
 %type <bpx_option> BPX_option
 %type <dbl> float_or_perc
+%type <func_type> FN_TYPE
 
 %error-verbose
 
@@ -282,6 +286,19 @@ BPF_option
     current_BPF->set_ofs=$9;
     current_BPF->set_val=$12;
  }
+ | ARG DEC_NUMBER '_' TYPE ':' FN_TYPE { 
+   oassert ($2 >= 1);
+   oassert ($2 <= current_BPF->args);
+   if (current_BPF->arg_types==NULL)
+        current_BPF->arg_types=DCALLOC (function_type, current_BPF->args, "function_type");
+   current_BPF->arg_types[($2)-1]=$6;
+ }
+ ;
+
+FN_TYPE
+ : TYPE_INT            { $$=TY_INT; }
+ | TYPE_QSTRING        { $$=TY_QSTRING; }
+ | TYPE_PTR_TO_QSTRING { $$=TY_PTR_TO_QSTRING; /* temporary, as I hope! */ }
  ;
 
 ARGUMENT_N
