@@ -44,6 +44,7 @@ typedef enum _function_type
     TY_INT,
     TY_PTR,
     TY_TETRABYTE,
+    TY_PTR_TO_DOUBLE,
     TY_QSTRING,
     TY_PTR_TO_QSTRING
 } function_type;

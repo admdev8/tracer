@@ -187,6 +187,7 @@ SYMBOL_NAME_RE @?[[:alpha:]\\?_$]{REGEXP}
 <STATE_BPF>arg                      { return ARG; }
 <STATE_BPF>type                     { return TYPE; }
 <STATE_BPF>int                      { return TYPE_INT; }
+<STATE_BPF>\*double                 { return TYPE_PTR_TO_DOUBLE;  /* FIXME: do something with asterisk! */ }
 <STATE_BPF>\*QString                { return TYPE_PTR_TO_QSTRING; /* FIXME: do something with asterisk! */ }
 <STATE_BPF>QString                  { return TYPE_QSTRING; }
 

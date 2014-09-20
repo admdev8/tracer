@@ -195,6 +195,42 @@ static void handle_BPX_option (process *p, thread *t, CONTEXT *ctx, MemoryCache 
         handle_BPX_option(p, t, ctx, mc, o->next, bp_no);
 };
 
+static void dump_register_and_symbol (process *p, enum X86_register_t reg, CONTEXT *ctx)
+{
+        strbuf sb=STRBUF_INIT;
+        REG val=CONTEXT_get_reg(ctx, reg);
+        process_get_sym(p, val, true, true, &sb);
+        L ("%s=%s\n", X86_register_ToString(reg), sb.buf);
+        strbuf_deinit (&sb);
+};
+
+static void dump_symbols_for_all_registers (process *p, CONTEXT *ctx)
+{
+#ifdef _WIN64
+    dump_register_and_symbol (p, R_RAX, ctx);
+    dump_register_and_symbol (p, R_RBX, ctx);
+    dump_register_and_symbol (p, R_RCX, ctx);
+    dump_register_and_symbol (p, R_RDX, ctx);
+    dump_register_and_symbol (p, R_RSI, ctx);
+    dump_register_and_symbol (p, R_RDI, ctx);
+    dump_register_and_symbol (p, R_R8,  ctx);
+    dump_register_and_symbol (p, R_R9,  ctx);
+    dump_register_and_symbol (p, R_R10, ctx);
+    dump_register_and_symbol (p, R_R11, ctx);
+    dump_register_and_symbol (p, R_R12, ctx);
+    dump_register_and_symbol (p, R_R13, ctx);
+    dump_register_and_symbol (p, R_R14, ctx);
+    dump_register_and_symbol (p, R_R15, ctx);
+#else    
+    dump_register_and_symbol (p, R_EAX, ctx);
+    dump_register_and_symbol (p, R_EBX, ctx);
+    dump_register_and_symbol (p, R_ECX, ctx);
+    dump_register_and_symbol (p, R_EDX, ctx);
+    dump_register_and_symbol (p, R_ESI, ctx);
+    dump_register_and_symbol (p, R_EDI, ctx);
+#endif    
+};
+
 static void handle_BPX_default_state(unsigned bp_no, BP *bp, process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
 {
     BPX *bpx=bp->u.bpx;
@@ -207,6 +243,7 @@ static void handle_BPX_default_state(unsigned bp_no, BP *bp, process *p, thread 
     dump_PID_if_need(p); dump_TID_if_need(p, t);
     L ("(%d) %s\n", DRx_no, sb_address.buf);
     dump_CONTEXT (&cur_fds, ctx, dump_fpu, false /*DRx?*/, dump_xmm);
+    dump_symbols_for_all_registers(p, ctx);
 
     if (bpx->opts)
         handle_BPX_option (p, t, ctx, mc, bpx->opts, bp_no);

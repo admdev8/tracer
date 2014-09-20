@@ -54,6 +54,8 @@ static const char* function_type_ToString (function_type f)
             return "QString";
         case TY_PTR_TO_QSTRING:
             return "QString*";
+        case TY_PTR_TO_DOUBLE:
+            return "double*";
         default:
             oassert(0);
     };
@@ -209,6 +211,16 @@ static bool BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type 
                     dump_QString(tmp, mc);
                 else
                     L ("(while dumping TY_PTR_TO_QSTRING: cannot read at 0x" PRI_ADR_HEX "\n", arg);
+            };
+            break;
+
+        case TY_PTR_TO_DOUBLE:
+            {
+                double tmp;
+                if (MC_ReadBuffer (mc, arg, sizeof(double), &tmp))
+                    L ("%f", tmp);
+                else
+                    L ("(while dumping TY_PTR_TO_DOUBLE: cannot read at 0x" PRI_ADR_HEX "\n", arg);
             };
             break;
 

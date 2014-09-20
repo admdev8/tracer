@@ -68,6 +68,7 @@ void help_and_exit()
     printf ("\t- store value to memory cell arg_<X>+<number>\n");
     printf ("rt_probability:<probability> - rt option will trigger in some probability,\n");
     printf ("\tdefined as [0..1] float number or as [0%%..100%%] percentage\n");
+    printf ("argX_type:type - set type. arguments are numbered starting at 1\n");
     printf ("\n");
     printf ("* BPX: break on arbitrary address\n");
     printf ("bpx=<address>[,<bpx_option>[,<bpx_option>]]\n");
@@ -101,7 +102,7 @@ void help_and_exit()
     printf ("--allsymbols - print all symbols in all loading modules\n");
     printf ("--loading - show each module loading information\n");
     printf ("--allsymbols:<regexp> - print all symbols in all loading modules falling under <regexp>\n");
-    //printf ("--dump-fpu - dump FPU registers where it's possible\n");
+    printf ("--dump-fpu - dump FPU registers where it's possible\n");
     printf ("--dump-xmm - dump MMX/XMM registers\n");
     printf ("--one-time-INT3-bp:<symbol_mask> - set multiple one-time INT3 breakpoints\n");
     printf ("--limit-trace-nestedness:<number> - limit level of trace in BPF CC. default is 1.\n");

@@ -387,9 +387,9 @@ static void add_symbols_from_PDB_if_exist (process *p, module *m, address img_ba
         DWORD err=GetLastError();
 
         if (err==ERROR_SUCCESS)
-            L ("%s() Error: SymLoadModule64() failed. error code==ERROR_SUCCESS. module is already loaded?\n", __func__);
+            L ("%s() Error: SymLoadModuleEx() failed. error code==ERROR_SUCCESS. module is already loaded?\n", __func__);
         else
-            L ("%s() Error: SymLoadModule64() failed. Error code: 0x%x \n", __func__, err);
+            L ("%s() Error: SymLoadModuleEx() failed. Error code: 0x%x \n", __func__, err);
     }
     else
     {
@@ -398,13 +398,13 @@ static void add_symbols_from_PDB_if_exist (process *p, module *m, address img_ba
         info2.MyEnumSymbolsCallback_total=0;
         info2.params=&(add_symbol_params){ p, m, SYM_TYPE_PDB, mc };
 
-        b=SymEnumSymbols(GetCurrentProcess(), ModBase, NULL, MyEnumSymbolsCallback, (PVOID)&info2); 
+        b=SymEnumSymbols(GetCurrentProcess(), ModBase, NULL, MyEnumSymbolsCallback, (PVOID)&info2);
         if (b==FALSE)
             L("%s() Error: SymEnumSymbols() failed. Error code: 0x%x\n", __func__, GetLastError()); 
 
         b=SymUnloadModule64(GetCurrentProcess(), ModBase); 
         if (b==FALSE)
-            L ("%s() Error: SymUnloadModule64() failed. Error code: 0x%x\n", __func__, GetLastError() ); 
+            L ("%s() Error: SymUnloadModule64() failed. Error code: 0x%x\n", __func__, GetLastError());
 
         L ("%d symbols loaded from %s\n", info2.MyEnumSymbolsCallback_total, sb_pdbfilename.buf);
     };

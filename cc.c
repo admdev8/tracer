@@ -393,23 +393,25 @@ unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEX
         case I_CLC:
         case I_PUSHA: 
         case I_POPA:
-            break;
-
-        case I_FLD:
-        case I_FILD:
-            // do nothing - yet
-            //SET_BIT (rt, NOTICE_OP1);
+        case I_FLDZ:
             break;
 
         case I_FSTP:
             SET_BIT (rt, NOTICE_ST0);
             break;
-
-        case I_FMULP:
-            SET_BIT (rt, NOTICE_OP1);
-            SET_BIT (rt, NOTICE_OP2);
+/*        
+        case I_FUCOM:
+        case I_FUCOMP:
+        case I_FUCOMPP:
+            SET_BIT (rt, NOTICE_ST0);
+            SET_BIT (rt, NOTICE_OP1); // NOTICE_OP1_AS_DOUBLE?
             break;
 
+        case I_FMULP:
+            SET_BIT (rt, NOTICE_OP1); // NOTICE_OP1_AS_DOUBLE?
+            SET_BIT (rt, NOTICE_OP2);
+            break;
+*/
         default:
             if (ins_reported_as_unhandled[da->ins_code]==false)
             {

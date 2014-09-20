@@ -1,3 +1,4 @@
 ﻿* no spaces allowed in filenames in -l option
+* PDB files are not loaded in Windows XP and Windows 2003
 * error while running -l:Illustrator.exe from Adobe CS5
 * (cc) "mov     byte ptr [esi+0ACh], 1 ; 1=1"
