@@ -11,3 +11,9 @@ opts.tab.*
 tags
 *.gcov
 *blotters*
+*.asm
+*.exe
+*.obj
+*.ilk
+*.pdb
+*.idb
