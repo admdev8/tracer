@@ -66,6 +66,8 @@ void BPF_ToString(BPF *b, strbuf *out)
     strbuf_addstr (out, "BPF. options: ");
     if (b->unicode)
         strbuf_addstr (out, "unicode ");
+    if (b->microsoft_fastcall)
+        strbuf_addstr (out, "microsoft_fastcall ");
     if (b->borland_fastcall)
         strbuf_addstr (out, "borland_fastcall ");
     if (b->skip)
@@ -279,6 +281,28 @@ static bool read_MS_x64_arguments (MemoryCache *mc, CONTEXT *ctx, unsigned args,
 #endif
 
 #ifndef _WIN64
+static bool read_microsoft_fastcall_arguments (MemoryCache *mc, CONTEXT *ctx, unsigned args,
+        BP_thread_specific_dynamic_info *di)
+{
+    unsigned arguments_in_stack=(args<2) ? 0 : args-2;
+
+    for (unsigned a=0; a<args; a++)
+    {
+        switch (a)
+        {
+            case 0: di->BPF_args[a]=ctx->Ecx;
+                    break;
+            case 1: di->BPF_args[a]=ctx->Edx;
+                    break;
+            default:
+                    if (read_argument_from_stack (mc, ctx, arguments_in_stack - (a-2), &di->BPF_args[a])==false)
+                        return false;
+                    break;
+        };
+    };
+    return true;
+};
+
 static bool read_borland_fastcall_arguments (MemoryCache *mc, CONTEXT *ctx, unsigned args,
         BP_thread_specific_dynamic_info *di)
 {
@@ -306,30 +330,36 @@ static bool read_borland_fastcall_arguments (MemoryCache *mc, CONTEXT *ctx, unsi
 
 static void load_args(thread *t, CONTEXT *ctx, MemoryCache *mc, unsigned bp_no, unsigned args, BPF* bpf)
 {
-    address SP=CONTEXT_get_SP(ctx);
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
-    di->BPF_args=DMALLOC(REG, args, "REG");
+	address SP=CONTEXT_get_SP(ctx);
+	BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+	di->BPF_args=DMALLOC(REG, args, "REG");
 
 #ifdef _WIN64
-    if (read_MS_x64_arguments (mc, ctx, args, di)==false)
-        goto read_failed;
+	if (read_MS_x64_arguments (mc, ctx, args, di)==false)
+		goto read_failed;
 #else
-    if (bpf->borland_fastcall)
-    {
-        if (read_borland_fastcall_arguments (mc, ctx, args, di)==false)
-            goto read_failed;
-    }
-    else
-    { // default:
-        if (MC_ReadBuffer(mc, SP+REG_SIZE, args*REG_SIZE, (BYTE*)di->BPF_args)==false)
-            goto read_failed;
-    };
+	if (bpf->borland_fastcall)
+		{
+			if (read_borland_fastcall_arguments (mc, ctx, args, di)==false)
+				goto read_failed;
+		}
+	else
+		if (bpf->microsoft_fastcall)
+			{
+				if (read_microsoft_fastcall_arguments (mc, ctx, args, di)==false)
+					goto read_failed;
+			}
+		else
+			{ // default:
+				if (MC_ReadBuffer(mc, SP+REG_SIZE, args*REG_SIZE, (BYTE*)di->BPF_args)==false)
+					goto read_failed;
+			};
 #endif
-    return;
+	return;
 
-read_failed:
-    DFREE (di->BPF_args);
-    di->BPF_args=NULL;
+ read_failed:
+	DFREE (di->BPF_args);
+	di->BPF_args=NULL;
 };
 
 static void handle_set (BPF* bpf, unsigned bp_no, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, unsigned args)
@@ -567,6 +597,7 @@ static unsigned handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *
 
     if (got_ret_adr)
     {
+	    // FIXME: microsoft_fastcall and borland_fastcall (?) should be handled
         if (bpf->skip || bpf->skip_stdcall)
         {
             L ("(%d) Skipping execution of this function\n", bp_no);

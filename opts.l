@@ -163,6 +163,7 @@ SYMBOL_NAME_RE @?[[:alpha:]\\?_$]{REGEXP}
 <STATE_BPX>[^\\\",)\n]                         { yylval.num = yytext[0]; return CSTRING_BYTE ; }
 
 <STATE_BPF>unicode                   { return BPF_UNICODE; }
+<STATE_BPF>microsoft_fastcall        { return BPF_MICROSOFT_FASTCALL; }
 <STATE_BPF>borland_fastcall          { return BPF_BORLAND_FASTCALL; }
 <STATE_BPF>trace:                    { return BPF_TRACE_COLON; }
 <STATE_BPF>trace                     { return BPF_TRACE; }
