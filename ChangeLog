@@ -1,4 +1,19 @@
-2013-Sep-26 This is a first public version (0.7), uploaded to github.com.
-2014-Jan-28 --dump-seh option
-2014-Feb-16 (BPX, BPF) analyze buffers to be dumped for symbols in it
-2014-Feb-28 (BPF) new option: ARGn_TYPE
+2015-04-17  Dennis Yurichev <dennis@yurichev.com>
+
+	* Switching to autotools.
+
+2014-02-28  Dennis Yurichev <dennis@yurichev.com>
+
+	* (BPF) new option: ARGn_TYPE
+
+2014-02-16  Dennis Yurichev <dennis@yurichev.com>
+
+	* (BPX, BPF) analyze buffers to be dumped for symbols in it
+
+2014-01-28  Dennis Yurichev <dennis@yurichev.com>
+
+	* New --dump-seh option
+
+2013-09-26  Dennis Yurichev <dennis@yurichev.com>
+
+	* New version (0.7), uploaded to github.com.

@@ -1,2 +1,0 @@
--l:1_x64.exe
-bpf=1_x64.exe!f,args:1,dump_args:0x20

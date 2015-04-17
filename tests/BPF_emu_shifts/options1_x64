@@ -1,3 +1,0 @@
--l:1_x64.exe
-bpf=1_x64.exe!main,trace
---emulator-testing
