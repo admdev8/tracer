@@ -288,7 +288,7 @@ void handle_LOAD_DLL_DEBUG_EVENT (DEBUG_EVENT *de)
     process *p=find_process(PID);
     strbuf sb=STRBUF_INIT;
 
-    bool b=GetFileNameFromHandle(de->u.LoadDll.hFile, &sb);
+    bool b=GetFileNameFromHandle(de->u.LoadDll.hFile, &sb, /* report_errors */ true);
     oassert (b);
 
     if (cycle_c_debug)

@@ -5,5 +5,3 @@ Libraries required:
 * bolt (available at https://github.com/dennis714/bolt)
 * porg (available at https://github.com/dennis714/porg)
 * x86_disasm (available at https://github.com/dennis714/x86_disasm)
-
-Usually built in MinGW environment, just run ./make_all.sh (or ./clean_all.sh for opposite effect).

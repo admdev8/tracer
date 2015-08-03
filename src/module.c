@@ -184,7 +184,7 @@ static bool try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
 
 static void set_filename_and_path_for_module (HANDLE file_hdl, module *m, strbuf *fullpath_filename)
 {
-    if (GetFileNameFromHandle(file_hdl, fullpath_filename))
+    if (GetFileNameFromHandle(file_hdl, fullpath_filename, /* report_errors */ true))
     {
         strbuf sb_filename=STRBUF_INIT, sb_filename_without_ext=STRBUF_INIT, sb_path=STRBUF_INIT;
 

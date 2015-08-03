@@ -40,7 +40,7 @@ void add_symbol (address a, char *name, add_symbol_params *params)
     oassert(symtbl && "symbols=NULL in module");
     MemoryCache *mc=params->mc;
 
-    if (one_time_int3_bp_re && params->t==SYM_TYPE_PE_EXPORT && module_adr_in_executable_section (m, a))
+    if (one_time_int3_bp_re && value_in2 (params->t, SYM_TYPE_PE_EXPORT, SYM_TYPE_MAP) && module_adr_in_executable_section (m, a))
     {
         strbuf sb=STRBUF_INIT;
         strbuf_addstr (&sb, get_module_name(m));
