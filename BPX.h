@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include "CONTEXT_utils.h"
 #include "memorycache.h"
+#include "x86_register.h"
 
 typedef struct _BP BP;
 typedef struct _process process;
@@ -37,7 +38,7 @@ typedef struct _BPX_option
     enum BPX_option_type t;
 
     bp_address *a; // if NULL, see reg
-    X86_register reg;
+    enum X86_register reg;
 
     // in case of DUMP or SET
     REG size_or_value;

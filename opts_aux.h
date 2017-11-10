@@ -25,12 +25,6 @@
 #include "regex.h"
 #include "BP.h"
 
-#ifdef _WIN64
-typedef octabyte REG;
-#else
-typedef tetrabyte REG;
-#endif
-
 extern BPF* current_BPF; // filled while parsing
 extern bp_address* current_BPF_address; // filled while parsing
 

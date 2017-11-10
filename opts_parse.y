@@ -96,7 +96,7 @@ void add_new_address_to_be_resolved (bp_address *a)
     struct _BPM *bpm;
     struct _BP *bp;
     struct _BPX_option *bpx_option;
-    X86_register x86reg;
+    enum X86_register x86reg;
     function_type func_type;
 }
 

@@ -19,11 +19,12 @@
 #include "datatypes.h"
 #include "rbtree.h"
 
+// TODO get rid of typedefs:
 typedef struct _process process;
 typedef struct _thread thread;
 typedef struct _BP BP;
 typedef struct _MemoryCache MemoryCache;
-typedef struct _Da Da;
+//typedef struct _Da Da;
 typedef struct _module module;
 
 void dump_PID_if_need(process *p);
@@ -31,7 +32,7 @@ void dump_TID_if_need(process *p, thread *t);
 void set_or_update_DRx_for_thread(thread *t, BP *bp, unsigned DRx_no);
 void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no);
 void set_or_update_all_DRx_breakpoints(process *p);
-bool MC_disas(address a, MemoryCache *mc, Da* out);
+bool MC_disas(address a, MemoryCache *mc, struct Da* out);
 void dump_buf_as_array_of_strings(MemoryCache *mc, address a, size_t size);
 bool read_REG_from_stack (MemoryCache *mc, CONTEXT *ctx, int idx, REG * out);
 bool read_argument_from_stack (MemoryCache *mc, CONTEXT *ctx, unsigned arg, REG * out);

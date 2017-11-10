@@ -35,14 +35,14 @@ process* process_init (DWORD PID, HANDLE PHDL, HANDLE file_handle, LPVOID base_o
     p->base_of_image=(address)base_of_image;
 
     p->modules=rbtree_create(true, "modules", compare_size_t); // compare_REGs?
-    p->threads=rbtree_create(true, "threads", compare_tetrabytes);
+    p->threads=rbtree_create(true, "threads", compare_tetras);
 
     return p;
 };
 
 void process_free (process *p)
 {
-#ifdef TRACER_DEBUG
+#ifdef _DEBUG
     if (p->ins_emulated)
         L ("instructions emulated=%I64d\n", p->ins_emulated);
     if (p->ins_not_emulated)

@@ -56,7 +56,7 @@ static int compare_doubles(void* leftp, void* rightp)
 	return memcmp (leftp, rightp, sizeof(double)); // it's not correct, but what can I do
 };
 
-unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEXT *ctx, MemoryCache *mc)
+unsigned what_to_notice (process *p, thread *t, struct Da *da, strbuf *comments, CONTEXT *ctx, MemoryCache *mc)
 {
 	if (cc_c_debug)
 		L ("%s() begin\n", __func__);
@@ -156,7 +156,7 @@ unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEX
 	case I_CALL:
 		if (da->op[0].type==DA_OP_TYPE_REGISTER || da->op[0].type==DA_OP_TYPE_VALUE_IN_MEMORY) // add symbol to comment
 		{
-			// FIXME function should be here
+			// FIXME a function should be here
 			address adr;
 			obj val;
 
@@ -164,7 +164,9 @@ unsigned what_to_notice (process *p, thread *t, Da *da, strbuf *comments, CONTEX
 			if (Da_op_get_value_of_op (&da->op[0], &adr, ctx, mc, __FILE__, __LINE__, &val, da->prefix_codes, t->TIB))
 			{
 				process_get_sym (p, obj_get_as_REG (&val), true, true, comments);
-				strbuf_addf (comments, " (0x" PRI_ADR_HEX ")", adr);
+				// if da->op[0].type==DA_OP_TYPE_REGISTER, adr itsn't set in Da_op_get_value_of_op()!
+				if (da->op[0].type==DA_OP_TYPE_VALUE_IN_MEMORY)
+					strbuf_addf (comments, " (0x" PRI_ADR_HEX ")", adr);
 			}
 			else
 				strbuf_addstr (comments, "<can't get value of op1 here>");
@@ -463,7 +465,7 @@ exit:
 	return rt;
 };
 
-static void cc_dump_op_name (Da *da, unsigned i, strbuf *out)
+static void cc_dump_op_name (struct Da *da, unsigned i, strbuf *out)
 {
 	//L ("%s() begin i=%d\n", __func__, i);
 	switch (i)
@@ -522,7 +524,7 @@ static void cc_free_op(op_info *op, unsigned tmp_i, address tmp_a)
 	DFREE (op);
 };
 
-static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out, address tmp_a)
+static bool cc_dump_op_and_free (struct Da *da, PC_info* info, unsigned i, strbuf *out, address tmp_a)
 {
 	//L ("%s() begin\n", __func__);
 	oassert(da);
@@ -552,8 +554,8 @@ static bool cc_dump_op_and_free (Da *da, PC_info* info, unsigned i, strbuf *out,
 	{
 	case OBJ_BYTE:
 	case OBJ_WYDE:
-	case OBJ_TETRABYTE:
-	case OBJ_OCTABYTE: 
+	case OBJ_TETRA:
+	case OBJ_OCTA:
 	{
 		set_of_REG_to_string (op->values, out, 10);
 
@@ -781,17 +783,17 @@ static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *m
 		rbtree_insert(op->values, (void*)obj_get_as_wyde(val), NULL);
 		break;
 
-	case OBJ_TETRABYTE: 
+	case OBJ_TETRA: 
 		op=allocate_op_n(info, i);
 		info->op_t[i]=val->t;
-		rbtree_insert(op->values, (void*)obj_get_as_tetrabyte(val), NULL);
+		rbtree_insert(op->values, (void*)obj_get_as_tetra(val), NULL);
 		break;
 
 #ifdef _WIN64
-	case OBJ_OCTABYTE:
+	case OBJ_OCTA:
 		op=allocate_op_n(info, i);
 		info->op_t[i]=val->t;
-		rbtree_insert(op->values, (void*)obj_get_as_octabyte(val), NULL);
+		rbtree_insert(op->values, (void*)obj_get_as_octa(val), NULL);
 		break;
 #endif
         
@@ -817,9 +819,9 @@ static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *m
 
 	if (val->t==
 #ifdef _WIN64
-            OBJ_OCTABYTE
+            OBJ_OCTA
 #else
-            OBJ_TETRABYTE
+            OBJ_TETRA
 #endif
 		)
 	{
@@ -833,7 +835,7 @@ static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *m
 	};
 };
 
-static void save_info_about_PC (thread *t, module *m, strbuf *comment, unsigned to_notice, Da* da, CONTEXT *ctx, 
+static void save_info_about_PC (thread *t, module *m, strbuf *comment, unsigned to_notice, struct Da* da, CONTEXT *ctx, 
 				MemoryCache *mc)
 {
 	if (cc_c_debug)
@@ -951,7 +953,7 @@ static void save_info_about_PC (thread *t, module *m, strbuf *comment, unsigned 
 		L ("%s() end\n", __func__);
 };
 
-void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, 
+void handle_cc(struct Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, 
 	       bool CALL_to_be_skipped_due_to_module, bool CALL_to_be_skipped_due_to_trace_limit)
 {
 	//printf ("sizeof(ins_reported_as_unhandled)/sizeof(bool)=%d\n", sizeof(ins_reported_as_unhandled)/sizeof(bool));

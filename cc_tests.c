@@ -36,7 +36,7 @@ void cc_tests()
 	m->size=0x10000;
 	m->internal_name=DSTRDUP ("dummy_module", "char*");
 	bool b;
-	Da da;
+	struct Da da;
 
 	bzero (&ctx, sizeof(CONTEXT));
 	BYTE* memory_test=DCALLOC(BYTE, PAGE_SIZE, "BYTE");
@@ -219,40 +219,42 @@ void cc_tests()
 
 		construct_common_string(&sb, a, info);
 		//printf ("a=0x" PRI_ADR_HEX " [%s]\n", a, sb.buf);
-		const char *should_be;
+		const char *must_be;
 		switch (a)
 		{
-			case 0: should_be=AX_REGISTER_NAME "=0xa..0xd, 0x10, 0x12, 0x15, 0x20, 0x29a";
+			case 0: must_be=AX_REGISTER_NAME "=0xa..0xd, 0x10, 0x12, 0x15, 0x20, 0x29a";
 				break;
-			case 1: should_be=AX_REGISTER_NAME "=0xa..0x1e(step=4) (16 items skipped) 0x5e..0x6e(step=4)";
+			case 1: must_be=AX_REGISTER_NAME "=0xa..0x1e(step=4) (16 items skipped) 0x5e..0x6e(step=4)";
 				break;
-			case 2: should_be=AX_REGISTER_NAME "=0xa..0x32(step=8) (3 items skipped) 0x4a..0x6a(step=8)";
+			case 2: must_be=AX_REGISTER_NAME "=0xa..0x32(step=8) (3 items skipped) 0x4a..0x6a(step=8)";
 				break;
-			case 3: should_be=SI_REGISTER_NAME "=0, 0x10, 0x20, \"test_string_1\", \"test_string_2\", \"test_string_3\"";
+			case 3: must_be=SI_REGISTER_NAME "=0, 0x10, 0x20, \"test_string_1\", \"test_string_2\", \"test_string_3\"";
 				break;
-			case 5: should_be="ST0=0.1, 1.0, 100.0, 666.7, 1234.1";
+			case 5: must_be="ST0=0.1, 1.0, 100.0, 666.7, 1234.1";
 				break;
-			case 7: should_be="ST0=0.0, 0.1, 0.2, 0.3, 0.4 (9990 doubles skipped) 999.5, 999.6, 999.7, 999.8, 999.9";
+			case 7: must_be="ST0=0.0, 0.1, 0.2, 0.3, 0.4 (9990 doubles skipped) 999.5, 999.6, 999.7, 999.8, 999.9";
 				break;
-			case 9: should_be="ZF=false CF=false";
+			case 9: must_be="ZF=false CF=false";
 				break;
-			case 0xb: should_be="ZF=true CF=true";
+			case 0xb: must_be="ZF=true CF=true";
 				  break;
-			case 0xd: should_be="ZF=false,true CF=false,true";
+			case 0xd: must_be="ZF=false,true CF=false,true";
 				  break;
-			case 0xf: should_be="op1=dummy_module!dummy_symbol+0x6 (0x2001001)";
+			case 0xf: must_be="op1=dummy_module!dummy_symbol+0x6";
 				  break;
-			case 0x11: should_be=AX_REGISTER_NAME "=0x100..0x114(step=4) (54 items skipped) 0x1ec..0x1fc(step=4) " BX_REGISTER_NAME "=0x200..0x205 (22 items skipped) 0x21b..0x21f";
+			case 0x11: must_be=AX_REGISTER_NAME "=0x100..0x114(step=4) (54 items skipped) 0x1ec..0x1fc(step=4) " BX_REGISTER_NAME "=0x200..0x205 (22 items skipped) 0x21b..0x21f";
 				   break;
-			case 0x20: should_be=CX_REGISTER_NAME "=0x11223344";
+			case 0x20: must_be=CX_REGISTER_NAME "=0x11223344";
 				  break;
 			default:
 				   fatal_error();
 				   break;
 		};
-		if(strcmp(should_be, sb.buf)!=0)
+		if(strcmp(must_be, sb.buf)!=0)
 		{
-			printf ("strcmp (%s, %s) failed\n", should_be, sb.buf);
+			//printf ("strcmp (%s, %s) failed\n", must_be, sb.buf);
+			printf ("strcmp () failed\n");
+			printf ("must_be: [%s], we got: [%s]\n", must_be, sb.buf);
 			exit(1);
 		};
 		strbuf_deinit (&sb);

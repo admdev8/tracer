@@ -1,0 +1,68 @@
+OPTIONS=/D__WORDSIZE=64 /Zi /D_DEBUG /DRE_USE_MALLOC /I../octothorpe /I../porg /I../x86_disasm /I../bolt
+OBJECTS=BP.obj BPF.obj BPM.obj BPX.obj bp_address.obj cc.obj cc_tests.obj cycle.obj lex.yy.obj module.obj one_time_INT3_BP.obj \
+	opts_parse.tab.obj opts_test.obj process.obj SEH.obj symbol.obj thread.obj utils.obj
+
+all: tracer64.exe $(OBJECTS)
+
+tracer64.exe: $(OBJECTS)
+	cl tracer.c /Fe: tracer64.exe $(OPTIONS) $(OBJECTS) ../octothorpe/octothorpe64.lib ../porg/porg64.lib ../x86_disasm/x86_disasm64.lib ../bolt/bolt64.lib imagehlp.lib dbghelp.lib advapi32.lib winhttp.lib
+
+BP.obj: BP.c BP.h
+	cl BP.c /c $(OPTIONS)
+
+BPF.obj: BPF.c BPF.h
+	cl BPF.c /c $(OPTIONS)
+
+BPM.obj: BPM.c BPM.h
+	cl BPM.c /c $(OPTIONS)
+
+BPX.obj: BPX.c BPX.h
+	cl BPX.c /c $(OPTIONS)
+
+bp_address.obj: bp_address.c bp_address.h
+	cl bp_address.c /c $(OPTIONS)
+
+cc.obj: cc.c cc.h
+	cl cc.c /c $(OPTIONS)
+
+cc_tests.obj: cc_tests.c
+	cl cc_tests.c /c $(OPTIONS)
+
+cycle.obj: cycle.c cycle.h
+	cl cycle.c /c $(OPTIONS)
+
+lex.yy.obj: lex.yy.c
+	cl lex.yy.c /c $(OPTIONS) /DYY_NO_UNISTD_H
+
+module.obj: module.c module.h
+	cl module.c /c $(OPTIONS)
+
+one_time_INT3_BP.obj: one_time_INT3_BP.c one_time_INT3_BP.h
+	cl one_time_INT3_BP.c /c $(OPTIONS)
+
+opts_parse.tab.obj: opts_parse.tab.c opts_parse.tab.h
+	cl opts_parse.tab.c /c $(OPTIONS)
+
+opts_test.obj: opts_test.c
+	cl opts_test.c /c $(OPTIONS)
+
+process.obj: process.c process.h
+	cl process.c /c $(OPTIONS)
+
+SEH.obj: SEH.c SEH.h
+	cl SEH.c /c $(OPTIONS)
+
+symbol.obj: symbol.c symbol.h
+	cl symbol.c /c $(OPTIONS)
+
+thread.obj: thread.c thread.h
+	cl thread.c /c $(OPTIONS)
+
+utils.obj: utils.c utils.h
+	cl utils.c /c $(OPTIONS)
+
+clean:
+	del -f *.obj
+	del -f *.exe
+	del -f bolt64.lib
+

@@ -20,10 +20,11 @@
 #include "x86_disas.h"
 #include "lisp.h"
 
+// TODO get rid of typedefs
 typedef struct _process process;
 typedef struct _thread thread;
 typedef struct _module module;
-typedef struct _Da Da;
+//typedef struct _Da Da;
 
 // order matters!
 #define WORKOUT_OP1 0
@@ -85,16 +86,16 @@ typedef struct _op_info
 
 typedef struct _PC_info
 {
-    Da *da;
+    struct Da *da;
     op_info *op[7]; // OP1/2/3/AX/CX/DX/ST0
     enum obj_type op_t[7]; // type for OP1/2/3/AX/CX/DX/ST0. use this from lisp.h
-    octabyte executed; // how many times we've been here?
+    octa executed; // how many times we've been here?
     char *comment; // (one) comment about this PC
     wyde flags; // FLAG_xF_CAN_BE_(TRUE|FALSE)
 } PC_info;
 
 void cc_dump_and_free(module *m); // for module m
-void handle_cc(Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, 
+void handle_cc(struct Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, 
         bool CALL_to_be_skipped_due_to_module, bool CALL_to_be_skipped_due_to_trace_limit);
 
 // can be called from cc_tests.c

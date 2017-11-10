@@ -18,7 +18,7 @@
 #include "opts_aux.h"
 #include "dmalloc.h"
 
-#ifdef TRACER_DEBUG
+#ifdef _DEBUG
 
 // opts.tab.c
 int yydebug;
@@ -48,12 +48,13 @@ static void do_test(char *s, char *should_be)
 
 void opts_test()
 {
-#ifdef O_BITS64
+    // move this to octo...
+#if __WORDSIZE==64
     oassert(strtol_or_strtoll("0xAB12345678", NULL, 16)==0xAB12345678);
-#elif defined O_BITS32
+#elif __WORDSIZE==32
     oassert(strtol_or_strtoll("0x12345678", NULL, 16)==0x12345678);
 #else
-#error "O_BITS64 or O_BITS32 should be defined"
+#error "__WORDSIZE must be defined"
 #endif
 
     //yydebug=1;

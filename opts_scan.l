@@ -23,8 +23,9 @@
 #include "dmalloc.h"
 #include "X86_register.h"
 
-#include "opts_parse.h"
+//#include "opts_parse.h"
 #include "opts_aux.h"
+#include "opts_parse.tab.h"
 
 // BCC mangled names may be started with @
 

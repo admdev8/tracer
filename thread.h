@@ -49,7 +49,7 @@ typedef struct _thread
 
     // for CPU emulator
     bool last_emulated_present;
-    Da *last_emulated_ins;
+    struct Da *last_emulated_ins;
     MemoryCache *last_emulated_MC;
     CONTEXT *last_emulated_ctx;
 } thread;

@@ -155,7 +155,7 @@ void attach_process(obj *PIDs)
 {
     for (obj *i=PIDs; i; i=cdr(i))
     {
-        if (DebugActiveProcess (obj_get_as_tetrabyte(car(i)))==FALSE)
+        if (DebugActiveProcess (obj_get_as_tetra(car(i)))==FALSE)
             die_GetLastError ("DebugActiveProcess() failed\n");
     };
 };
@@ -200,7 +200,7 @@ void debug_or_attach()
         obj_free(attach_PIDs);
     } else if (attach_PID!=-1)
     {
-        attach_PIDs=cons(obj_tetrabyte(attach_PID), NULL);
+        attach_PIDs=cons(obj_tetra(attach_PID), NULL);
         attach_process(attach_PIDs);
         obj_free(attach_PIDs);
     }
@@ -489,7 +489,7 @@ void free_trace_skip_options(trace_skip_element *i)
     DFREE(i);
 };
 
-#ifdef TRACER_DEBUG
+#ifdef _DEBUG
 void cc_tests();
 void opts_test();
 void tests()
@@ -579,7 +579,7 @@ int main(int argc, char *argv[], char *envp[])
 
     if (argc==2 && stricmp (argv[1], "test")==0)
     {
-#ifdef TRACER_DEBUG
+#ifdef _DEBUG
         tests();
 #else
         printf ("no tests in release version\n");
@@ -640,7 +640,7 @@ int main(int argc, char *argv[], char *envp[])
     EnableDebugPrivilege (TRUE);
 
     debug_or_attach();
-    processes=rbtree_create(true, "processes", compare_tetrabytes);
+    processes=rbtree_create(true, "processes", compare_tetras);
    
     if (run_thread_b && IsDebuggerPresent()==FALSE) // do not start thread B if gdb is used...
     {

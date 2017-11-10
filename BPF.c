@@ -50,7 +50,7 @@ static const char* function_type_ToString (function_type f)
         case TY_PTR:
             return "ptr";
         case TY_TETRABYTE:
-            return "tetrabyte";
+            return "tetra";
         case TY_QSTRING:
             return "QString";
         case TY_PTR_TO_QSTRING:
@@ -130,8 +130,8 @@ void BPF_free(BPF* o)
 struct QString_obj
 {
     REG QBasicAtomicInt;
-    tetrabyte alloc;
-    tetrabyte size;
+    tetra alloc;
+    tetra size;
     address data;
 };
 
@@ -727,7 +727,7 @@ bool handle_tracing_should_be_skipped(process *p, thread *t, MemoryCache *mc, CO
 };
 
 static bool handle_tracing_disassemble_and_cc (process *p, thread *t, MemoryCache *mc,
-        CONTEXT *ctx, unsigned bp_no, Da* da)
+        CONTEXT *ctx, unsigned bp_no, struct Da* da)
 {
     BP *bp=breakpoints[bp_no];
     BPF *bpf=bp->u.bpf;
@@ -842,7 +842,7 @@ static void check_emulator_results_if_need (process *p, thread *t, CONTEXT *ctx)
     DFREE(t->last_emulated_ins);
 };
 
-static bool emulate_if_need(process *p, thread *t, Da* da, CONTEXT *ctx, MemoryCache *mc)
+static bool emulate_if_need(process *p, thread *t, struct Da* da, CONTEXT *ctx, MemoryCache *mc)
 {
     // if we test emulator, emulate next instruction only in one case: 
     // last_emulated_* were checked before by emulator tester and t->last_emulated_present is false
@@ -884,7 +884,7 @@ static bool emulate_if_need(process *p, thread *t, Da* da, CONTEXT *ctx, MemoryC
         {
             strbuf tmp=STRBUF_INIT;
             Da_ToString(da, &tmp);
-#ifdef TRACER_DEBUG            
+#ifdef _DEBUG            
             L_once ("instruction wasn't emulated=%s\n", tmp.buf);
 #endif            
             strbuf_deinit(&tmp);
@@ -908,7 +908,7 @@ static bool emulate_if_need(process *p, thread *t, Da* da, CONTEXT *ctx, MemoryC
         oassert(t->last_emulated_present==false);
         oassert(t->last_emulated_ctx==NULL);
         oassert(t->last_emulated_MC==NULL);
-        t->last_emulated_ins=DMEMDUP (da, sizeof(Da), "Da");
+        t->last_emulated_ins=DMEMDUP (da, sizeof(struct Da), "struct Da");
         t->last_emulated_present=true;
         t->last_emulated_ctx=new_ctx;
         t->last_emulated_MC=new_mc;
@@ -950,7 +950,7 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
         if (PC==di->ret_adr && (SP >= (di->SP_at_ret_adr)+sizeof(REG)))
             return ht_finished;
 
-        Da da;
+        struct Da da;
 
         // need to skip something? are we at the start of function to skip? is SYSCALL here? depth-level reached?
         // note: short-curcuit here
