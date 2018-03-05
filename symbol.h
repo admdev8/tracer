@@ -23,9 +23,7 @@
 #include "rbtree.h"
 #include "fuzzybool.h"
 
-typedef struct _module module;
-
-typedef enum _symbol_type
+enum symbol_type
 {
     SYM_TYPE_SPECIAL,
     SYM_TYPE_PE_EXPORT,
@@ -33,25 +31,25 @@ typedef enum _symbol_type
     SYM_TYPE_ORACLE_SYM,
     SYM_TYPE_PDB
     // to be added here: SYM_TYPE_INLINE_FUNCTION - to be added while scanning for patterns
-} symbol_type;
+};
 
-typedef struct _symbol
+struct symbol
 {
-    symbol_type t;
+    enum symbol_type t;
     char *name;
     TrueFalseUndefined skip_on_tracing;
-    struct _symbol *next;
-} symbol;
+    struct symbol *next;
+};
 
-typedef struct _add_symbol_params
+struct add_symbol_params
 {
-    process* p;
-    module* m;
-    symbol_type t;
-    MemoryCache *mc;
-} add_symbol_params;
+    struct process* p;
+    struct module* m;
+    enum symbol_type t;
+    struct MemoryCache *mc;
+};
 
-void add_symbol (address a, char *name, add_symbol_params *params);
-bool symbol_skip_on_tracing(module *m, symbol *s);
+void add_symbol (address a, char *name, struct add_symbol_params *params);
+bool symbol_skip_on_tracing(struct module *m, struct symbol *s);
 
 /* vim: set expandtab ts=4 sw=4 : */

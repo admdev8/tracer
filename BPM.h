@@ -18,25 +18,22 @@
 #include <windows.h>
 #include "memorycache.h"
 
-typedef struct _process process;
-typedef struct _thread thread;
-
 enum BPM_type
 {
     BPM_type_W,
     BPM_type_RW
 };
 
-typedef struct _BPM
+struct BPM
 {
     unsigned width; // in bytes!
     enum BPM_type t;
-} BPM;
+};
 
-BPM *create_BPM(unsigned width, enum BPM_type t);
-void BPM_ToString(BPM *bpm, strbuf *out);
-void BPM_free(BPM *);
-void handle_BPM(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc);
-void BPM_set_or_update_DRx_breakpoint(BPM *b, address a, unsigned DRx_no, CONTEXT *ctx);
+struct BPM *create_BPM(unsigned width, enum BPM_type t);
+void BPM_ToString(struct BPM *bpm, strbuf *out);
+void BPM_free(struct BPM *);
+void handle_BPM(struct process *p, struct thread *t, int bp_no, CONTEXT *ctx, struct MemoryCache *mc);
+void BPM_set_or_update_DRx_breakpoint(struct BPM *b, address a, unsigned DRx_no, CONTEXT *ctx);
 
 /* vim: set expandtab ts=4 sw=4 : */

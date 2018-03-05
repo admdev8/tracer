@@ -13,6 +13,7 @@
  *
  */
 
+#include "tracer.h"
 #include "oassert.h"
 #include "ostrings.h"
 #include "BPF.h"
@@ -33,7 +34,32 @@
 #include "x86_emu.h"
 #include "fmt_utils.h"
 
-static const char* function_type_ToString (function_type f)
+void BPF_skip_func (struct process *p, int bp_no, CONTEXT *ctx, struct MemoryCache *mc, address ret_adr)
+{
+#ifdef INT3_DURING_FUNC_SKIP
+            p->INT3_DURING_FUNC_SKIP_used[bp_no]=true;
+            //L ("ret_adr=0x" PRI_ADR_HEX "\n", ret_adr);
+            p->INT3_DURING_FUNC_SKIP_addresses[bp_no]=ret_adr;
+            bool b=MC_ReadByte (mc, ret_adr, &p->INT3_DURING_FUNC_SKIP_byte[bp_no]);
+            oassert(b && "can't read byte at breakpoint start");
+            b=MC_WriteByte (mc, ret_adr, 0xCC);
+            oassert(b && "can't write 0xCC byte at breakpoint start");
+
+            if (verbose>0)
+            {
+                strbuf sb=STRBUF_INIT;
+                address PC=CONTEXT_get_PC(ctx);
+                process_get_sym (p, PC, /* add_module_name */ true, /* add_offset */ true, &sb);
+                L ("(%d) Using INT3 to skip execution of %s\n", bp_no, sb.buf);
+                strbuf_deinit(&sb);
+            };
+#else
+            //clear_TF(ctx);
+            CONTEXT_setDRx_and_DR7 (ctx, bp_no, ret_adr);
+#endif
+};
+
+static const char* function_type_ToString (enum function_type f)
 {
     switch (f)
     {
@@ -62,7 +88,7 @@ static const char* function_type_ToString (function_type f)
     };
 };
 
-void BPF_ToString(BPF *b, strbuf *out)
+void BPF_ToString(struct BPF *b, strbuf *out)
 {
     strbuf_addstr (out, "BPF. options: ");
     if (b->unicode)
@@ -117,7 +143,7 @@ void BPF_ToString(BPF *b, strbuf *out)
             strbuf_addf(out, "arg%d_type=%s ", i+1, function_type_ToString(b->arg_types[i]));
 };
 
-void BPF_free(BPF* o)
+void BPF_free(struct BPF* o)
 {
     if (o->when_called_from_address)
         bp_address_free(o->when_called_from_address);
@@ -135,7 +161,7 @@ struct QString_obj
     address data;
 };
 
-static void dump_QString (address a, MemoryCache *mc)
+static void dump_QString (address a, struct MemoryCache *mc)
 {
     /*
        struct Data {
@@ -173,7 +199,7 @@ static void dump_QString (address a, MemoryCache *mc)
             else
                 L ("(data=(read error))");
         };
-
+        
         strbuf_deinit(&sb);
     }
     else
@@ -182,7 +208,7 @@ static void dump_QString (address a, MemoryCache *mc)
 
 // function to be separated?
 // return true if hexadecimal number dumped
-static bool BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type ft)
+static bool BPF_dump_arg (struct MemoryCache *mc, REG arg, bool unicode, enum function_type ft)
 {
     bool rt=false;
     switch (ft)
@@ -245,7 +271,7 @@ static bool BPF_dump_arg (MemoryCache *mc, REG arg, bool unicode, function_type 
     return rt;
 };
 
-static void BPF_dump_args (MemoryCache *mc, REG* args, unsigned args_n, bool unicode, function_type *arg_types)
+static void BPF_dump_args (struct MemoryCache *mc, REG* args, unsigned args_n, bool unicode, enum function_type *arg_types)
 {
     for (unsigned i=0; i<args_n; i++)
     {
@@ -256,8 +282,8 @@ static void BPF_dump_args (MemoryCache *mc, REG* args, unsigned args_n, bool uni
 };
 
 #ifdef _WIN64
-static bool read_MS_x64_arguments (MemoryCache *mc, CONTEXT *ctx, unsigned args,
-        BP_thread_specific_dynamic_info *di)
+static bool read_MS_x64_arguments (struct MemoryCache *mc, CONTEXT *ctx, unsigned args,
+        struct BP_thread_specific_dynamic_info *di)
 {
     for (unsigned a=0; a<args; a++)
     {
@@ -282,8 +308,8 @@ static bool read_MS_x64_arguments (MemoryCache *mc, CONTEXT *ctx, unsigned args,
 #endif
 
 #ifndef _WIN64
-static bool read_microsoft_fastcall_arguments (MemoryCache *mc, CONTEXT *ctx, unsigned args,
-        BP_thread_specific_dynamic_info *di)
+static bool read_microsoft_fastcall_arguments (struct MemoryCache *mc, CONTEXT *ctx, unsigned args,
+        struct BP_thread_specific_dynamic_info *di)
 {
     unsigned arguments_in_stack=(args<2) ? 0 : args-2;
 
@@ -304,8 +330,8 @@ static bool read_microsoft_fastcall_arguments (MemoryCache *mc, CONTEXT *ctx, un
     return true;
 };
 
-static bool read_borland_fastcall_arguments (MemoryCache *mc, CONTEXT *ctx, unsigned args,
-        BP_thread_specific_dynamic_info *di)
+static bool read_borland_fastcall_arguments (struct MemoryCache *mc, CONTEXT *ctx, unsigned args,
+        struct BP_thread_specific_dynamic_info *di)
 {
     unsigned arguments_in_stack=(args<3) ? 0 : args-3;
 
@@ -329,10 +355,10 @@ static bool read_borland_fastcall_arguments (MemoryCache *mc, CONTEXT *ctx, unsi
 };
 #endif
 
-static void load_args(thread *t, CONTEXT *ctx, MemoryCache *mc, unsigned bp_no, unsigned args, BPF* bpf)
+static void load_args(struct thread *t, CONTEXT *ctx, struct MemoryCache *mc, unsigned bp_no, unsigned args, struct BPF* bpf)
 {
 	address SP=CONTEXT_get_SP(ctx);
-	BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+	struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
 	di->BPF_args=DMALLOC(REG, args, "REG");
 
 #ifdef _WIN64
@@ -358,14 +384,14 @@ static void load_args(thread *t, CONTEXT *ctx, MemoryCache *mc, unsigned bp_no, 
 #endif
 	return;
 
- read_failed:
+read_failed:
 	DFREE (di->BPF_args);
 	di->BPF_args=NULL;
 };
 
-static void handle_set (BPF* bpf, unsigned bp_no, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, unsigned args)
+static void handle_set (struct BPF* bpf, unsigned bp_no, struct process *p, struct thread *t, CONTEXT *ctx, struct MemoryCache *mc, unsigned args)
 {
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
     if (bpf->set_arg_n+1 > args)
     {
         L ("Can't work with arg_%d: it wasn't loaded, change 'args' options in BPF!\n", bpf->set_arg_n);
@@ -379,9 +405,9 @@ static void handle_set (BPF* bpf, unsigned bp_no, process *p, thread *t, CONTEXT
             bpf->set_val, succ ? "" : "cannot be ", adr, bpf->set_arg_n, bpf->set_ofs);
 };
 
-static void dump_bufs_if_need(process *p, thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args, unsigned bp_no)
+static void dump_bufs_if_need(struct process *p, struct thread *t, struct MemoryCache *mc, unsigned size, unsigned args_n, REG* args, unsigned bp_no)
 {
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
     oassert (di->BPF_buffers_at_start==NULL);
     di->BPF_buffers_at_start=(BYTE**)DCALLOC(REG*, args_n, "REG*");
     di->BPF_buffers_at_start_cnt=args_n;
@@ -404,9 +430,9 @@ static void dump_bufs_if_need(process *p, thread *t, MemoryCache *mc, unsigned s
     };
 };
 
-static void dump_args_diff_if_need(process *p, thread *t, MemoryCache *mc, unsigned size, unsigned args_n, REG* args, unsigned bp_no)
+static void dump_args_diff_if_need(struct process *p, struct thread *t, struct MemoryCache *mc, unsigned size, unsigned args_n, REG* args, unsigned bp_no)
 {
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
     oassert (di->BPF_buffers_at_start);
 
     for (unsigned i=0; i<args_n; i++)
@@ -437,7 +463,7 @@ static void dump_args_diff_if_need(process *p, thread *t, MemoryCache *mc, unsig
     di->BPF_buffers_at_start=NULL;
 };
         
-static void dump_object_info_if_needed(BPF *bpf, MemoryCache *mc, CONTEXT *ctx)
+static void dump_object_info_if_needed(struct BPF *bpf, struct MemoryCache *mc, CONTEXT *ctx)
 {
     if (bpf->this_type==TY_UNKNOWN || bpf->this_type==TY_UNINTERESTING)
         return;
@@ -451,9 +477,9 @@ static void dump_object_info_if_needed(BPF *bpf, MemoryCache *mc, CONTEXT *ctx)
     L ("\n");
 };
 
-static void is_it_known_function (const char *fn_name, BPF* bpf)
+static void is_it_known_function (const char *fn_name, struct BPF* bpf)
 {
-    if (BPF_c_debug)
+    if (verbose>0)
         L ("%s(fn_name=%s)\n", __func__, fn_name);
 
     if (bpf->arg_types)
@@ -463,13 +489,13 @@ static void is_it_known_function (const char *fn_name, BPF* bpf)
     if (strstr(fn_name, "?information@QMessageBox@@SAHPEAVQWidget@@AEBVQString@@1111HH@Z"))
     {
         bpf->args=8;
-        bpf->arg_types=DCALLOC(function_type, bpf->args, "function_type");
+        bpf->arg_types=DCALLOC(enum function_type, bpf->args, "function_type");
         bpf->arg_types[0]=TY_PTR; // QWidget
         bpf->arg_types[1]=bpf->arg_types[2]=bpf->arg_types[3]=bpf->arg_types[4]=bpf->arg_types[5]=TY_QSTRING;
         bpf->arg_types[6]=bpf->arg_types[7]=TY_INT;
         bpf->ret_type=bpf->this_type=TY_UNINTERESTING;
         bpf->known_function=Fuzzy_True;
-        if (BPF_c_debug)
+        if (verbose>0)
             L ("%s() - True\n", __func__);
         return;
     };
@@ -479,19 +505,19 @@ static void is_it_known_function (const char *fn_name, BPF* bpf)
     {
         bpf->this_type=TY_QSTRING;
         bpf->known_function=Fuzzy_True;
-        if (BPF_c_debug)
+        if (verbose>0)
             L ("%s() - True\n", __func__);
         return;
     };
     bpf->known_function=Fuzzy_False;
-    if (BPF_c_debug)
+    if (verbose>0)
         L ("%s() - False\n", __func__);
 };
 
 // return - should this call skipped?
-static bool handle_when_called_from_func(process *p, thread *t, unsigned bp_no, BPF *bpf, bool got_ret_adr)
+static bool handle_when_called_from_func(struct process *p, struct thread *t, unsigned bp_no, struct BPF *bpf, bool got_ret_adr)
 {
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
     oassert (bpf->when_called_from_func);
 
     if (bpf->when_called_from_func->resolved==false || got_ret_adr==false)
@@ -507,13 +533,13 @@ static bool handle_when_called_from_func(process *p, thread *t, unsigned bp_no, 
         if (a)
         {
             bpf->when_called_from_func_next_func_adr=a;
-            if (BPF_c_debug)
+            if (verbose>0)
                 L ("(case 1) bpf->when_called_from_func_next_func_adr=0x" PRI_ADR_HEX "\n", bpf->when_called_from_func_next_func_adr);
         }
         else
         {
             bpf->when_called_from_func_next_func_adr=get_module_end(find_module_for_address (p, bpf->when_called_from_func->abs_address));
-            if (BPF_c_debug)
+            if (verbose>0)
                 L ("(case 2) bpf->when_called_from_func_next_func_adr=0x" PRI_ADR_HEX "\n", bpf->when_called_from_func_next_func_adr);
         };
         bpf->when_called_from_func_next_func_adr_present=true;
@@ -530,12 +556,12 @@ static bool handle_when_called_from_func(process *p, thread *t, unsigned bp_no, 
 // 0 - OK, go ahead
 // 1 - when_called_from_func case, or we didn't get return address. do not call handle_finish()
 // 2 - this function should be skipped, call handle_finish()
-static unsigned handle_begin(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
+static unsigned handle_begin(struct process *p, struct thread *t, struct BP *bp, int bp_no, CONTEXT *ctx, struct MemoryCache *mc)
 {
     // do function begin things
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
-    BPF *bpf=bp->u.bpf;
-    bp_address *bp_a=bp->a;
+    struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    struct BPF *bpf=bp->u.bpf;
+    struct bp_address *bp_a=bp->a;
     strbuf sb=STRBUF_INIT, sb_address=STRBUF_INIT;
     address_to_string(bp_a, &sb_address); // sb_address in form module!regexp
     address SP=CONTEXT_get_SP(ctx);
@@ -626,11 +652,11 @@ exit:
     return rt;
 };
 
-static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx, MemoryCache *mc)
+static void handle_finish(struct process *p, struct thread *t, struct BP *bp, int bp_no, CONTEXT *ctx, struct MemoryCache *mc)
 {
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
-    bp_address *bp_a=bp->a;
-    BPF *bpf=bp->u.bpf;
+    struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    struct bp_address *bp_a=bp->a;
+    struct BPF *bpf=bp->u.bpf;
     strbuf sb_address=STRBUF_INIT;
     address_to_string(bp_a, &sb_address);
     // do function finish things
@@ -663,7 +689,7 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
 
     if (bpf->rt_present && bpf->rt_probability_present)
     {
-        if (BPF_c_debug)
+        if (verbose>0)
         {
             L ("bpf->rt_probability=%f\n", bpf->rt_probability);
             L_print_buf ((BYTE*)&bpf->rt_probability, sizeof(double));
@@ -685,21 +711,21 @@ static void handle_finish(process *p, thread *t, BP *bp, int bp_no, CONTEXT *ctx
     strbuf_deinit(&sb_address);
 };
 
-bool handle_tracing_should_be_skipped(process *p, thread *t, MemoryCache *mc, CONTEXT *ctx, unsigned bp_no)
+bool handle_tracing_should_be_skipped(struct process *p, struct thread *t, struct MemoryCache *mc, CONTEXT *ctx, unsigned bp_no)
 {
     REG PC=CONTEXT_get_PC(ctx);
     DWORD tmp;
     if (MC_ReadTetrabyte (mc, PC, &tmp) && tmp==0xC015FF64) // 64 FF 15 C0 00 00 00 <call large dword ptr fs:0C0h>
     {
-        if (tracing_debug)
+        if (verbose>0)
             L ("syscall to be skipped\n");
         CONTEXT_setDRx_and_DR7 (ctx, bp_no, PC+7);
         return true;
     };
 
     // is there symbol?
-    module *m=find_module_for_address (p, PC);
-    symbol *s=process_sym_exist_at(p, PC);
+    struct module *m=find_module_for_address (p, PC);
+    struct symbol *s=process_sym_exist_at(p, PC);
     if (s)
     {
         // should it be skipped?
@@ -711,12 +737,33 @@ bool handle_tracing_should_be_skipped(process *p, thread *t, MemoryCache *mc, CO
             {
                 oassert(!"can't read return address while we'are 'inside' function");
             };
+#if 0
+#ifdef INT3_DURING_FUNC_SKIP
+            p->INT3_DURING_FUNC_SKIP_used[bp_no]=true;
+            //L ("ret_adr=0x" PRI_ADR_HEX "\n", ret_adr);
+            p->INT3_DURING_FUNC_SKIP_addresses[bp_no]=ret_adr;
+            bool b=MC_ReadByte (mc, ret_adr, &p->INT3_DURING_FUNC_SKIP_byte[bp_no]);
+            oassert(b && "can't read byte at breakpoint start");
+            b=MC_WriteByte (mc, ret_adr, 0xCC);
+            oassert(b && "can't write 0xCC byte at breakpoint start");
+
+            if (verbose>0)
+            {
+                strbuf sb=STRBUF_INIT;
+                process_get_sym (p, PC, /* add_module_name */ true, /* add_offset */ true, &sb);
+                L ("(%d) Using INT3 to skip execution of %s\n", bp_no, sb.buf);
+                strbuf_deinit(&sb);
+            };
+#else
             //clear_TF(ctx);
             CONTEXT_setDRx_and_DR7 (ctx, bp_no, ret_adr);
+#endif
+#endif
+            BPF_skip_func (p, bp_no, ctx, mc, ret_adr);
 
-            BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+            struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
             di->tracing_CALLs_executed--;
-            if (BPF_c_debug)
+            if (verbose>0)
                 L ("0x" PRI_ADR_HEX " skipping function, decreasing tracing_CALLs_executed, now it is %d\n", 
                         PC, di->tracing_CALLs_executed);
 
@@ -726,12 +773,12 @@ bool handle_tracing_should_be_skipped(process *p, thread *t, MemoryCache *mc, CO
     return false;
 };
 
-static bool handle_tracing_disassemble_and_cc (process *p, thread *t, MemoryCache *mc,
+static bool handle_tracing_disassemble_and_cc (struct process *p, struct thread *t, struct MemoryCache *mc,
         CONTEXT *ctx, unsigned bp_no, struct Da* da)
 {
-    BP *bp=breakpoints[bp_no];
-    BPF *bpf=bp->u.bpf;
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    struct BP *bp=breakpoints[bp_no];
+    struct BPF *bpf=bp->u.bpf;
+    struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
     REG PC=CONTEXT_get_PC(ctx);
     bool disassembled=MC_disas(PC, mc, da);
 
@@ -749,11 +796,14 @@ static bool handle_tracing_disassemble_and_cc (process *p, thread *t, MemoryCach
         if (limit_trace_nestedness && (di->tracing_CALLs_executed+1 >= limit_trace_nestedness))
         {
             // this call is to be skipped!
-            if (BPF_c_debug)
+            if (verbose>0)
                 L ("t->tracing_CALLs_executed=%d, limit_trace_nestedness=%d, skipping this CALL!\n",
                         di->tracing_CALLs_executed, limit_trace_nestedness);
             address new_adr=CONTEXT_get_PC(ctx) + da->ins_len;
-            CONTEXT_setDRx_and_DR7 (ctx, bp_no, new_adr);
+
+            //CONTEXT_setDRx_and_DR7 (ctx, bp_no, new_adr);
+            BPF_skip_func (p, bp_no, ctx, mc, new_adr);
+
             if (bpf->cc)                            // redundant?
                 handle_cc(da, p, t, ctx, mc, false, true); // redundant?
             return true;
@@ -761,7 +811,7 @@ static bool handle_tracing_disassemble_and_cc (process *p, thread *t, MemoryCach
         else
         {
             di->tracing_CALLs_executed++;
-            if (BPF_c_debug)
+            if (verbose>0)
                 L ("0x" PRI_ADR_HEX " CALL, increasing tracing_CALLs_executed, now it is %d\n", 
                         PC, di->tracing_CALLs_executed);
         };
@@ -770,7 +820,7 @@ static bool handle_tracing_disassemble_and_cc (process *p, thread *t, MemoryCach
     if (disassembled && da->ins_code==I_RETN && di->tracing_CALLs_executed>0)
     {
         di->tracing_CALLs_executed--;
-        if (BPF_c_debug)
+        if (verbose>0)
             L ("0x" PRI_ADR_HEX " RETN, decreasing tracing_CALLs_executed, now it is %d\n", 
                     PC, di->tracing_CALLs_executed);
     };
@@ -788,7 +838,7 @@ enum ht_result
     ht_need_to_skip_something
 };
 
-static void check_emulator_results_if_need (process *p, thread *t, CONTEXT *ctx)
+static void check_emulator_results_if_need (struct process *p, struct thread *t, CONTEXT *ctx)
 {
     bool fail=false;
 
@@ -829,7 +879,7 @@ static void check_emulator_results_if_need (process *p, thread *t, CONTEXT *ctx)
         exit(0);
     };
     
-    if (tracing_debug)
+    if (verbose>0)
     {
         L ("last checked instruction="); Da_DumpString(&cur_fds, t->last_emulated_ins); L ("\n");
     };
@@ -842,11 +892,15 @@ static void check_emulator_results_if_need (process *p, thread *t, CONTEXT *ctx)
     DFREE(t->last_emulated_ins);
 };
 
-static bool emulate_if_need(process *p, thread *t, struct Da* da, CONTEXT *ctx, MemoryCache *mc)
+static bool emulate_if_need(struct process *p, struct thread *t, struct Da* da, CONTEXT *ctx, struct MemoryCache *mc)
 {
+    // TODO command-line option:
+    //if (disable_emulator)
+    //    return false;
+
     // if we test emulator, emulate next instruction only in one case: 
     // last_emulated_* were checked before by emulator tester and t->last_emulated_present is false
-    // this is done for REP MOVSx/STOSx instructions testing
+    // this is so for REP MOVSx/STOSx instructions testing
     if (emulator_testing && t->last_emulated_present)
         return false;
 
@@ -854,7 +908,7 @@ static bool emulate_if_need(process *p, thread *t, struct Da* da, CONTEXT *ctx, 
         return false; // can't emulate
 
     CONTEXT *new_ctx;
-    MemoryCache *new_mc;
+    struct MemoryCache *new_mc;
 
     if (emulator_testing)
     {
@@ -862,12 +916,12 @@ static bool emulate_if_need(process *p, thread *t, struct Da* da, CONTEXT *ctx, 
         new_mc=MC_MemoryCache_copy_ctor(mc);
     };
 
-    if (tracing_debug)
+    if (verbose>0)
     {
         L ("instruction to be emulated="); Da_DumpString(&cur_fds, da); L ("\n");
     };
 
-    Da_emulate_result r;
+    enum Da_emulate_result r;
 
     if (emulator_testing)
         r=Da_emulate(da, new_ctx, new_mc, true, t->TIB);
@@ -877,16 +931,16 @@ static bool emulate_if_need(process *p, thread *t, struct Da* da, CONTEXT *ctx, 
     if (r==DA_EMULATED_OK)
     {
         p->ins_emulated++;
+        if ((p->ins_emulated&0xffff)==0)
+            L ("Heartbeat: p->ins_emulated=%I64d\n", p->ins_emulated);
     }
     else
     {
-        //if (tracing_debug)
+        if (verbose>0)
         {
             strbuf tmp=STRBUF_INIT;
             Da_ToString(da, &tmp);
-#ifdef _DEBUG            
             L_once ("instruction wasn't emulated=%s\n", tmp.buf);
-#endif            
             strbuf_deinit(&tmp);
             p->ins_not_emulated++;
         };
@@ -899,7 +953,7 @@ static bool emulate_if_need(process *p, thread *t, struct Da* da, CONTEXT *ctx, 
         return false;
     };
 
-    if (tracing_debug)
+    if (verbose>0)
     {
         L ("instruction emulated successfully="); Da_DumpString(&cur_fds, da); L ("\n");
     };
@@ -916,12 +970,12 @@ static bool emulate_if_need(process *p, thread *t, struct Da* da, CONTEXT *ctx, 
     return true;
 };
 
-static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
+static enum ht_result handle_tracing(int bp_no, struct process *p, struct thread *t, CONTEXT *ctx, struct MemoryCache *mc)
 {
     address PC=CONTEXT_get_PC(ctx);
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
 
-    if (tracing_debug)
+    if (verbose>0)
     {
         strbuf sb=STRBUF_INIT;
         process_get_sym(p, PC, true, true, &sb);
@@ -941,7 +995,7 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
         emulated=false;
         PC=CONTEXT_get_PC(ctx);
         address SP=CONTEXT_get_SP(ctx);
-        if (tracing_debug)
+        if (verbose>0)
             L ("%s() emu cycle begin. PC=0x" PRI_ADR_HEX " SP=0x" PRI_ADR_HEX "\n", __func__, PC, SP);
         // (to be implemented in future): check other BPF/BPX breakpoints. handle them if need.
 
@@ -961,9 +1015,7 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
             return ht_need_to_skip_something;
         };
 
-#ifndef _WIN64        
         emulated=emulate_if_need(p, t, &da, ctx, mc);
-#endif        
 
         if (emulator_testing)
             break;
@@ -974,14 +1026,14 @@ static enum ht_result handle_tracing(int bp_no, process *p, thread *t, CONTEXT *
     return ht_go_on;
 };
 
-void handle_BPF(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
+void handle_BPF(struct process *p, struct thread *t, int bp_no, CONTEXT *ctx, struct MemoryCache *mc)
 {
-    if (BPF_c_debug)
+    if (verbose>0)
         L ("%s() begin. PC=0x" PRI_ADR_HEX "\n", __func__, CONTEXT_get_PC (ctx));
-    BP *bp=breakpoints[bp_no];
-    BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
-    BPF_state* state=&di->BPF_states;
-    BPF *bpf=bp->u.bpf;
+    struct BP *bp=breakpoints[bp_no];
+    struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
+    enum BPF_state* state=&di->BPF_states;
+    struct BPF *bpf=bp->u.bpf;
     unsigned u;
 
     switch (*state)
@@ -1026,29 +1078,29 @@ call_handle_tracing_etc:
     switch (handle_tracing(bp_no, p, t, ctx, mc))
     {
         case ht_go_on: // go on
-            if (BPF_c_debug)
+            if (verbose>0)
                 L ("handle_tracing() -> ht_go_on. PC=0x" PRI_ADR_HEX "\n", CONTEXT_get_PC (ctx));
-            di->tracing=true;
+            di->tracing=true; 
             break;
         case ht_finished: // finished
-            if (BPF_c_debug)
+            if (verbose>0)
                 L ("handle_tracing() -> ht_finished\n");
             di->tracing=false;
             REMOVE_BIT(ctx->Dr6, FLAG_DR6_BS);
             goto handle_finish_and_switch_to_default;
         case ht_need_to_skip_something: // need to skip something
-            if (BPF_c_debug)
+            if (verbose>0)
                 L ("handle_tracing() -> ht_need_to_skip_something\n");
             di->tracing=false;
             *state=BPF_state_tracing_skipping;
             break;
     };
-    /*
+
     if (di->tracing)
         set_TF(ctx);
     else
         clear_TF(ctx);
-    */
+
     goto exit;
 
 handle_finish_and_switch_to_default:
@@ -1057,9 +1109,29 @@ switch_to_default:
     *state=BPF_state_default;
 
 exit:
-    if (BPF_c_debug)
+    if (verbose>0)
         L ("%s() end. TF=%s, PC=0x" PRI_ADR_HEX "\n", 
                 __func__, bool_to_string(IS_SET(ctx->EFlags, FLAG_TF)), CONTEXT_get_PC (ctx));
+};
+
+void handle_BPF_INT3(struct process *p, struct thread *t, int DRx_no, CONTEXT *ctx, struct MemoryCache *mc)
+{
+    if (verbose>0)
+        L ("%s() begin. PC=0x" PRI_ADR_HEX "\n", __func__, CONTEXT_get_PC (ctx));
+
+    p->INT3_DURING_FUNC_SKIP_used[DRx_no]=false;
+    bool b=MC_WriteByte (mc, p->INT3_DURING_FUNC_SKIP_addresses[DRx_no], p->INT3_DURING_FUNC_SKIP_byte[DRx_no]);
+    if (b==false)
+    {
+        L ("can't restore byte at 0x" PRI_ADR_HEX ", byte=0x%02X\n", p->INT3_DURING_FUNC_SKIP_addresses[DRx_no], p->INT3_DURING_FUNC_SKIP_byte[DRx_no]);
+        exit(0);
+    };
+    CONTEXT_decrement_PC (ctx);
+
+    handle_BPF(p, t, DRx_no, ctx, mc);
+
+    if (verbose>0)
+        L ("%s() end. \n", __func__);
 };
 
 /* vim: set expandtab ts=4 sw=4 : */

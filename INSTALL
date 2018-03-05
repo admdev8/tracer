@@ -1,7 +1,7 @@
 Requires C11 compiler, like GCC >= 4.7.
 
 Libraries required:
-* octothorpe (available at https://github.com/dennis714/octothorpe)
-* bolt (available at https://github.com/dennis714/bolt)
-* porg (available at https://github.com/dennis714/porg)
-* x86_disasm (available at https://github.com/dennis714/x86_disasm)
+* octothorpe (available at https://github.com/DennisYurichev/octothorpe)
+* bolt (available at https://github.com/DennisYurichev/bolt)
+* porg (available at https://github.com/DennisYurichev/porg)
+* x86_disasm (available at https://github.com/DennisYurichev/x86_disasm)

@@ -1,11 +1,11 @@
-OPTIONS=/D__WORDSIZE=32 /Zi /D_DEBUG /DRE_USE_MALLOC /I../octothorpe /I../porg /I../x86_disasm /I../bolt
+OPTIONS=/D__WORDSIZE=64 /Zi /D_DEBUG /DRE_USE_MALLOC /I../octothorpe /I../porg /I../x86_disasm /I../bolt
 OBJECTS=BP.obj BPF.obj BPM.obj BPX.obj bp_address.obj cc.obj cc_tests.obj cycle.obj lex.yy.obj module.obj one_time_INT3_BP.obj \
 	opts_parse.tab.obj opts_test.obj process.obj SEH.obj symbol.obj thread.obj utils.obj
 
-all: tracer.exe $(OBJECTS)
+all: tracer64.exe $(OBJECTS)
 
-tracer.exe: $(OBJECTS) ../octothorpe/octothorpe.lib ../porg/porg.lib ../x86_disasm/x86_disasm.lib ../bolt/bolt.lib
-	cl tracer.c /Fe: tracer.exe $(OPTIONS) $(OBJECTS) ../octothorpe/octothorpe.lib ../porg/porg.lib ../x86_disasm/x86_disasm.lib ../bolt/bolt.lib imagehlp.lib dbghelp.lib advapi32.lib winhttp.lib
+tracer64.exe: $(OBJECTS) ../octothorpe/octothorpe64.lib ../porg/porg64.lib ../x86_disasm/x86_disasm64.lib ../bolt/bolt64.lib
+	cl tracer.c /Fe: tracer64.exe $(OPTIONS) $(OBJECTS) ../octothorpe/octothorpe64.lib ../porg/porg64.lib ../x86_disasm/x86_disasm64.lib ../bolt/bolt64.lib imagehlp.lib dbghelp.lib advapi32.lib winhttp.lib
 
 BP.obj: BP.c BP.h
 	cl BP.c /c $(OPTIONS)
@@ -64,4 +64,4 @@ utils.obj: utils.c utils.h
 clean:
 	del *.obj
 	del *.exe
-	del tracer.lib
+	del tracer64.lib

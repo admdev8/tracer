@@ -24,21 +24,21 @@
 #include "memorycache.h"
 #include "fmt_utils.h"
 
-static symbol *create_symbol (symbol_type t, char *n)
+static struct symbol *create_symbol (enum symbol_type t, char *n)
 {
-    symbol *rt=DCALLOC (symbol, 1, "symbol");
+    struct symbol *rt=DCALLOC (struct symbol, 1, "symbol");
     rt->t=t;
     rt->skip_on_tracing=Fuzzy_Undefined;
     rt->name=DSTRDUP(n, "name");
     return rt;
 };
 
-void add_symbol (address a, char *name, add_symbol_params *params)
+void add_symbol (address a, char *name, struct add_symbol_params *params)
 {
-    module *m=params->m;
+    struct module *m=params->m;
     rbtree *symtbl=m->symbols;
     oassert(symtbl && "symbols=NULL in module");
-    MemoryCache *mc=params->mc;
+    struct MemoryCache *mc=params->mc;
 
     if (one_time_int3_bp_re && value_in2 (params->t, SYM_TYPE_PE_EXPORT, SYM_TYPE_MAP) && module_adr_in_executable_section (m, a))
     {
@@ -57,7 +57,7 @@ void add_symbol (address a, char *name, add_symbol_params *params)
     {
         m->security_cookie_adr=a;
         m->security_cookie_adr_known=true;
-        if (symbol_c_debug)
+        if (verbose>0)
             L ("%s() got address of security_cookie (0x" PRI_REG_HEX ") for %s!%s\n", __FUNCTION__, a, get_module_name(m), name);
     };
 
@@ -81,8 +81,8 @@ void add_symbol (address a, char *name, add_symbol_params *params)
         L("New symbol. Module=[%s], address=[0x" PRI_ADR_HEX "], name=[%s]\n", get_module_name(m), a, name);
     };
 
-    symbol *new_sym=create_symbol(params->t, name);
-    symbol *first_sym=(symbol*)rbtree_lookup(symtbl, (void*)a);
+    struct symbol *new_sym=create_symbol(params->t, name);
+    struct symbol *first_sym=(struct symbol*)rbtree_lookup(symtbl, (void*)a);
 
     if (first_sym)
         new_sym->next=first_sym; // insert at beginning of list
@@ -90,7 +90,7 @@ void add_symbol (address a, char *name, add_symbol_params *params)
     rbtree_insert(symtbl, (void*)a, (void*)new_sym);
 };
 
-bool symbol_skip_on_tracing(module *m, symbol *s)
+bool symbol_skip_on_tracing(struct module *m, struct symbol *s)
 {
     if (m->skip_all_symbols_in_module_on_trace)
         return true;
@@ -102,7 +102,7 @@ bool symbol_skip_on_tracing(module *m, symbol *s)
 
     // run regexp, etc
     int j;
-    trace_skip_element * i;
+    struct trace_skip_element * i;
     for (i=trace_skip_options, j=0; i; i=i->next, j++)
     {
         if (regexec (&i->re_path, m->path, 0, NULL, 0)==0)

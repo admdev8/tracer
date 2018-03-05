@@ -25,9 +25,9 @@
 
 bool process_c_debug=false;
 
-process* process_init (DWORD PID, HANDLE PHDL, HANDLE file_handle, LPVOID base_of_image)
+struct process* process_init (DWORD PID, HANDLE PHDL, HANDLE file_handle, LPVOID base_of_image)
 {
-    process *p=DCALLOC (process, 1, "process");
+    struct process *p=DCALLOC (struct process, 1, "process");
     
     p->PID=PID;
     p->PHDL=PHDL;
@@ -40,7 +40,7 @@ process* process_init (DWORD PID, HANDLE PHDL, HANDLE file_handle, LPVOID base_o
     return p;
 };
 
-void process_free (process *p)
+void process_free (struct process *p)
 {
 #ifdef _DEBUG
     if (p->ins_emulated)
@@ -62,16 +62,16 @@ void process_free (process *p)
     DFREE (p);
 };
 
-process *find_process(DWORD PID)
+struct process *find_process(DWORD PID)
 {
-    process *p=(process*)rbtree_lookup(processes, (void*)PID);
+    struct process *p=(struct process*)rbtree_lookup(processes, (void*)PID);
     oassert (p!=NULL && "PID not found in processes table");
     return p;
 };
 
-module *find_module_for_address (process *p, address a)
+struct module *find_module_for_address (struct process *p, address a)
 {
-    module *prev_v, *m=rbtree_lookup2 (p->modules, (void*)a, NULL, (void**)&prev_v, NULL, NULL);
+    struct module *prev_v, *m=rbtree_lookup2 (p->modules, (void*)a, NULL, (void**)&prev_v, NULL, NULL);
 
     if (m) // a==base address of some module
         return m;
@@ -88,9 +88,9 @@ module *find_module_for_address (process *p, address a)
 };
 
 // may return NULL
-symbol *process_sym_exist_at (process *p, address a)
+struct symbol *process_sym_exist_at (struct process *p, address a)
 {
-    module *m=find_module_for_address (p, a);
+    struct module *m=find_module_for_address (p, a);
 
     if (m==NULL)
         return NULL;
@@ -98,12 +98,12 @@ symbol *process_sym_exist_at (process *p, address a)
     return module_sym_exist_at (m, a);
 };
 
-void process_get_sym (process *p, address a, bool add_module_name, bool add_offset, strbuf *out)
+void process_get_sym (struct process *p, address a, bool add_module_name, bool add_offset, strbuf *out)
 {
     if (0 && process_c_debug)
         L ("%s() a=0x" PRI_ADR_HEX "\n", __func__, a);
     
-    module *m=find_module_for_address (p, a);
+    struct module *m=find_module_for_address (p, a);
     
     if (m)
         module_get_sym (m, a, add_module_name, add_offset, out);
@@ -116,9 +116,9 @@ void process_get_sym (process *p, address a, bool add_module_name, bool add_offs
     };
 };
 
-address process_get_next_sym_address_after (process *p, address a)
+address process_get_next_sym_address_after (struct process *p, address a)
 {
-    module *m=find_module_for_address (p, a);
+    struct module *m=find_module_for_address (p, a);
     
     if (m==NULL)
         return 0;
@@ -126,9 +126,9 @@ address process_get_next_sym_address_after (process *p, address a)
     return module_get_next_sym_address_after (m, a);
 };
 
-bool adr_in_executable_section(process *p, address a)
+bool adr_in_executable_section(struct process *p, address a)
 {
-    module *m=find_module_for_address (p, a);
+    struct module *m=find_module_for_address (p, a);
     if(m==NULL)
         return false;
     return module_adr_in_executable_section (m, a);

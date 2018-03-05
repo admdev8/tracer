@@ -83,42 +83,38 @@ extern int yydebug;
     ARG_ = 293,
     LOADING = 294,
     NO_NEW_CONSOLE = 295,
-    MODULE_DEBUG = 296,
-    SYMBOL_DEBUG = 297,
-    CYCLE_DEBUG = 298,
-    BPX_DEBUG = 299,
-    UTILS_DEBUG = 300,
-    CC_DEBUG = 301,
-    BPF_DEBUG = 302,
-    EMULATOR_TESTING = 303,
-    TRACING_DEBUG = 304,
-    NEWLINE = 305,
-    ARG = 306,
-    TYPE = 307,
-    TYPE_INT = 308,
-    TYPE_PTR_TO_DOUBLE = 309,
-    TYPE_QSTRING = 310,
-    TYPE_PTR_TO_QSTRING = 311,
-    DEC_NUMBER = 312,
-    HEX_NUMBER = 313,
-    HEX_BYTE = 314,
-    BPM_width = 315,
-    CSTRING_BYTE = 316,
-    ATTACH_PID = 317,
-    DMALLOC_BREAK_ON = 318,
-    LIMIT_TRACE_NESTEDNESS = 319,
-    BYTE_WORD_DWORD_DWORD64 = 320,
-    REGISTER = 321,
-    FPU_REGISTER = 322,
-    FLOAT_NUMBER = 323,
-    FILENAME_EXCLAMATION = 324,
-    SYMBOL_NAME_RE = 325,
-    SYMBOL_NAME_RE_PLUS = 326,
-    LOAD_FILENAME = 327,
-    ATTACH_FILENAME = 328,
-    CMDLINE = 329,
-    ALL_SYMBOLS = 330,
-    ONE_TIME_INT3_BP = 331
+    VERBOSE1 = 296,
+    VERBOSE2 = 297,
+    VERBOSE3 = 298,
+    EMULATOR_TESTING = 299,
+    TRACING_DEBUG = 300,
+    NEWLINE = 301,
+    ARG = 302,
+    TYPE = 303,
+    TYPE_INT = 304,
+    TYPE_PTR_TO_DOUBLE = 305,
+    TYPE_QSTRING = 306,
+    TYPE_PTR_TO_QSTRING = 307,
+    DEC_NUMBER = 308,
+    HEX_NUMBER = 309,
+    HEX_BYTE = 310,
+    BPM_width = 311,
+    CSTRING_BYTE = 312,
+    ATTACH_PID = 313,
+    DMALLOC_BREAK_ON = 314,
+    LIMIT_TRACE_NESTEDNESS = 315,
+    BYTE_WORD_DWORD_DWORD64 = 316,
+    REGISTER = 317,
+    FPU_REGISTER = 318,
+    FLOAT_NUMBER = 319,
+    FILENAME_EXCLAMATION = 320,
+    SYMBOL_NAME_RE = 321,
+    SYMBOL_NAME_RE_PLUS = 322,
+    LOAD_FILENAME = 323,
+    ATTACH_FILENAME = 324,
+    CMDLINE = 325,
+    ALL_SYMBOLS = 326,
+    ONE_TIME_INT3_BP = 327
   };
 #endif
 
@@ -127,20 +123,20 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 90 "opts_parse.y" /* yacc.c:1909  */
+#line 91 "opts_parse.y" /* yacc.c:1909  */
 
     char * str;
     REG num;
     double dbl;
-    struct _obj * o;
-    struct _bp_address *a;
-    struct _BPM *bpm;
-    struct _BP *bp;
-    struct _BPX_option *bpx_option;
+    struct obj * o;
+    struct bp_address *a;
+    struct BPM *bpm;
+    struct BP *bp;
+    struct BPX_option *bpx_option;
     enum X86_register x86reg;
-    function_type func_type;
+    enum function_type func_type;
 
-#line 144 "opts_parse.tab.h" /* yacc.c:1909  */
+#line 140 "opts_parse.tab.h" /* yacc.c:1909  */
 };
 
 typedef union YYSTYPE YYSTYPE;

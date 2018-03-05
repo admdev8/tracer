@@ -31,7 +31,7 @@
 #include "ostrings.h"
 #include "fmt_utils.h"
 
-void BP_free(BP* b)
+void BP_free(struct BP* b)
 {
     if (b==NULL)
         return; // free(NULL) behaviour
@@ -55,9 +55,9 @@ void BP_free(BP* b)
     DFREE(b);
 };
 
-BP* create_BP (enum BP_type t, bp_address* a, void* p)
+struct BP* create_BP (enum BP_type t, struct bp_address* a, void* p)
 {
-    BP* rt=DCALLOC(BP, 1, "BP");
+    struct BP* rt=DCALLOC(struct BP, 1, "BP");
     rt->t=t;
     rt->a=a;
     rt->u.p=p;
@@ -65,7 +65,7 @@ BP* create_BP (enum BP_type t, bp_address* a, void* p)
     return rt;
 };
 
-void BP_ToString (BP* b, strbuf* out)
+void BP_ToString (struct BP* b, strbuf* out)
 {
     if (b->a)
     {
@@ -91,7 +91,7 @@ void BP_ToString (BP* b, strbuf* out)
     };
 };
 
-void dump_BP (BP* b)
+void dump_BP (struct BP* b)
 {
     strbuf sb=STRBUF_INIT;
     BP_ToString(b, &sb);
@@ -99,12 +99,12 @@ void dump_BP (BP* b)
     strbuf_deinit (&sb);
 };
 
-void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
+void handle_BP(struct process *p, struct thread *t, int bp_no, CONTEXT *ctx, struct MemoryCache *mc)
 {
-    if (cycle_c_debug)
+    if (verbose>0)
         L ("%s(bp_no=%d) begin\n", __func__, bp_no);
 
-    BP* bp=breakpoints[bp_no];
+    struct BP* bp=breakpoints[bp_no];
 
     switch (bp->t)
     {
@@ -121,14 +121,14 @@ void handle_BP(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
             oassert(0);
             fatal_error();
     };
-    if (cycle_c_debug)
+    if (verbose>0)
         L ("%s() end. TF=%s, PC=0x" PRI_ADR_HEX "\n", 
                 __func__, bool_to_string(IS_SET(ctx->EFlags, FLAG_TF)), CONTEXT_get_PC(ctx));
 };
 
-void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
+void handle_Bx (struct process *p, struct thread *t, CONTEXT *ctx, struct MemoryCache *mc)
 {
-    if (cycle_c_debug)
+    if (verbose>0)
         L ("%s() begin\n", __func__);
 
     bool bp_handled_in_SS_mode[4]={ false, false, false, false };
@@ -144,7 +144,7 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
                 tracing_handled=bp_handled_in_SS_mode[b]=true;
             }
 
-        if (tracing_handled==false && cycle_c_debug)
+        if (tracing_handled==false && verbose>0)
             L ("[!] BS flag in DR6 (or DR6 is zero), but no breakpoint in tracing mode\n");
     };
 
@@ -171,20 +171,19 @@ void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
         oassert (breakpoints[3]);
         handle_BP(p, t, 3, ctx, mc);
     };
-    
+
     clear_TF(ctx);
     for (unsigned b=0; b<4; b++)
         if (t->BP_dynamic_info[b].tracing)
         {
-            if (cycle_c_debug)
+            if (verbose>0)
                 L ("%s() setting TF because bp #%d is in tracing mode\n", __func__, b);
             set_TF(ctx);
         };
 
-    if (cycle_c_debug)
+    if (verbose>0)
         L ("%s() end. TF=%s, PC=0x" PRI_ADR_HEX "\n", 
                 __func__, bool_to_string(IS_SET(ctx->EFlags, FLAG_TF)), CONTEXT_get_PC(ctx));
 };
-
 
 /* vim: set expandtab ts=4 sw=4 : */

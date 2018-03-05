@@ -1,8 +1,5 @@
 #pragma once
 
 #include <windows.h>
-typedef struct _MemoryCache MemoryCache;
-typedef struct _process process;
-typedef struct _thread thread;
 
-void dump_SEH_chain (fds* s, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc);
+void dump_SEH_chain (fds* s, struct process *p, struct thread *t, CONTEXT *ctx, struct MemoryCache *mc);

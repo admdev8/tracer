@@ -23,15 +23,6 @@
 #include "regex.h"
 #include "lisp.h"
 
-// TODO get rid of typedefs
-typedef struct _bp_address bp_address;
-typedef struct _BPF BPF;
-typedef struct _BPX BPX;
-typedef struct _BPM BPM;
-typedef struct _process process;
-typedef struct _thread thread;
-typedef struct _MemoryCache MemoryCache;
-
 enum BP_type
 {
     BP_type_BPM,
@@ -39,27 +30,27 @@ enum BP_type
     BP_type_BPF
 };
 
-typedef struct _BP
+struct BP
 {
     enum BP_type t;
     struct Da* ins; // disassembled instruction at the place of INT3
 
-    bp_address *a;
+    struct bp_address *a;
     union
     {
-        BPM* bpm;
-        BPX* bpx;
-        BPF* bpf;
+        struct BPM* bpm;
+        struct BPX* bpx;
+        struct BPF* bpf;
         void *p;
     } u;
-    struct _BP *next;
-} BP;
+    struct BP *next;
+};
 
-BP* create_BP (enum BP_type t, bp_address* a, void* p);
-void BP_ToString (BP* b, strbuf* out);
-void dump_BP (BP* b);
-void BP_free(BP*);
-void handle_BP (process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc);
-void handle_Bx (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc);
+struct BP* create_BP (enum BP_type t, struct bp_address* a, void* p);
+void BP_ToString (struct BP* b, strbuf* out);
+void dump_BP (struct BP* b);
+void BP_free(struct BP*);
+void handle_BP (struct process *p, struct thread *t, int bp_no, CONTEXT *ctx, struct MemoryCache *mc);
+void handle_Bx (struct process *p, struct thread *t, CONTEXT *ctx, struct MemoryCache *mc);
 
 /* vim: set expandtab ts=4 sw=4 : */

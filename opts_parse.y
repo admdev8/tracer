@@ -41,7 +41,7 @@
 
 // globals to be set here:
 
-BP* breakpoints[4]={ NULL, NULL, NULL, NULL }; // 0..3 - DR0-3
+struct BP* breakpoints[4]={ NULL, NULL, NULL, NULL }; // 0..3 - DR0-3
 dlist* addresses_to_be_resolved=NULL;
 char* load_filename=NULL;
 char* attach_filename=NULL;
@@ -50,13 +50,14 @@ int attach_PID=-1;
 bool debug_children=false;
 bool dash_s=false, quiet=false;
 bool dump_fpu=false, dump_xmm=false, dump_seh=false;
-BPX_option *current_BPX_option=NULL; // temporary, while parsing...
-BPF* current_BPF=NULL; // filled while parsing
-bp_address* current_BPF_address; // filled while parsing
+struct BPX_option *current_BPX_option=NULL; // temporary, while parsing...
+struct BPF* current_BPF=NULL; // filled while parsing
+struct bp_address* current_BPF_address; // filled while parsing
 bool run_thread_b=true;
 bool dump_all_symbols=false;
 regex_t *dump_all_symbols_re=NULL;
-bool module_c_debug=false, symbol_c_debug=false, cycle_c_debug=false, bpx_c_debug=false, utils_c_debug=false, cc_c_debug=false, BPF_c_debug=false, tracing_debug=false, emulator_testing=false, opt_loading=false, create_new_console=true;
+int verbose=0;
+bool emulator_testing=false, opt_loading=false, create_new_console=true;
 int limit_trace_nestedness=1; // default value
 
 // from opts.l:
@@ -64,7 +65,7 @@ void flex_set_str(char *s);
 void flex_cleanup();
 void flex_restart();
 
-void add_new_BP (BP* bp)
+void add_new_BP (struct BP* bp)
 {
     for (int i=0; i<4; i++)
         if (breakpoints[i]==NULL)
@@ -76,7 +77,7 @@ void add_new_BP (BP* bp)
     die ("No more free DRx slots. Only 4 breakpoints allowed!\n");
 };
 
-void add_new_address_to_be_resolved (bp_address *a)
+void add_new_address_to_be_resolved (struct bp_address *a)
 {
     if (addresses_to_be_resolved==NULL)
         addresses_to_be_resolved=dlist_init();
@@ -91,13 +92,13 @@ void add_new_address_to_be_resolved (bp_address *a)
     char * str;
     REG num;
     double dbl;
-    struct _obj * o;
-    struct _bp_address *a;
-    struct _BPM *bpm;
-    struct _BP *bp;
-    struct _BPX_option *bpx_option;
+    struct obj * o;
+    struct bp_address *a;
+    struct BPM *bpm;
+    struct BP *bp;
+    struct BPX_option *bpx_option;
     enum X86_register x86reg;
-    function_type func_type;
+    enum function_type func_type;
 }
 
 %token SKIP COLON EOL BYTEMASK BYTEMASK_END BPX_EQ BPF_EQ
@@ -105,7 +106,7 @@ void add_new_address_to_be_resolved (bp_address *a)
 %token BPF_TRACE BPF_TRACE_COLON DASH_S DASH_Q DASH_T DONT_RUN_THREAD_B DUMP_FPU DUMP_XMM DUMP_SEH
 %token BPF_ARGS BPF_DUMP_ARGS BPF_RT BPF_SKIP BPF_SKIP_STDCALL BPF_UNICODE BPF_MICROSOFT_FASTCALL BPF_BORLAND_FASTCALL
 %token WHEN_CALLED_FROM_ADDRESS WHEN_CALLED_FROM_FUNC ARG_ LOADING NO_NEW_CONSOLE
-%token MODULE_DEBUG SYMBOL_DEBUG CYCLE_DEBUG BPX_DEBUG UTILS_DEBUG CC_DEBUG BPF_DEBUG EMULATOR_TESTING 
+%token VERBOSE1 VERBOSE2 VERBOSE3 EMULATOR_TESTING 
 %token TRACING_DEBUG NEWLINE
 %token ARG TYPE TYPE_INT TYPE_PTR_TO_DOUBLE TYPE_QSTRING TYPE_PTR_TO_QSTRING
 %token <num> DEC_NUMBER HEX_NUMBER HEX_BYTE
@@ -139,7 +140,7 @@ tracer_option_without_newline
  | bpf             { 
    if (current_BPF->rt_present==false && current_BPF->rt_probability_present==true)
        die ("rt_probability option without rt option is useless. exiting.\n");
-   BP *bp=create_BP(BP_type_BPF, current_BPF_address, current_BPF);
+   struct BP *bp=create_BP(BP_type_BPF, current_BPF_address, current_BPF);
    add_new_BP (bp); 
    current_BPF=NULL;
    current_BPF_address=NULL;
@@ -157,14 +158,9 @@ tracer_option_without_newline
  | DONT_RUN_THREAD_B       { run_thread_b=false; }
  | CMDLINE                 { load_command_line=$1; }
  | LOADING                 { opt_loading=true; }
- | MODULE_DEBUG            { module_c_debug=true; }
- | SYMBOL_DEBUG            { symbol_c_debug=true; }
- | CYCLE_DEBUG             { cycle_c_debug=true; }
- | BPX_DEBUG               { bpx_c_debug=true; }
- | UTILS_DEBUG             { utils_c_debug=true; }
- | CC_DEBUG                { cc_c_debug=true; }
- | BPF_DEBUG               { BPF_c_debug=true; }
- | TRACING_DEBUG           { tracing_debug=true; }
+ | VERBOSE1                { verbose=1; }
+ | VERBOSE2                { verbose=2; }
+ | VERBOSE3                { verbose=3; }
  | EMULATOR_TESTING        { emulator_testing=true; }
  | NO_NEW_CONSOLE          { create_new_console=false; }
  | DMALLOC_BREAK_ON        { dmalloc_break_at_seq_n ($1); }
@@ -213,7 +209,7 @@ bpf
 BPX_options
  : BPX_option ',' BPX_options
  { 
-     BPX_option *o;
+     struct BPX_option *o;
      oassert(current_BPX_option);
      for (o=current_BPX_option; o->next; o=o->next);
      o->next=$1;
@@ -229,20 +225,20 @@ BPF_options
 
 BPX_option
  : DUMP_OP address ',' DEC_OR_HEX ')'
- { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->a=$2; $$->size_or_value=$4; }
+ { $$=DCALLOC(struct BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->a=$2; $$->size_or_value=$4; }
  | DUMP_OP address ')'
- { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->a=$2; $$->size_or_value=BPX_DUMP_DEFAULT; }
+ { $$=DCALLOC(struct BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->a=$2; $$->size_or_value=BPX_DUMP_DEFAULT; }
  | DUMP_OP REGISTER ',' DEC_OR_HEX ')'
- { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->reg=$2; $$->size_or_value=$4; }
+ { $$=DCALLOC(struct BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->reg=$2; $$->size_or_value=$4; }
  | DUMP_OP REGISTER ')'
- { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->reg=$2; $$->size_or_value=BPX_DUMP_DEFAULT; }
+ { $$=DCALLOC(struct BPX_option, 1, "BPX_option"); $$->t=BPX_option_DUMP; $$->reg=$2; $$->size_or_value=BPX_DUMP_DEFAULT; }
  | SET_OP REGISTER ',' DEC_OR_HEX ')'
- { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->size_or_value=$4; }
+ { $$=DCALLOC(struct BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->size_or_value=$4; }
  | SET_OP FPU_REGISTER ',' FLOAT_NUMBER ')'
- { $$=DCALLOC(BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->float_value=$4; }
+ { $$=DCALLOC(struct BPX_option, 1, "BPX_option"); $$->t=BPX_option_SET; $$->reg=$2; $$->float_value=$4; }
  | COPY_OP address ',' '"' cstring '"' ')'
  {
-    $$=DCALLOC(BPX_option, 1, "BPX_option"); 
+    $$=DCALLOC(struct BPX_option, 1, "BPX_option"); 
     $$->t=BPX_option_COPY; 
     $$->a=$2; 
     list_of_bytes_to_array (&($$->copy_string), &($$->copy_string_len), $5); 
@@ -250,7 +246,7 @@ BPX_option
  }
  | COPY_OP REGISTER ',' '"' cstring '"' ')'
  {
-    $$=DCALLOC(BPX_option, 1, "BPX_option"); 
+    $$=DCALLOC(struct BPX_option, 1, "BPX_option"); 
     $$->t=BPX_option_COPY; 
     $$->reg=$2; 
     list_of_bytes_to_array (&($$->copy_string), &($$->copy_string_len), $5); 
@@ -291,7 +287,7 @@ BPF_option
    oassert ($2 >= 1);
    oassert ($2 <= current_BPF->args);
    if (current_BPF->arg_types==NULL)
-        current_BPF->arg_types=DCALLOC (function_type, current_BPF->args, "function_type");
+        current_BPF->arg_types=DCALLOC (enum function_type, current_BPF->args, "function_type");
    current_BPF->arg_types[($2)-1]=$6;
  }
  ;
@@ -378,7 +374,7 @@ skip_n
 
 %%
 
-BP* parse_option(char *s)
+struct BP* parse_option(char *s)
 {
     //printf ("%s(%s)\n", __func__, s);
     int r;

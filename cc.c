@@ -31,6 +31,9 @@
 #include "thread.h"
 #include "fmt_utils.h"
 
+// octo
+#include "files.h"
+
 #define IDA_MAX_COMMENT_SIZE 1023
 #define STRING_LEN 4
 
@@ -53,12 +56,12 @@ static int compare_doubles(void* leftp, void* rightp)
 		return 1;
 
 	// NaNs case
-	return memcmp (leftp, rightp, sizeof(double)); // it's not correct, but what can I do
+	return memcmp (leftp, rightp, sizeof(double)); // it's not correct, but what can I do?
 };
 
-unsigned what_to_notice (process *p, thread *t, struct Da *da, strbuf *comments, CONTEXT *ctx, MemoryCache *mc)
+unsigned what_to_notice (struct process *p, struct thread *t, struct Da *da, strbuf *comments, CONTEXT *ctx, struct MemoryCache *mc)
 {
-	if (cc_c_debug)
+	if (verbose>0)
 		L ("%s() begin\n", __func__);
 	unsigned rt=0;
 
@@ -460,7 +463,7 @@ unsigned what_to_notice (process *p, thread *t, struct Da *da, strbuf *comments,
 #endif
 
 exit:
-	if (cc_c_debug)
+	if (verbose>0)
 		L ("%s() end\n", __func__);
 	return rt;
 };
@@ -508,7 +511,7 @@ static void cc_dump_op_name (struct Da *da, unsigned i, strbuf *out)
 	//L ("%s() end\n", __func__);
 };
 
-static void cc_free_op(op_info *op, unsigned tmp_i, address tmp_a)
+static void cc_free_op(struct op_info *op, unsigned tmp_i, address tmp_a)
 {
 	oassert(op);
 	rbtree_foreach(op->values, NULL, NULL, NULL);
@@ -524,12 +527,12 @@ static void cc_free_op(op_info *op, unsigned tmp_i, address tmp_a)
 	DFREE (op);
 };
 
-static bool cc_dump_op_and_free (struct Da *da, PC_info* info, unsigned i, strbuf *out, address tmp_a)
+static bool cc_dump_op_and_free (struct Da *da, struct PC_info* info, unsigned i, strbuf *out, address tmp_a)
 {
 	//L ("%s() begin\n", __func__);
 	oassert(da);
 
-	op_info *op=info->op[i];
+	struct op_info *op=info->op[i];
 	enum obj_type op_t=info->op_t[i];
 
 	if (op==NULL)
@@ -587,7 +590,7 @@ static bool cc_dump_op_and_free (struct Da *da, PC_info* info, unsigned i, strbu
 	return true;
 };
 
-void construct_common_string(strbuf *out, address a, PC_info *info)
+void construct_common_string(strbuf *out, address a, struct PC_info *info)
 {
 	if (info->comment)
 	{
@@ -648,20 +651,20 @@ void construct_common_string(strbuf *out, address a, PC_info *info)
 		strbuf_trim_last_char (out);
 };
 
-void free_PC_info (PC_info *i)
+void free_PC_info (struct PC_info *i)
 {
 	DFREE (i->da);
 	DFREE (i->comment);
 	DFREE (i);
 };
 
-static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCache *mc, 
+static void dump_one_PC_and_free(address a, struct PC_info *info, struct process *p, struct MemoryCache *mc, 
 				 FILE *f_txt, FILE *f_idc, FILE* f_clear_idc)
 {
 	strbuf sb_txt=STRBUF_INIT, sb_common=STRBUF_INIT, sb_sym=STRBUF_INIT;
 	process_get_sym(p, a, false, true, &sb_sym);
 
-	module *m=find_module_for_address (p, a);
+	struct module *m=find_module_for_address (p, a);
 	address adr_in_PE_file=a - m->base + m->original_base;
     
 	strbuf_addf (&sb_txt, "0x" PRI_ADR_HEX " (%s), e=%8I64d [", adr_in_PE_file, sb_sym.buf, info->executed);
@@ -694,9 +697,9 @@ static void dump_one_PC_and_free(address a, PC_info *info, process *p, MemoryCac
 	free_PC_info (info);
 };
 
-void cc_dump_and_free(module *m) // for module m
+void cc_dump_and_free(struct module *m) // for module m
 {
-	if (cc_c_debug)
+	if (verbose>0)
 		L ("%s() begin for module %s\n", __func__, get_module_name(m));
 
 	if (m->PC_infos==NULL)
@@ -705,8 +708,8 @@ void cc_dump_and_free(module *m) // for module m
 		return; // no collected info for us
 	};
 
-	process *p=m->parent_process;
-	MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+	struct process *p=m->parent_process;
+	struct MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
 	strbuf sb_filename_txt=STRBUF_INIT, sb_filename_idc=STRBUF_INIT, sb_filename_clear_idc=STRBUF_INIT;
 	const char *module_name=get_module_name(m);
 	strbuf_addf (&sb_filename_txt, "%s.txt", module_name);
@@ -725,7 +728,7 @@ void cc_dump_and_free(module *m) // for module m
 	{
 		//L ("%s() loop begin\n", __func__);
 		address a=(address)i->key;
-		PC_info *info=i->value;
+		struct PC_info *info=i->value;
 
 		dump_one_PC_and_free(a, info, p, mc, f_txt, f_idc, f_clear_idc);
 		dumped++;
@@ -748,15 +751,15 @@ void cc_dump_and_free(module *m) // for module m
 	strbuf_deinit (&sb_filename_clear_idc);
 	MC_Flush (mc);
 	MC_MemoryCache_dtor (mc, true);
-	if (cc_c_debug)
-		L ("%s() end\n", __func__);
+	if (verbose>0)
+            L ("%s() end\n", __func__);
 };
 
-static op_info* allocate_op_n (PC_info *info, unsigned i)
+static struct op_info* allocate_op_n (struct PC_info *info, unsigned i)
 {
 	if (info->op[i]==NULL)
 	{
-		info->op[i]=DCALLOC(op_info, 1, "op_info");
+		info->op[i]=DCALLOC(struct op_info, 1, "op_info");
 		info->op[i]->values=rbtree_create(true, "op_info:values", compare_size_t);
 		info->op[i]->FPU_values=rbtree_create(true, "op_info:FPU_values", compare_doubles);
 		info->op[i]->ptr_to_string_set=rbtree_create(true, "op_info:ptr_to_string_set", (int(*)(void*,void*))strcmp);
@@ -765,9 +768,9 @@ static op_info* allocate_op_n (PC_info *info, unsigned i)
 	return info->op[i];
 };
 
-static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *mc, PC_info *info)
+static void save_info_about_op (address PC, unsigned i, obj *val, struct MemoryCache *mc, struct PC_info *info)
 {
-	op_info *op=NULL;
+	struct op_info *op=NULL;
 	// TODO: add XMM?
 	switch (val->t)
 	{
@@ -835,10 +838,10 @@ static void save_info_about_op (address PC, unsigned i, obj *val, MemoryCache *m
 	};
 };
 
-static void save_info_about_PC (thread *t, module *m, strbuf *comment, unsigned to_notice, struct Da* da, CONTEXT *ctx, 
-				MemoryCache *mc)
+static void save_info_about_PC (struct thread *t, struct module *m, strbuf *comment, unsigned to_notice, struct Da* da, CONTEXT *ctx, 
+				struct MemoryCache *mc)
 {
-	if (cc_c_debug)
+	if (verbose>0)
 		L ("%s(comment=\"%s\") begin\n", __func__, comment->buf);
 	address PC=CONTEXT_get_PC(ctx);
 
@@ -846,10 +849,10 @@ static void save_info_about_PC (thread *t, module *m, strbuf *comment, unsigned 
 	if (m->PC_infos==NULL)
 		m->PC_infos=rbtree_create (true, "PC_infos", compare_size_t);
 
-	PC_info *info=rbtree_lookup(m->PC_infos, (void*)PC);
+	struct PC_info *info=rbtree_lookup(m->PC_infos, (void*)PC);
 	if (info==NULL)
 	{
-		info=DCALLOC(PC_info, 1, "PC_info");
+		info=DCALLOC(struct PC_info, 1, "PC_info");
 		//L ("%s() allocated info=0x%p\n", __func__, info);
 		rbtree_insert(m->PC_infos, (void*)PC, info);
 	};
@@ -949,16 +952,16 @@ static void save_info_about_PC (thread *t, module *m, strbuf *comment, unsigned 
 				};
 			};
 		};
-	if (cc_c_debug)
+	if (verbose>0)
 		L ("%s() end\n", __func__);
 };
 
-void handle_cc(struct Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, 
+void handle_cc(struct Da* da, struct process *p, struct thread *t, CONTEXT *ctx, struct MemoryCache *mc, 
 	       bool CALL_to_be_skipped_due_to_module, bool CALL_to_be_skipped_due_to_trace_limit)
 {
 	//printf ("sizeof(ins_reported_as_unhandled)/sizeof(bool)=%d\n", sizeof(ins_reported_as_unhandled)/sizeof(bool));
 	//printf ("I_MAX_INS=%d\n", I_MAX_INS);
-	if (cc_c_debug)
+	if (verbose>0)
 		L ("%s() begin\n", __func__);
 
 	oassert (sizeof(ins_reported_as_unhandled)/sizeof(bool) > I_MAX_INS);
@@ -975,7 +978,7 @@ void handle_cc(struct Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *
 		strbuf_addstr (&comment, "instruction wasn't disassembled");
 	};
 
-	module *m=find_module_for_address (p, PC);
+	struct module *m=find_module_for_address (p, PC);
 	if (m==NULL)
 		goto exit; // we don't handle anything for unknown modules
 
@@ -998,6 +1001,6 @@ void handle_cc(struct Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *
 
 exit:
 	strbuf_deinit(&comment);
-	if (cc_c_debug)
+	if (verbose>0)
 		L ("%s() end\n", __func__);
 };

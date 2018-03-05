@@ -20,12 +20,6 @@
 #include "x86_disas.h"
 #include "lisp.h"
 
-// TODO get rid of typedefs
-typedef struct _process process;
-typedef struct _thread thread;
-typedef struct _module module;
-//typedef struct _Da Da;
-
 // order matters!
 #define WORKOUT_OP1 0
 #define WORKOUT_OP2 1
@@ -56,7 +50,7 @@ typedef struct _module module;
 #define NOTICE_CF 1<<WORKOUT_CF
 
 // FIXME: lisp object could be here!
-typedef struct _op_info
+struct op_info
 {
     // value is unused in both trees, so these are kind of sets
 
@@ -69,7 +63,7 @@ typedef struct _op_info
 
     // ? set of (other comment) strings
     // ? name of op
-} op_info;
+};
 
 #define FLAG_PF_CAN_BE_TRUE 1<<0
 #define FLAG_SF_CAN_BE_TRUE 1<<1
@@ -84,22 +78,22 @@ typedef struct _op_info
 #define FLAG_OF_CAN_BE_FALSE 1<<10
 #define FLAG_CF_CAN_BE_FALSE 1<<11
 
-typedef struct _PC_info
+struct PC_info
 {
     struct Da *da;
-    op_info *op[7]; // OP1/2/3/AX/CX/DX/ST0
+    struct op_info *op[7]; // OP1/2/3/AX/CX/DX/ST0
     enum obj_type op_t[7]; // type for OP1/2/3/AX/CX/DX/ST0. use this from lisp.h
     octa executed; // how many times we've been here?
     char *comment; // (one) comment about this PC
     wyde flags; // FLAG_xF_CAN_BE_(TRUE|FALSE)
-} PC_info;
+};
 
-void cc_dump_and_free(module *m); // for module m
-void handle_cc(struct Da* da, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, 
+void cc_dump_and_free(struct module *m); // for module m
+void handle_cc(struct Da* da, struct process *p, struct thread *t, CONTEXT *ctx, struct MemoryCache *mc, 
         bool CALL_to_be_skipped_due_to_module, bool CALL_to_be_skipped_due_to_trace_limit);
 
 // can be called from cc_tests.c
-void construct_common_string(strbuf *out, address a, PC_info *info);
-void free_PC_info (PC_info *i);
+void construct_common_string(strbuf *out, address a, struct PC_info *info);
+void free_PC_info (struct PC_info *i);
 
 /* vim: set expandtab ts=4 sw=4 : */

@@ -21,17 +21,14 @@
 #include "dmalloc.h"
 #include "strbuf.h"
 
-typedef struct _module module;
-typedef struct _symbol symbol;
-
-typedef struct _process
+struct process
 {
     DWORD PID;
     HANDLE PHDL;
     address base_of_image;
     HANDLE file_handle;
 
-    module *executable_module;
+    struct module *executable_module;
 
     rbtree *threads; // -> TID, thread
     rbtree *modules; // base_address (in process), module
@@ -40,15 +37,19 @@ typedef struct _process
 
     octa ins_emulated;
     octa ins_not_emulated;
-} process;
 
-process* process_init (DWORD PID, HANDLE PHDL, HANDLE file_handle, LPVOID base_of_image); 
-void process_free (process *p);
-process *find_process(DWORD PID);
-module *find_module_for_address (process *p, address a);
-symbol *process_sym_exist_at (process *p, address a);
-void process_get_sym (process *p, address a, bool add_module_name, bool add_offset, strbuf *out);
-bool adr_in_executable_section(process *p, address a);
-address process_get_next_sym_address_after (process *p, address a);
+    bool INT3_DURING_FUNC_SKIP_used[4];
+    address INT3_DURING_FUNC_SKIP_addresses[4];
+    byte INT3_DURING_FUNC_SKIP_byte[4];
+};
+
+struct process* process_init (DWORD PID, HANDLE PHDL, HANDLE file_handle, LPVOID base_of_image); 
+void process_free (struct process *p);
+struct process *find_process(DWORD PID);
+struct module *find_module_for_address (struct process *p, address a);
+struct symbol *process_sym_exist_at (struct process *p, address a);
+void process_get_sym (struct process *p, address a, bool add_module_name, bool add_offset, strbuf *out);
+bool adr_in_executable_section(struct process *p, address a);
+address process_get_next_sym_address_after (struct process *p, address a);
 
 /* vim: set expandtab ts=4 sw=4 : */

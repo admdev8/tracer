@@ -27,13 +27,13 @@
 
 bool thread_c_debug=false;
 
-void thread_free (thread *t)
+void thread_free (struct thread *t)
 {
     if (thread_c_debug)
         L ("%s() begin\n", __func__);
     for (unsigned b=0; b<4; b++)
     {
-        BP_thread_specific_dynamic_info *bp=&t->BP_dynamic_info[b];
+        struct BP_thread_specific_dynamic_info *bp=&t->BP_dynamic_info[b];
         
         DFREE (bp->BPF_args);
 
@@ -47,17 +47,17 @@ void thread_free (thread *t)
     DFREE (t);
 };
 
-thread *find_thread (DWORD PID, DWORD TID)
+struct thread *find_thread (DWORD PID, DWORD TID)
 {
-    process *p=find_process(PID);
-    thread *t=(thread*)rbtree_lookup (p->threads, (void*)TID);
+    struct process *p=find_process(PID);
+    struct thread *t=(struct thread*)rbtree_lookup (p->threads, (void*)TID);
     oassert (t!=NULL && "TID not found in threads table");
     return t;
 };
 
-void add_thread (process *p, DWORD TID, HANDLE THDL, address start, address TIB)
+void add_thread (struct process *p, DWORD TID, HANDLE THDL, address start, address TIB)
 {
-    thread *t=DCALLOC (thread, 1, "thread");
+    struct thread *t=DCALLOC (struct thread, 1, "thread");
 
     if (thread_c_debug)
         L ("%s() begin\n", __func__);
@@ -73,7 +73,7 @@ void add_thread (process *p, DWORD TID, HANDLE THDL, address start, address TIB)
         L ("%s() end\n", __func__);
 };
 
-static void dump_stack_not_using_EBP (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
+static void dump_stack_not_using_EBP (struct process *p, struct thread *t, CONTEXT *ctx, struct MemoryCache *mc)
 {
     HANDLE THDL=t->THDL;
     address stack_top=TIB_get_stack_top (THDL, mc);
@@ -103,7 +103,7 @@ static void dump_stack_not_using_EBP (process *p, thread *t, CONTEXT *ctx, Memor
     };
 };
 
-static void dump_stack_EBP_frame (process *p, thread *t, CONTEXT * ctx, MemoryCache *mem)
+static void dump_stack_EBP_frame (struct process *p, struct thread *t, CONTEXT * ctx, struct MemoryCache *mem)
 {
     HANDLE THDL=t->THDL;
     address stack_top=TIB_get_stack_top (THDL, mem);
@@ -149,7 +149,7 @@ exit:
     strbuf_deinit (&sb);
 };
 
-void dump_stack (process *p, thread *t, CONTEXT * ctx, MemoryCache *mem)
+void dump_stack (struct process *p, struct thread *t, CONTEXT * ctx, struct MemoryCache *mem)
 {
 #ifdef _WIN64
     dump_stack_not_using_EBP (p, t, ctx, mem);

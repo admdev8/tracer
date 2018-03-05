@@ -37,7 +37,7 @@ struct my_EH4_SCOPETABLE_HEADER
 	address EHCookieXOROffset;
 };
 
-void dump_scopetable_entry (MemoryCache *mc, process *p, int i, address a)
+void dump_scopetable_entry (struct MemoryCache *mc, struct process *p, int i, address a)
 {
 	bool b;
 	struct my_SCOPETABLE_ENTRY e;
@@ -67,7 +67,7 @@ void dump_scopetable_entry (MemoryCache *mc, process *p, int i, address a)
 	strbuf_deinit(&sb2);
 };
 
-void dump_scopetable(MemoryCache *mc, process *p, address a, size_t total)
+void dump_scopetable(struct MemoryCache *mc, struct process *p, address a, size_t total)
 {
 	for (size_t i=0; i<total; i++)
 	{
@@ -76,7 +76,7 @@ void dump_scopetable(MemoryCache *mc, process *p, address a, size_t total)
 	};
 };
 
-void check_SEH4_cookie(MemoryCache *mc, address adr_of_EBP, 
+void check_SEH4_cookie(struct MemoryCache *mc, address adr_of_EBP, 
 		address CookieOffset, address CookieXOROffset, REG security_cookie, const char *name)
 {
 	REG value_in_stack=0;
@@ -101,7 +101,7 @@ void check_SEH4_cookie(MemoryCache *mc, address adr_of_EBP,
 };
 
 // returns address of next SEH frame
-address dump_SEH_frame (fds* s, process* p, thread* t, MemoryCache *mc, address a)
+address dump_SEH_frame (fds* s, struct process* p, struct thread* t, struct MemoryCache *mc, address a)
 {
 	struct my_EXCEPTION_REGISTRATION current_SEH_frame;
 	bool b;
@@ -130,7 +130,7 @@ address dump_SEH_frame (fds* s, process* p, thread* t, MemoryCache *mc, address 
 	if (string_is_ends_with (sb.buf, "except_handler4"))
 	{
 		SEH4=true;
-		module *m=find_module_for_address(p, current_SEH_frame.handler);
+		struct module *m=find_module_for_address(p, current_SEH_frame.handler);
 		if (m->security_cookie_adr_known)
 		{
 			b=MC_ReadREG (mc, m->security_cookie_adr, &security_cookie);
@@ -194,7 +194,7 @@ exit:
 	return current_SEH_frame.prev;
 };
 
-void dump_SEH_chain (fds* s, process *p, thread *t, CONTEXT *ctx, MemoryCache *mc)
+void dump_SEH_chain (fds* s, struct process *p, struct thread *t, CONTEXT *ctx, struct MemoryCache *mc)
 {
 	address current_SEH_frame_address=TIB_get_current_SEH_frame(mc, t->THDL);
 	

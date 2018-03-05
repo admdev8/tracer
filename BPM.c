@@ -26,9 +26,9 @@
 #include "bp_address.h"
 #include "fmt_utils.h"
 
-BPM *create_BPM(unsigned width, enum BPM_type t)
+struct BPM *create_BPM(unsigned width, enum BPM_type t)
 {
-    BPM *rt=DCALLOC (BPM, 1, "BPM");
+    struct BPM *rt=DCALLOC (struct BPM, 1, "BPM");
 
     rt->width=width;
     rt->t=t;
@@ -36,12 +36,12 @@ BPM *create_BPM(unsigned width, enum BPM_type t)
     return rt;
 };
 
-void BPM_free(BPM *o)
+void BPM_free(struct BPM *o)
 {
     DFREE (o);
 };
 
-void BPM_ToString(BPM *bpm, strbuf *out)
+void BPM_ToString(struct BPM *bpm, strbuf *out)
 {
     strbuf_addf (out, "BPM. width=%d, ", bpm->width);
     if (bpm->t==BPM_type_RW)
@@ -51,7 +51,7 @@ void BPM_ToString(BPM *bpm, strbuf *out)
     strbuf_addstr (out, "\n");
 };
 
-void BPM_set_or_update_DRx_breakpoint(BPM *bpm, address a, unsigned DRx_no, CONTEXT *ctx)
+void BPM_set_or_update_DRx_breakpoint(struct BPM *bpm, address a, unsigned DRx_no, CONTEXT *ctx)
 {
     unsigned DR7_idx;
 
@@ -119,10 +119,10 @@ void BPM_set_or_update_DRx_breakpoint(BPM *bpm, address a, unsigned DRx_no, CONT
     };
 };
 
-void handle_BPM(process *p, thread *t, int bp_no, CONTEXT *ctx, MemoryCache *mc)
+void handle_BPM(struct process *p, struct thread *t, int bp_no, CONTEXT *ctx, struct MemoryCache *mc)
 {
-    BP *bp=breakpoints[bp_no];
-    BPM *bpm=bp->u.bpm;
+    struct BP *bp=breakpoints[bp_no];
+    struct BPM *bpm=bp->u.bpm;
 
     address a=bp->a->abs_address;
     bool b;

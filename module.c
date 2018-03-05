@@ -38,17 +38,17 @@
 #include "ostrings.h"
 #include "fmt_utils.h"
 
-static address module_translate_adr_to_abs_address(module *m, address original_adr)
+static address module_translate_adr_to_abs_address(struct module *m, address original_adr)
 {
     return m->base + (original_adr - m->original_base);
 };
 
-static bool search_for_symbol_re_in_module(module *m, regex_t *symbol_re, address *out)
+static bool search_for_symbol_re_in_module(struct module *m, regex_t *symbol_re, address *out)
 {
     // enumerate all symbols in module in order for searching
 
     for (struct rbtree_node_t* i=rbtree_minimum(m->symbols); i; i=rbtree_succ(i))
-        for (symbol* s=(symbol*)i->value; s; s=s->next)
+        for (struct symbol* s=(struct symbol*)i->value; s; s=s->next)
             if (regexec(symbol_re, s->name, 0, NULL, 0)==0)
                 return *out=(address)i->key, true;
 
@@ -56,7 +56,7 @@ static bool search_for_symbol_re_in_module(module *m, regex_t *symbol_re, addres
 };
                
 #ifdef THIS_CODE_IS_NOT_WORKING
-static bool search_bytemask_in_PE_section(LOADED_IMAGE *im, module *m, IMAGE_SECTION_HEADER *sect, wyde bytemask, 
+static bool search_bytemask_in_PE_section(LOADED_IMAGE *im, struct module *m, IMAGE_SECTION_HEADER *sect, wyde bytemask, 
         unsigned bytemask_len, address *out)
 {
         address begin=sect->VirtualAddress;
@@ -64,7 +64,7 @@ static bool search_bytemask_in_PE_section(LOADED_IMAGE *im, module *m, IMAGE_SEC
         SIZE_T=sect->Misc.VirtualSize;
 };
 
-static bool try_to_resolve_bytemask(module *m, bp_address *a)
+static bool try_to_resolve_bytemask(struct module *m, struct bp_address *a)
 {
     LOADED_IMAGE im;
     bool rt=false;
@@ -87,9 +87,9 @@ exit:
 };
 #endif
 
-static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_address *a)
+static bool try_to_resolve_bp_address_if_need(struct module *module_just_loaded, struct bp_address *a)
 {
-    if (module_c_debug)
+    if (verbose>0)
     {
         printf ("%s() a=", __func__);
         dump_address (a);
@@ -114,7 +114,7 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
         {
             a->abs_address=module_translate_adr_to_abs_address(module_just_loaded, a->adr);
 
-            if (module_c_debug)
+            if (verbose>0)
             {
                 strbuf tmp=STRBUF_INIT;
                 address_to_string (a, &tmp);
@@ -136,7 +136,7 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
             {
                 a->abs_address=found + a->ofs;
 
-                if (module_c_debug)
+                if (verbose>0)
                 {
                     strbuf tmp=STRBUF_INIT;
                     address_to_string (a, &tmp);
@@ -160,16 +160,16 @@ static bool try_to_resolve_bp_address_if_need(module *module_just_loaded, bp_add
     fatal_error();
 };
 
-static bool try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
+static bool try_to_resolve_bp_addresses_if_need (struct module *module_just_loaded)
 {
     bool rt=false;
 
-    if (module_c_debug)
+    if (verbose>0)
         printf ("%s() scan addresses_to_be_resolved...\n", __func__);
 
     for (dlist *i=addresses_to_be_resolved; i;) // breakpoints is a list
     {
-        if (try_to_resolve_bp_address_if_need(module_just_loaded, (bp_address*)i->data))
+        if (try_to_resolve_bp_address_if_need(module_just_loaded, (struct bp_address*)i->data))
         {
             dlist *tmp=i->next;
             dlist_unlink(&addresses_to_be_resolved, i);
@@ -182,23 +182,23 @@ static bool try_to_resolve_bp_addresses_if_need (module *module_just_loaded)
     return rt;
 };
 
-static void set_filename_and_path_for_module (HANDLE file_hdl, module *m, strbuf *fullpath_filename)
+static void set_filename_and_path_for_module (HANDLE file_hdl, struct module *m, strbuf *fullpath_filename)
 {
     if (GetFileNameFromHandle(file_hdl, fullpath_filename, /* report_errors */ true))
     {
         strbuf sb_filename=STRBUF_INIT, sb_filename_without_ext=STRBUF_INIT, sb_path=STRBUF_INIT;
 
-        if (0 && module_c_debug)
-            L ("fullpath_filename=%s\n", fullpath_filename->buf);
+        if (verbose>0)
+            L ("%s() fullpath_filename=%s\n", __FUNCTION__, fullpath_filename->buf);
 
         full_path_and_filename_to_path_only (&sb_path, fullpath_filename->buf);
         full_path_and_filename_to_filename_only (&sb_filename, &sb_filename_without_ext, fullpath_filename->buf);
 
-        if (0 && module_c_debug)
+        if (verbose>0)
         {
-            L ("sb_path=%s\n", sb_path.buf);
-            L ("sb_filename=%s\n", sb_filename.buf);
-            L ("sb_filename_without_ext=%s\n", sb_filename_without_ext.buf);
+            L ("%s() sb_path=%s\n", __FUNCTION__, sb_path.buf);
+            L ("%s() sb_filename=%s\n", __FUNCTION__, sb_filename.buf);
+            L ("%s() sb_filename_without_ext=%s\n", __FUNCTION__, sb_filename_without_ext.buf);
         };
 
         m->filename=strbuf_detach(&sb_filename, NULL);
@@ -208,35 +208,45 @@ static void set_filename_and_path_for_module (HANDLE file_hdl, module *m, strbuf
         strbuf_deinit (&sb_filename);
         strbuf_deinit (&sb_filename_without_ext);
         strbuf_deinit (&sb_path);
-        if (0 && module_c_debug)
+        if (verbose>0)
         {
-            L ("m->filename=%s\n", m->filename);
-            L ("m->filename_without_ext=%s\n", m->filename_without_ext);
-            L ("m->path=%s\n", m->path);
+            L ("%s() m->filename=%s\n", __FUNCTION__, m->filename);
+            L ("%s() m->filename_without_ext=%s\n", __FUNCTION__, m->filename_without_ext);
+            L ("%s() m->path=%s\n", __FUNCTION__, m->path);
         };
     }
     else
     {
+        die ("GetFileNameFromHandle() failed\n");
         m->filename=DSTRDUP("?", "");
         m->filename_without_ext=DSTRDUP("?", "");
         m->path=DSTRDUP("?", "");
     };
 };
 
-static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_filename, address img_base, 
-        MemoryCache *mc)
+static struct PE_info* get_all_info_from_PE(struct process *p, struct module *m, strbuf *fullpath_filename, address img_base, 
+        struct MemoryCache *mc)
 {
-    PE_info *info=DCALLOC(PE_info, 1, "PE_info");
+    if (verbose>0)
+        L ("%s() begin\n", __func__);
 
+    struct PE_info *info=DCALLOC(struct PE_info, 1, "PE_info");
+
+    if (verbose>0)
+        L ("%s() fullpath_filename->buf=%s\n", __func__, fullpath_filename->buf);
+    
     PE_get_sections_info (fullpath_filename->buf, &m->sections, &m->sections_total);
     m->base=img_base;
+
+    if (verbose>0)
+        L ("%s() line %d\n", __func__, __LINE__);
 
     // PE_get_info() will call add_symbol(), and the latter may use m->base, m->sections, 
     // m->sections_total, so these variables in $m$ should be already present!
     // that's weird, I know.
 
     PE_get_info (fullpath_filename->buf, img_base, info, (void (*)(address,  char *, void *))add_symbol, 
-            (void*)&(add_symbol_params){p, m, SYM_TYPE_PE_EXPORT, mc});
+            (void*)&(struct add_symbol_params){p, m, SYM_TYPE_PE_EXPORT, mc});
     m->original_base=info->original_base;
     m->OEP=info->OEP;
     m->size=info->size;
@@ -244,12 +254,18 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
     if (info->internal_name)
         m->internal_name=DSTRDUP(info->internal_name, "internal_name");
 
+    if (verbose>0)
+        L ("%s() line %d\n", __func__, __LINE__);
+
     //PE_add_symbols(p, m, fullpath_filename->buf, img_base, info);
 
     // add OEP
-    add_symbol(info->OEP, "OEP", &(add_symbol_params){p, m, SYM_TYPE_SPECIAL, mc});
+    add_symbol(info->OEP, "OEP", &(struct add_symbol_params){p, m, SYM_TYPE_SPECIAL, mc});
     // add BASE
-    add_symbol(img_base, "BASE", &(add_symbol_params){p, m, SYM_TYPE_SPECIAL, mc});
+    add_symbol(img_base, "BASE", &(struct add_symbol_params){p, m, SYM_TYPE_SPECIAL, mc});
+
+    if (verbose>0)
+        L ("%s() line %d\n", __func__, __LINE__);
 
     // add special symbols like .data, etc
     for (unsigned i=0; i<m->sections_total; i++)
@@ -258,14 +274,17 @@ static PE_info* get_all_info_from_PE(process *p, module *m, strbuf *fullpath_fil
         address new_a=sect->VirtualAddress + m->base;
         //L ("adding %s!%s at 0x" PRI_ADR_HEX " (sect->VA=0x" PRI_ADR_HEX ")\n", 
         //        m->filename, sect->Name, new_a, sect->VirtualAddress);
-        add_symbol(new_a, (char*)sect->Name, &(add_symbol_params){p, m, SYM_TYPE_SPECIAL, mc});
+        add_symbol(new_a, (char*)sect->Name, &(struct add_symbol_params){p, m, SYM_TYPE_SPECIAL, mc});
     };
+
+    if (verbose>0)
+        L ("%s() end\n", __func__);
 
     return info;
 };
 
-static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_base, PE_info *info, 
-        const char* short_PE_name, MemoryCache *mc)
+static void add_symbols_from_MAP_if_exist (struct process *p, struct module *m, address img_base, struct PE_info *info, 
+        const char* short_PE_name, struct MemoryCache *mc)
 {
 #ifdef _WIN64
     const char *MAP_get_all_PAT="^ ([0-9A-F]{8}):([0-9A-F]{16})       (.*)$";
@@ -316,7 +335,7 @@ static void add_symbols_from_MAP_if_exist (process *p, module *m, address img_ba
 
             if (sect < m->sections_total)
             {
-                add_symbol (m->sections[sect].VirtualAddress + img_base + addr, v3, &(add_symbol_params){ p, m, SYM_TYPE_MAP, mc });
+                add_symbol (m->sections[sect].VirtualAddress + img_base + addr, v3, &(struct add_symbol_params){ p, m, SYM_TYPE_MAP, mc });
                 loaded++;
             }
             else
@@ -337,16 +356,16 @@ exit:
     strbuf_deinit(&sb_mapfilename);
 };
 
-typedef struct _PDB_load_callback_info
+struct PDB_load_callback_info
 {
     address cur_module_base;
     unsigned MyEnumSymbolsCallback_total;
-    add_symbol_params *params;
-} PDB_load_callback_info;
+    struct add_symbol_params *params;
+};
 
 static BOOL CALLBACK MyEnumSymbolsCallback(SYMBOL_INFO* pSymInfo, ULONG SymbolSize, PVOID UserContext) 
 {
-    PDB_load_callback_info* info=(PDB_load_callback_info*)UserContext;
+    struct PDB_load_callback_info* info=(struct PDB_load_callback_info*)UserContext;
    
     if (pSymInfo)
     {
@@ -358,8 +377,8 @@ static BOOL CALLBACK MyEnumSymbolsCallback(SYMBOL_INFO* pSymInfo, ULONG SymbolSi
     return TRUE; // Continue enumeration 
 };
 
-static void add_symbols_from_PDB_if_exist (process *p, module *m, address img_base, PE_info *info, 
-        const char* short_PE_name, MemoryCache *mc)
+static void add_symbols_from_PDB_if_exist (struct process *p, struct module *m, address img_base, struct PE_info *info, 
+        const char* short_PE_name, struct MemoryCache *mc)
 {    
     strbuf sb_pdbfilename=STRBUF_INIT;
     strbuf_addf (&sb_pdbfilename, "%s.pdb", m->filename_without_ext);
@@ -388,10 +407,10 @@ static void add_symbols_from_PDB_if_exist (process *p, module *m, address img_ba
     }
     else
     {
-        PDB_load_callback_info info2;
+        struct PDB_load_callback_info info2;
         info2.cur_module_base=img_base;
         info2.MyEnumSymbolsCallback_total=0;
-        info2.params=&(add_symbol_params){ p, m, SYM_TYPE_PDB, mc };
+        info2.params=&(struct add_symbol_params){ p, m, SYM_TYPE_PDB, mc };
 
         b=SymEnumSymbols(GetCurrentProcess(), ModBase, NULL, MyEnumSymbolsCallback, (PVOID)&info2);
         if (b==FALSE)
@@ -412,8 +431,8 @@ exit:
     strbuf_deinit(&sb_pdbfilename);
 };
 
-static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address img_base, PE_info *info, 
-        const char* short_PE_name, MemoryCache *mc)
+static void add_symbols_from_ORACLE_SYM_if_exist (struct process *p, struct module *m, address img_base, struct PE_info *info, 
+        const char* short_PE_name, struct MemoryCache *mc)
 {
     strbuf sb=STRBUF_INIT;
 
@@ -423,7 +442,7 @@ static void add_symbols_from_ORACLE_SYM_if_exist (process *p, module *m, address
         goto exit;
 
     int err=get_symbols_from_ORACLE_SYM (sb.buf, img_base, info->size, info->timestamp, true, 
-            (void (*)(address,  char *, void *))add_symbol, (void*)&(add_symbol_params){ p, m, SYM_TYPE_ORACLE_SYM, mc }, oracle_version);
+            (void (*)(address,  char *, void *))add_symbol, (void*)&(struct add_symbol_params){ p, m, SYM_TYPE_ORACLE_SYM, mc }, oracle_version);
 
     if (err==ORACLE_SYM_IMPORTER_ERROR_FILE_OPENING_ERROR)
         die ("Can't open %s\n", sb.buf);
@@ -436,31 +455,37 @@ exit:
     strbuf_deinit(&sb);
 };
 
-module* add_module (process *p, address img_base, HANDLE file_hdl, MemoryCache *mc)
+struct module* add_module (struct process *p, address img_base, HANDLE file_hdl, struct MemoryCache *mc)
 {
-    module *m=DCALLOC(module, 1, "module");
+    struct module *m=DCALLOC(struct module, 1, "module");
     strbuf fullpath_filename=STRBUF_INIT;
 
-    if (module_c_debug)
+    if (verbose>0)
         L ("%s() begin\n", __func__);
-
+        
     m->parent_process=p;
     m->INT3_BP_bytes=rbtree_create(true, "INT3_BP_bytes", compare_size_t);
 
     m->symbols=rbtree_create(true, "symbols", compare_size_t);
 
     set_filename_and_path_for_module(file_hdl, m, &fullpath_filename);
-        
+
+    if (verbose>0)
+        L ("%s() line %d. fullpath_filename.buf=%s\n", __func__, __LINE__, fullpath_filename.buf);
+
     if (opt_loading)
         L ("New module: %s%s, base=0x" PRI_ADR_HEX "\n", m->path, m->filename, img_base);
-    
-    PE_info* info=get_all_info_from_PE (p, m, &fullpath_filename, img_base, mc);
+
+    struct PE_info* info=get_all_info_from_PE (p, m, &fullpath_filename, img_base, mc);
     if (ORACLE_HOME.strlen>0)
         add_symbols_from_ORACLE_SYM_if_exist (p, m, img_base, info, get_module_name(m), mc);
 
+    if (verbose>0)
+        L ("%s() line %d\n", __func__, __LINE__);
+
     // will symbols from this module skipping during tracing?
     int j;
-    trace_skip_element * i;
+    struct trace_skip_element * i;
     for (i=trace_skip_options, j=0; i; i=i->next,j++)
     {
         if (regexec (&i->re_path, m->path, 0, NULL, 0)==0)
@@ -473,9 +498,15 @@ module* add_module (process *p, address img_base, HANDLE file_hdl, MemoryCache *
                 };
     };
 
+    if (verbose>0)
+        L ("%s() line %d\n", __func__, __LINE__);
+
     // this function uses PE sections info!
     add_symbols_from_MAP_if_exist (p, m, img_base, info, get_module_name(m), mc);
     
+    if (verbose>0)
+        L ("%s() line %d\n", __func__, __LINE__);
+
     add_symbols_from_PDB_if_exist (p, m, img_base, info, get_module_name(m), mc);
 
     PE_info_free(info);
@@ -483,16 +514,19 @@ module* add_module (process *p, address img_base, HANDLE file_hdl, MemoryCache *
 
     rbtree_insert (p->modules, (void*)img_base, (void*)m);
 
+    if (verbose>0)
+        L ("%s() line %d\n", __func__, __LINE__);
+
     if (try_to_resolve_bp_addresses_if_need(m))
         set_or_update_all_DRx_breakpoints(p);
 
-    if (module_c_debug)
+    if (verbose>0)
         L ("%s() end\n", __func__);
 
     return m;
 };
 
-static void module_free (module *m)
+static void module_free (struct module *m)
 {
     DFREE(m->filename);
     DFREE(m->filename_without_ext);
@@ -503,9 +537,9 @@ static void module_free (module *m)
     if (m->symbols)
         for (struct rbtree_node_t *i=rbtree_minimum(m->symbols); i; i=rbtree_succ(i))
         {
-            for (symbol* s=(symbol*)i->value; s; )
+            for (struct symbol* s=(struct symbol*)i->value; s; )
             {
-                symbol *tmp=s;
+                struct symbol *tmp=s;
                 s=s->next;
                 DFREE(tmp->name);
                 DFREE(tmp);
@@ -517,9 +551,9 @@ static void module_free (module *m)
     DFREE(m);
 };
 
-void unload_module_and_free(module *m)
+void unload_module_and_free(struct module *m)
 {
-    if (module_c_debug)
+    if (verbose>0)
     {
         L ("%s() begin\n", __func__);
         L ("m->filename=%s\n", m->filename);
@@ -532,11 +566,11 @@ void unload_module_and_free(module *m)
     module_free(m);
 };
 
-void remove_module (process *p, address img_base)
+void remove_module (struct process *p, address img_base)
 {
-    if (module_c_debug)
+    if (verbose>0)
         L ("%s() begin\n", __func__);
-    module *m=rbtree_lookup(p->modules, (void*)img_base);
+    struct module *m=rbtree_lookup(p->modules, (void*)img_base);
 
     if (m==NULL)
     {
@@ -548,7 +582,7 @@ void remove_module (process *p, address img_base)
     rbtree_delete(p->modules, (void*)img_base);
 };
 
-bool address_in_module (module *m, address a)
+bool address_in_module (struct module *m, address a)
 {
     oassert(m);
     // FIXME use function like ... in range ...
@@ -556,7 +590,7 @@ bool address_in_module (module *m, address a)
 };
 
 // may return some symbol or NULL
-symbol* module_sym_exist_at (module *m, address a)
+struct symbol* module_sym_exist_at (struct module *m, address a)
 {
     oassert(m);
     oassert (address_in_module (m, a));
@@ -565,14 +599,14 @@ symbol* module_sym_exist_at (module *m, address a)
 };
 
 // may return module.dll!symbol+0x1234
-void module_get_sym (module *m, address a, bool add_module_name, bool add_offset, strbuf *out)
+void module_get_sym (struct module *m, address a, bool add_module_name, bool add_offset, strbuf *out)
 {
-    if (module_c_debug)
+    if (verbose>0)
         L ("%s(a=0x" PRI_ADR_HEX ")\n", __FUNCTION__, a);
     oassert (address_in_module (m, a));
 
     address prev_k;
-    symbol *prev_v;
+    struct symbol *prev_v;
 
     if (add_module_name)
     {
@@ -580,7 +614,7 @@ void module_get_sym (module *m, address a, bool add_module_name, bool add_offset
         strbuf_addc (out, '!');
     };
 
-    symbol *first_sym=rbtree_lookup2(m->symbols, (void*)a, (void**)&prev_k, (void**)&prev_v, NULL, NULL);
+    struct symbol *first_sym=rbtree_lookup2(m->symbols, (void*)a, (void**)&prev_k, (void**)&prev_v, NULL, NULL);
     if (first_sym)
     {
         // take 'top' symbol
@@ -594,7 +628,7 @@ void module_get_sym (module *m, address a, bool add_module_name, bool add_offset
     };
 };
 
-char *get_module_name (module *m)
+char *get_module_name (struct module *m)
 {
     if (m->internal_name)
         return m->internal_name;
@@ -602,13 +636,13 @@ char *get_module_name (module *m)
         return m->filename;
 };
 
-static IMAGE_SECTION_HEADER* find_section (module *m, address a)
+static IMAGE_SECTION_HEADER* find_section (struct module *m, address a)
 {
     oassert(m->sections && "PE sections info wasn't yet loaded to module structure");
     for (unsigned i=0; i<m->sections_total; i++)
     {
         IMAGE_SECTION_HEADER *s=&m->sections[i];
-        if (module_c_debug)
+        if (verbose>0)
             L ("%s() trying section %s\n", __func__, s->Name);
         address start=s->VirtualAddress + m->base;
         if (a>=start && a<(start + s->Misc.VirtualSize))
@@ -618,9 +652,9 @@ static IMAGE_SECTION_HEADER* find_section (module *m, address a)
 };
 
 
-bool module_adr_in_executable_section (module *m, address a)
+bool module_adr_in_executable_section (struct module *m, address a)
 {
-    if (module_c_debug)
+    if (verbose>0)
         L ("%s() module=%s, a=0x" PRI_ADR_HEX "\n", __func__, get_module_name(m), a);
     // find specific section
     oassert(m->sections && "PE sections info wasn't yet loaded to module structure");
@@ -631,12 +665,12 @@ bool module_adr_in_executable_section (module *m, address a)
     return PE_is_it_code_section (s);
 };
 
-address get_module_end(module *m)
+address get_module_end(struct module *m)
 {
     return m->base + m->size;
 };
 
-address module_get_next_sym_address_after (module *m, address a)
+address module_get_next_sym_address_after (struct module *m, address a)
 {
     address rt=0;
     void *tmp;

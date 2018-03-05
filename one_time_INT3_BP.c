@@ -9,7 +9,7 @@
 #include "utils.h"
 #include "fmt_utils.h"
 
-void set_onetime_INT3_BP(address a, process *p, module *m, char *name, MemoryCache *mc)
+void set_onetime_INT3_BP(address a, struct process *p, struct module *m, char *name, struct MemoryCache *mc)
 {
 	bool b;
 	byte byte_to_save;
@@ -30,11 +30,11 @@ void set_onetime_INT3_BP(address a, process *p, module *m, char *name, MemoryCac
 	};
 };
 
-bool check_for_onetime_INT3_BP(process *p, thread *t, address a, MemoryCache *mc, char *resolved_name, CONTEXT *ctx)
+bool check_for_onetime_INT3_BP(struct process *p, struct thread *t, address a, struct MemoryCache *mc, char *resolved_name, CONTEXT *ctx)
 {
 	//L ("%s(a=0x" PRI_ADR_HEX ", resolved_name=%s)\n", __func__, a, resolved_name);
 
-	module *m=find_module_for_address (p, a);
+	struct module *m=find_module_for_address (p, a);
 	oassert (m);
 
 	if (rbtree_is_key_present(m->INT3_BP_bytes, (void*)a)==false)
@@ -70,4 +70,3 @@ bool check_for_onetime_INT3_BP(process *p, thread *t, address a, MemoryCache *mc
 
 	return true;
 };
-

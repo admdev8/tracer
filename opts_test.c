@@ -25,7 +25,7 @@ int yydebug;
 
 static void do_test(char *s, char *should_be)
 {
-    BP *b;
+    struct BP *b;
     strbuf sb=STRBUF_INIT;
     //printf ("do_test(%s)\n", s);
 

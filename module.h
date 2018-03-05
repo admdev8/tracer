@@ -18,15 +18,9 @@
 #include "rbtree.h"
 #include "opts_aux.h"
 
-// FIXME get rid of, use struct... as Torvalds bequeathed
-
-typedef struct _process process;
-typedef struct _symbol symbol;
-typedef struct _MemoryCache MemoryCache;
-
-typedef struct _module
+struct module
 {
-    process *parent_process;
+    struct process *parent_process;
     char *filename;
     char *filename_without_ext;
     char *path;
@@ -53,17 +47,17 @@ typedef struct _module
     // if dump_seh is true
     bool security_cookie_adr_known;
     address security_cookie_adr;
-} module;
+};
 
-module* add_module (process *p, address img_base, HANDLE file_hdl, MemoryCache *mc);
-void unload_module_and_free(module *m);
-void remove_module (process *p, address img_base);
-bool address_in_module (module *m, address a);
-void module_get_sym (module *m, address a, bool add_module_name, bool add_offset, strbuf *out);
-symbol* module_sym_exist_at (module *m, address a);
-char *get_module_name (module *m);
-bool module_adr_in_executable_section (module *m, address a);
-address get_module_end(module *m);
-address module_get_next_sym_address_after (module *m, address a);
+struct module* add_module (struct process *p, address img_base, HANDLE file_hdl, struct MemoryCache *mc);
+void unload_module_and_free(struct module *m);
+void remove_module (struct process *p, address img_base);
+bool address_in_module (struct module *m, address a);
+void module_get_sym (struct module *m, address a, bool add_module_name, bool add_offset, strbuf *out);
+struct symbol* module_sym_exist_at (struct module *m, address a);
+char *get_module_name (struct module *m);
+bool module_adr_in_executable_section (struct module *m, address a);
+address get_module_end(struct module *m);
+address module_get_next_sym_address_after (struct module *m, address a);
 
 /* vim: set expandtab ts=4 sw=4 : */

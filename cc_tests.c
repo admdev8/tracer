@@ -30,8 +30,8 @@ void cc_tests()
 	dump_fpu=true;
 
 	CONTEXT ctx;
-	thread *t=DCALLOC(thread, 1, "thread");
-	module *m=DCALLOC(module, 1, "module");
+	struct thread *t=DCALLOC(struct thread, 1, "thread");
+	struct module *m=DCALLOC(struct module, 1, "module");
     	m->symbols=rbtree_create(true, "symbols", compare_size_t);
 	m->size=0x10000;
 	m->internal_name=DSTRDUP ("dummy_module", "char*");
@@ -41,15 +41,15 @@ void cc_tests()
 	bzero (&ctx, sizeof(CONTEXT));
 	BYTE* memory_test=DCALLOC(BYTE, PAGE_SIZE, "BYTE");
 
-	MemoryCache *mc=MC_MemoryCache_ctor_testing (memory_test, PAGE_SIZE);
+	struct MemoryCache *mc=MC_MemoryCache_ctor_testing (memory_test, PAGE_SIZE);
 
-	process *p=process_init (0, 0, 0, 0);
+	struct process *p=process_init (0, 0, 0, 0);
 	
 	rbtree_insert (p->modules, NULL, (void*)m);
 
     	rbtree_insert (p->threads, (void*)0, (void*)t);
 
-	add_symbol (0x1000, "dummy_symbol", &(add_symbol_params){ p, m, SYM_TYPE_MAP, mc });
+	add_symbol (0x1000, "dummy_symbol", &(struct add_symbol_params){ p, m, SYM_TYPE_MAP, mc });
 
 	// addr 0
 
@@ -215,7 +215,7 @@ void cc_tests()
 	{
 		strbuf sb=STRBUF_INIT;
 		address a=(address)i->key;
-		PC_info *info=i->value;
+		struct PC_info *info=i->value;
 
 		construct_common_string(&sb, a, info);
 		//printf ("a=0x" PRI_ADR_HEX " [%s]\n", a, sb.buf);

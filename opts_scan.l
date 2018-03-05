@@ -29,6 +29,8 @@
 
 // BCC mangled names may be started with @
 
+// must support multiple dots in filename like Software.v3.2.1.exe
+
 %}
 
 %option stack
@@ -36,8 +38,10 @@
 
 DEC            (0|[1-9][[:digit:]]*)
 HEX            0[Xx][[:xdigit:]]+
-FILENAME       [[:alnum:]_\+]+\.[[:alnum:]_]+
-FILEPATH_FILENAME ([[:alnum:]\\:]+)?[[:alnum:]_\+]+\.[[:alnum:]_]+
+
+FILENAME       [[:alnum:]_\+]+[[:alnum:]_\.]+
+FILEPATH_FILENAME ([[:alnum:]\\:]+)?[[:alnum:]_\+]+[[:alnum:]_\.]+
+
 SYMBOL_NAME    @?[[:alpha:]][[:alnum:]_@$]*
 REGEXP         @?[[:alnum:]_@$.|*^$?\\]*
 REGEXP_EXCL    @?[[:alnum:]_@$.|*^$?\\!]*
@@ -52,7 +56,7 @@ SYMBOL_NAME_RE @?[[:alpha:]\\?_$]{REGEXP}
 <INITIAL>bpx=   { BEGIN(STATE_BPX); yy_push_state(STATE_ADDRESS); return BPX_EQ; }
 <INITIAL>bpf=   { 
     oassert (current_BPF==NULL); 
-    current_BPF=DCALLOC (BPF, 1, "BPF"); 
+    current_BPF=DCALLOC (struct BPF, 1, "BPF"); 
     BEGIN(STATE_BPF); 
     yy_push_state(STATE_ADDRESS); 
     return BPF_EQ; 
@@ -101,14 +105,9 @@ SYMBOL_NAME_RE @?[[:alpha:]\\?_$]{REGEXP}
         return LIMIT_TRACE_NESTEDNESS;
     }
 <INITIAL>--loading          { return LOADING; }
-<INITIAL>--module-debug     { return MODULE_DEBUG; }
-<INITIAL>--symbol-debug     { return SYMBOL_DEBUG; }
-<INITIAL>--cycle-debug      { return CYCLE_DEBUG; }
-<INITIAL>--BPX-debug        { return BPX_DEBUG; }
-<INITIAL>--utils-debug      { return UTILS_DEBUG; }
-<INITIAL>--cc-debug         { return CC_DEBUG; }
-<INITIAL>--BPF-debug        { return BPF_DEBUG; }
-<INITIAL>--tracing-debug    { return TRACING_DEBUG; }
+<INITIAL>-vvv               { return VERBOSE3; }
+<INITIAL>-vv                { return VERBOSE2; }
+<INITIAL>-v                 { return VERBOSE1; }
 <INITIAL>--emulator-testing { return EMULATOR_TESTING; }
 <INITIAL>--no-new-console   { return NO_NEW_CONSOLE; }
 

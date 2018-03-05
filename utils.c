@@ -32,23 +32,23 @@
 #include "module.h"
 #include "fmt_utils.h"
 
-void dump_PID_if_need(process *p)
+void dump_PID_if_need(struct process *p)
 {
    if (rbtree_count(processes)>1)
        L ("PID=%d|", p->PID);
 };
 
-void dump_TID_if_need(process *p, thread *t)
+void dump_TID_if_need(struct process *p, struct thread *t)
 {
    if (rbtree_count(p->threads)>1)
        L ("TID=%d|", t->TID);
 };
 
 // FIXME: find another place for this function
-void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
+void set_or_update_DRx_breakpoint(struct BP *bp, CONTEXT *ctx, unsigned DRx_no)
 {
     oassert (bp->a->resolved);
-    if (utils_c_debug)
+    if (verbose>0)
     {
         strbuf sb=STRBUF_INIT;
         address_to_string(bp->a, &sb);
@@ -66,40 +66,40 @@ void set_or_update_DRx_breakpoint(BP *bp, CONTEXT *ctx, unsigned DRx_no)
         oassert(0);
         fatal_error();
     };
-    if (utils_c_debug)
+    if (verbose>0)
         L ("%s() end\n", __func__);
 };
 
-void set_or_update_DRx_for_thread(thread *t, BP *bp, unsigned DRx_no)
+void set_or_update_DRx_for_thread(struct thread *t, struct BP *bp, unsigned DRx_no)
 {
     CONTEXT ctx;
     ctx.ContextFlags = CONTEXT_ALL;
     DWORD rt;
     rt=GetThreadContext (t->THDL, &ctx); oassert (rt!=FALSE);      
 
-    if (utils_c_debug)
+    if (verbose>0)
         L ("%s() going to call set_or_update_DRx_breakpoint for TID %d\n", __func__, t->TID);
     set_or_update_DRx_breakpoint(bp, &ctx, DRx_no);
 
     rt=SetThreadContext (t->THDL, &ctx); oassert (rt!=FALSE);
 };
 
-void set_or_update_all_DRx_breakpoints(process *p)
+void set_or_update_all_DRx_breakpoints(struct process *p)
 {
-    if (utils_c_debug)
+    if (verbose>0)
         L ("%s() begin\n", __func__);
 
     // enum all breakpoints, pick out a->resolved ones
     for (unsigned DRx_no=0; DRx_no<4; DRx_no++)
     {
-        BP *bp=breakpoints[DRx_no];
+        struct BP *bp=breakpoints[DRx_no];
         if (bp)
         {
             //L ("%s() DRx_breakpoints[%d]=0x%p\n", __func__, DRx_no, bp);
         }
         else
         {
-            if (utils_c_debug)
+            if (verbose>0)
                 L ("%s() breakpoints[%d]==NULL\n", __func__, DRx_no);
             continue;
         };
@@ -108,28 +108,28 @@ void set_or_update_all_DRx_breakpoints(process *p)
 
         if (bp->a->resolved==false)
         {
-            if (utils_c_debug)
+            if (verbose>0)
                 L ("%s() breakpoints[%d]->a->resolved==false\n", __func__, DRx_no);
             continue;
         };
 
         if (load_filename && p->we_are_loading_and_OEP_was_executed==false)
         {
-            if (utils_c_debug)
+            if (verbose>0)
                 L ("%s() p->we_are_loading_and_OEP_was_executed==false\n", __func__);
             continue;
         };
         for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
         {
-            thread *t=(thread*)(_t->value);
+            struct thread *t=(struct thread*)(_t->value);
             set_or_update_DRx_for_thread (t, bp, DRx_no);
         };
     };
-    if (utils_c_debug)
+    if (verbose>0)
         L ("%s() end\n", __func__);
 };
 
-bool MC_disas(address a, MemoryCache *mc, struct Da* out)
+bool MC_disas(address a, struct MemoryCache *mc, struct Da* out)
 {
     return Da_Da_callbacks (Fuzzy_Undefined, a, 
             (callback_read_byte)MC_ReadByte, 
@@ -139,7 +139,7 @@ bool MC_disas(address a, MemoryCache *mc, struct Da* out)
             (void *)mc, out);
 };
 
-void dump_buf_as_array_of_strings(MemoryCache *mc, address a, size_t size)
+void dump_buf_as_array_of_strings(struct MemoryCache *mc, address a, size_t size)
 {
     strbuf sb=STRBUF_INIT;
     BYTE *buf=DMALLOC (BYTE, size, "BYTE*");
@@ -160,20 +160,20 @@ exit:
 };
 
 // idx may be negative
-bool read_REG_from_stack (MemoryCache *mc, CONTEXT *ctx, int idx, REG * out)
+bool read_REG_from_stack (struct MemoryCache *mc, CONTEXT *ctx, int idx, REG * out)
 {
     address SP=CONTEXT_get_SP(ctx);
     return MC_ReadREG (mc, SP + idx*sizeof(REG), out);
 };
 
-bool read_argument_from_stack (MemoryCache *mc, CONTEXT *ctx, unsigned arg, REG * out)
+bool read_argument_from_stack (struct MemoryCache *mc, CONTEXT *ctx, unsigned arg, REG * out)
 {
     return read_REG_from_stack (mc, ctx, arg+1, out);
 };
 
-void print_symbol_if_possible (process *p, MemoryCache *mc, address a, char *name)
+void print_symbol_if_possible (struct process *p, struct MemoryCache *mc, address a, char *name)
 {
-    module *m=find_module_for_address (p, a);
+    struct module *m=find_module_for_address (p, a);
     if (m==NULL)
         return;
 
@@ -183,7 +183,7 @@ void print_symbol_if_possible (process *p, MemoryCache *mc, address a, char *nam
     strbuf_deinit (&sb);
 };
 
-void print_symbols_in_buf_if_possible (process *p, MemoryCache *mc, byte *buf, size_t s, char *name)
+void print_symbols_in_buf_if_possible (struct process *p, struct MemoryCache *mc, byte *buf, size_t s, char *name)
 {
     for (size_t i=0; i*sizeof(address)<s; i++)
     {
@@ -194,7 +194,7 @@ void print_symbols_in_buf_if_possible (process *p, MemoryCache *mc, byte *buf, s
     };
 };
 
-void print_symbols_in_intersection_of_bufs (process *p, MemoryCache *mc, 
+void print_symbols_in_intersection_of_bufs (struct process *p, struct MemoryCache *mc, 
         byte *buf1, byte* buf2, char *buf1name, char *buf2name, size_t bufsize)
 {
     for (size_t i=0; (i*sizeof(address))<bufsize; i++)

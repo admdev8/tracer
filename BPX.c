@@ -25,18 +25,18 @@
 #include "process.h"
 #include "fmt_utils.h"
 
-void BPX_option_free(BPX_option *o)
+void BPX_option_free(struct BPX_option *o)
 {
     bp_address_free (o->a);
     DFREE (o->copy_string);
     DFREE (o);
 };
 
-void BPX_free(BPX *o)
+void BPX_free(struct BPX *o)
 {
     if (o->opts)
     {
-        BPX_option *t=o->opts, *t_next=o->opts;
+        struct BPX_option *t=o->opts, *t_next=o->opts;
         for (;t_next;t=t_next)
         {
             t_next=t->next;
@@ -46,19 +46,19 @@ void BPX_free(BPX *o)
     DFREE (o);
 };
 
-void BPX_ToString(BPX *b, strbuf *out)
+void BPX_ToString(struct BPX *b, strbuf *out)
 {
     strbuf_addstr (out, "BPX.");
     if (b->opts)
     {
         strbuf_addstr (out, " options: ");
-        for (BPX_option *o=b->opts; o; o=o->next)
+        for (struct BPX_option *o=b->opts; o; o=o->next)
             BPX_option_ToString(o, out);
     };
     strbuf_addstr (out, "\n");
 };
 
-static void BPX_DUMP_option_address_ToString(BPX_option *b, strbuf *out)
+static void BPX_DUMP_option_address_ToString(struct BPX_option *b, strbuf *out)
 {
     if (b->a)
         address_to_string(b->a, out);
@@ -66,7 +66,7 @@ static void BPX_DUMP_option_address_ToString(BPX_option *b, strbuf *out)
         strbuf_addstr (out, X86_register_ToString(b->reg));
 };
 
-void BPX_option_ToString(BPX_option *b, strbuf *out)
+void BPX_option_ToString(struct BPX_option *b, strbuf *out)
 {
     switch (b->t)
     {
@@ -104,15 +104,15 @@ void BPX_option_ToString(BPX_option *b, strbuf *out)
     };
 };
 
-BPX* create_BPX(BPX_option *opts)
+struct BPX* create_BPX(struct BPX_option *opts)
 {
-    BPX* rt=DCALLOC (BPX, 1, "BPX");
+    struct BPX* rt=DCALLOC (struct BPX, 1, "BPX");
     rt->opts=opts;
 
     return rt;
 };
 
-static bool BPX_get_address_for_DUMP_SET_COPY (BPX_option *o, CONTEXT *ctx, address *out)
+static bool BPX_get_address_for_DUMP_SET_COPY (struct BPX_option *o, CONTEXT *ctx, address *out)
 {
     if (o->a)
         if (o->a->resolved==false)
@@ -131,7 +131,7 @@ static bool BPX_get_address_for_DUMP_SET_COPY (BPX_option *o, CONTEXT *ctx, addr
     return true;
 };
 
-static void handle_BPX_option (process *p, thread *t, CONTEXT *ctx, MemoryCache *mc, BPX_option *o, unsigned bp_no)
+static void handle_BPX_option (struct process *p, struct thread *t, CONTEXT *ctx, struct MemoryCache *mc, struct BPX_option *o, unsigned bp_no)
 {
     switch (o->t)
     {
@@ -196,7 +196,7 @@ static void handle_BPX_option (process *p, thread *t, CONTEXT *ctx, MemoryCache 
         handle_BPX_option(p, t, ctx, mc, o->next, bp_no);
 };
 
-static void dump_register_and_symbol (process *p, enum X86_register_t reg, CONTEXT *ctx)
+static void dump_register_and_symbol (struct process *p, enum X86_register_t reg, CONTEXT *ctx)
 {
         strbuf sb=STRBUF_INIT;
         REG val=CONTEXT_get_reg(ctx, reg);
@@ -205,7 +205,7 @@ static void dump_register_and_symbol (process *p, enum X86_register_t reg, CONTE
         strbuf_deinit (&sb);
 };
 
-static void dump_symbols_for_all_registers (process *p, CONTEXT *ctx)
+static void dump_symbols_for_all_registers (struct process *p, CONTEXT *ctx)
 {
 #ifdef _WIN64
     dump_register_and_symbol (p, R_RAX, ctx);
@@ -232,12 +232,12 @@ static void dump_symbols_for_all_registers (process *p, CONTEXT *ctx)
 #endif    
 };
 
-static void handle_BPX_default_state(unsigned bp_no, BP *bp, process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
+static void handle_BPX_default_state(unsigned bp_no, struct BP *bp, struct process *p, struct thread *t, int DRx_no, CONTEXT *ctx, struct MemoryCache *mc)
 {
-    BPX *bpx=bp->u.bpx;
-    if (bpx_c_debug)
+    struct BPX *bpx=bp->u.bpx;
+    if (verbose>0)
         L ("%s() begin\n", __func__);
-    bp_address *bp_a=bp->a;
+    struct bp_address *bp_a=bp->a;
     strbuf sb_address=STRBUF_INIT;
     address_to_string(bp_a, &sb_address);
 
@@ -258,28 +258,28 @@ static void handle_BPX_default_state(unsigned bp_no, BP *bp, process *p, thread 
     //set_TF (ctx);
     t->BP_dynamic_info[DRx_no].tracing=true;
     strbuf_deinit(&sb_address);
-    if (bpx_c_debug)
+    if (verbose>0)
         L ("%s() end\n", __func__);
 }
 
-static void handle_BPX_skipping_first_instruction(BP *bp, process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
+static void handle_BPX_skipping_first_instruction(struct BP *bp, struct process *p, struct thread *t, int DRx_no, CONTEXT *ctx, struct MemoryCache *mc)
 {
-    if (bpx_c_debug)
+    if (verbose>0)
         L ("%s() begin\n", __func__);
     // set DRx back
     set_or_update_DRx_breakpoint(bp, ctx, DRx_no);
     t->BP_dynamic_info[DRx_no].tracing=false;
     //clear_TF (ctx);
-    if (bpx_c_debug)
+    if (verbose>0)
         L ("%s() end\n", __func__);
 };
 
-void handle_BPX(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc)
+void handle_BPX(struct process *p, struct thread *t, int DRx_no, CONTEXT *ctx, struct MemoryCache *mc)
 {
-    if (bpx_c_debug)
+    if (verbose>0)
         L ("%s() begin\n", __func__);
-    BP *bp=breakpoints[DRx_no];
-    BPX_state* state=&t->BP_dynamic_info[DRx_no].BPX_states;
+    struct BP *bp=breakpoints[DRx_no];
+    enum BPX_state* state=&t->BP_dynamic_info[DRx_no].BPX_states;
    
     if (*state==BPX_state_default)
     {
@@ -295,7 +295,7 @@ void handle_BPX(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc
     {
         fatal_error();
     };
-    if (bpx_c_debug)
+    if (verbose>0)
         L ("%s() end\n", __func__);
 };
 

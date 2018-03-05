@@ -96,6 +96,7 @@ void help_and_exit()
     printf ("@filename - load options from text file, line per option\n");
     printf ("-t - print timestamp\n");
     printf ("-q - be quiet\n");
+    printf ("-v -vv -vvv - verbose (3 levels)\n");
     printf ("-s - print stack on each BPF breakpoint\n");
     printf ("--one-time-INT3-bp:<regexp> - set one-time INT3 breakpoint to\n");
     printf ("\tall addresses falling under <regexp>\n");
@@ -167,11 +168,11 @@ void clean_all_DRx()
 
     for (struct rbtree_node_t *_p=rbtree_minimum(processes); _p; _p=rbtree_succ(_p))
     {
-        process *p=(process*)(_p->value);
+        struct process *p=(struct process*)(_p->value);
 
         for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
         {
-            thread *t=(thread*)(_t->value);
+            struct thread *t=(struct thread*)(_t->value);
             CONTEXT ctx;
             ctx.ContextFlags = CONTEXT_ALL;
             DWORD tmpd;
@@ -225,11 +226,11 @@ static void print_stack_for_all_processes_and_threads()
 {
     for (struct rbtree_node_t *_p=rbtree_minimum(processes); _p; _p=rbtree_succ(_p))
     {
-        process *p=(process*)(_p->value);
+        struct process *p=(struct process*)(_p->value);
 
         for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
         {
-            thread *t=(thread*)(_t->value);
+            struct thread *t=(struct thread*)(_t->value);
             CONTEXT ctx;
             ctx.ContextFlags = CONTEXT_ALL;
             DWORD tmpd;
@@ -237,7 +238,7 @@ static void print_stack_for_all_processes_and_threads()
             if (tmpd==FALSE)
                 die_GetLastError ("GetThreadContext() failed\n");
 
-            MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
+            struct MemoryCache *mc=MC_MemoryCache_ctor (p->PHDL, false);
 
             if (rbtree_count(processes)>1)
                 L ("PID=%d\n", p->PID);
@@ -254,11 +255,11 @@ static void print_DRx_values_for_all_processes_and_threads()
 {
     for (struct rbtree_node_t *_p=rbtree_minimum(processes); _p; _p=rbtree_succ(_p))
     {
-        process *p=(process*)(_p->value);
+        struct process *p=(struct process*)(_p->value);
 
         for (struct rbtree_node_t *_t=rbtree_minimum(p->threads); _t; _t=rbtree_succ(_t))
         {
-            thread *t=(thread*)(_t->value);
+            struct thread *t=(struct thread*)(_t->value);
             CONTEXT ctx;
             ctx.ContextFlags = CONTEXT_ALL;
             DWORD tmpd;
@@ -336,7 +337,7 @@ void detach_from_all_processes()
 
     for (struct rbtree_node_t *_p=rbtree_minimum(processes); _p; _p=rbtree_succ(_p))
     {
-        process *p=(process*)(_p->value);
+        struct process *p=(struct process*)(_p->value);
 
         if (DebugActiveProcessStop_ptr!=NULL)
         {
@@ -409,7 +410,7 @@ void set_ORACLE_HOME()
         L ("Warning: Oracle RDBMS version wasn't determined\n");
 };
 
-trace_skip_element *trace_skip_options=NULL;
+struct trace_skip_element *trace_skip_options=NULL;
 static char **my_environ=NULL;
 
 bool load_cfg(const char *fname)
@@ -439,7 +440,7 @@ bool load_cfg(const char *fname)
             strbuf opt1=STRBUF_INIT;
             strbuf opt2=STRBUF_INIT;
             strbuf opt3=STRBUF_INIT;
-            trace_skip_element *tmp;
+            struct trace_skip_element *tmp;
 
             strbuf_addstr_range_be(&opt1, buf, matches[1].rm_so, matches[1].rm_eo);
             strbuf_addstr_range_be(&opt2, buf, matches[2].rm_so, matches[2].rm_eo);
@@ -447,7 +448,7 @@ bool load_cfg(const char *fname)
 
             env_vars_expansion(&opt1, my_environ);
 
-            tmp=DCALLOC(trace_skip_element, 1, "trace_skip_element");
+            tmp=DCALLOC(struct trace_skip_element, 1, "trace_skip_element");
 
             regcomp_or_die(&tmp->re_path, opt1.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
             regcomp_or_die(&tmp->re_module, opt2.buf, REG_EXTENDED | REG_ICASE | REG_NEWLINE);
@@ -460,7 +461,7 @@ bool load_cfg(const char *fname)
                 trace_skip_options=tmp;
             else
             {
-                trace_skip_element *i;
+                struct trace_skip_element *i;
                 for (i=trace_skip_options; i->next!=NULL; i=i->next); // find last element
                 i->next=tmp; // add new element
             };
@@ -478,7 +479,7 @@ exit:
     return rt;
 };
 
-void free_trace_skip_options(trace_skip_element *i)
+void free_trace_skip_options(struct trace_skip_element *i)
 {
     if (i==NULL)
         return;

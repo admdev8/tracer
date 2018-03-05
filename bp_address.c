@@ -20,14 +20,14 @@
 #include "fmt_utils.h"
 #include "dmalloc.h"
 
-bool is_address_OEP(bp_address *a)
+bool is_address_OEP(struct bp_address *a)
 {
     return a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL &&
         stricmp(a->symbol, "OEP")==0 &&
         a->ofs==0;
 };
 
-bool is_address_fname_OEP(bp_address* a, char *fname)
+bool is_address_fname_OEP(struct bp_address* a, char *fname)
 {
     return a->t==OPTS_ADR_TYPE_FILENAME_SYMBOL &&
         stricmp(a->symbol, "OEP")==0 &&
@@ -35,7 +35,7 @@ bool is_address_fname_OEP(bp_address* a, char *fname)
         a->ofs==0;
 };
 
-void address_to_string (bp_address *a, strbuf *out)
+void address_to_string (struct bp_address *a, strbuf *out)
 {
     oassert(a);
 
@@ -71,7 +71,7 @@ void address_to_string (bp_address *a, strbuf *out)
     };
 };
 
-void dump_address (bp_address *a)
+void dump_address (struct bp_address *a)
 {
     oassert(a);
     strbuf sb=STRBUF_INIT;
@@ -81,9 +81,9 @@ void dump_address (bp_address *a)
     strbuf_deinit (&sb);
 };
 
-bp_address *create_address_filename_symbol_re(const char *filename, const char *symbol_re, unsigned ofs)
+struct bp_address *create_address_filename_symbol_re(const char *filename, const char *symbol_re, unsigned ofs)
 {
-    bp_address *rt=DCALLOC (bp_address, 1, "bp_address");
+    struct bp_address *rt=DCALLOC (struct bp_address, 1, "bp_address");
 
     rt->t=OPTS_ADR_TYPE_FILENAME_SYMBOL;
     rt->filename=DSTRDUP (filename, "");
@@ -101,9 +101,9 @@ bp_address *create_address_filename_symbol_re(const char *filename, const char *
 
     return rt;
 };
-bp_address *create_address_filename_address(const char *filename, address adr)
+struct bp_address *create_address_filename_address(const char *filename, address adr)
 {
-    bp_address *rt=DCALLOC (bp_address, 1, "bp_address");
+    struct bp_address *rt=DCALLOC (struct bp_address, 1, "bp_address");
 
     rt->t=OPTS_ADR_TYPE_FILENAME_ADR;
     rt->filename=DSTRDUP (filename, "");
@@ -112,9 +112,9 @@ bp_address *create_address_filename_address(const char *filename, address adr)
     return rt;
 };
 
-bp_address *create_address_abs(address adr)
+struct bp_address *create_address_abs(address adr)
 {
-    bp_address *rt=DCALLOC (bp_address, 1, "bp_address");
+    struct bp_address *rt=DCALLOC (struct bp_address, 1, "bp_address");
 
     rt->t=OPTS_ADR_TYPE_ABS;
     rt->resolved=true;
@@ -122,9 +122,9 @@ bp_address *create_address_abs(address adr)
 
     return rt;
 };
-bp_address *create_address_bytemask(obj *bytemask)
+struct bp_address *create_address_bytemask(obj *bytemask)
 {
-    bp_address *rt=DCALLOC (bp_address, 1, "bp_address");
+    struct bp_address *rt=DCALLOC (struct bp_address, 1, "bp_address");
 
     rt->t=OPTS_ADR_TYPE_BYTEMASK;
     list_of_wydes_to_array(&rt->bytemask, &rt->bytemask_len, bytemask);
@@ -132,7 +132,7 @@ bp_address *create_address_bytemask(obj *bytemask)
     return rt;
 };
 
-void bp_address_free(bp_address *a)
+void bp_address_free(struct bp_address *a)
 {
     if (a==NULL)
         return;

@@ -20,10 +20,6 @@
 #include "memorycache.h"
 #include "x86_register.h"
 
-typedef struct _BP BP;
-typedef struct _process process;
-typedef struct _thread thread;
-
 enum BPX_option_type
 {
     BPX_option_DUMP,
@@ -33,11 +29,11 @@ enum BPX_option_type
 
 #define BPX_DUMP_DEFAULT 0x10
 
-typedef struct _BPX_option
+struct BPX_option
 {
     enum BPX_option_type t;
 
-    bp_address *a; // if NULL, see reg
+    struct bp_address *a; // if NULL, see reg
     enum X86_register reg;
 
     // in case of DUMP or SET
@@ -47,26 +43,26 @@ typedef struct _BPX_option
     // in case of COPY
     byte *copy_string; // may be NULL if absent
     unsigned copy_string_len;
-    struct _BPX_option *next;
-} BPX_option;
+    struct BPX_option *next;
+};
 
-typedef struct _BPX
+struct BPX
 {
-    BPX_option* opts; // may be NULL if options absent
-} BPX;
+    struct BPX_option* opts; // may be NULL if options absent
+};
 
-typedef enum _BPX_state
+enum BPX_state
 {
     BPX_state_default=0,
     BPX_state_skipping_first_instruction    
-} BPX_state;
+};
 
-void BPX_option_free(BPX_option *);
-void BPX_ToString(BPX *b, strbuf *out);
-void BPX_option_ToString(BPX_option *b, strbuf *out);
-void BPX_free(BPX *);
-BPX* create_BPX(BPX_option *opts);
+void BPX_option_free(struct BPX_option *);
+void BPX_ToString(struct BPX *b, strbuf *out);
+void BPX_option_ToString(struct BPX_option *b, strbuf *out);
+void BPX_free(struct BPX *);
+struct BPX* create_BPX(struct BPX_option *opts);
 
-void handle_BPX(process *p, thread *t, int DRx_no, CONTEXT *ctx, MemoryCache *mc);
+void handle_BPX(struct process *p, struct thread *t, int DRx_no, CONTEXT *ctx, struct MemoryCache *mc);
 
 /* vim: set expandtab ts=4 sw=4 : */
