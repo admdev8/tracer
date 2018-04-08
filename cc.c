@@ -41,6 +41,7 @@
 // FIXME: add same thing in emulator!
 static bool ins_reported_as_unhandled[512]={ false };
 
+// FIXME move to octo...
 static int compare_doubles(void* leftp, void* rightp)
 {
 	double left = *(double*)leftp, right = *(double*)rightp;

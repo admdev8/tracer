@@ -32,12 +32,14 @@
 #include "module.h"
 #include "fmt_utils.h"
 
+// FIXME: may be slow!
 void dump_PID_if_need(struct process *p)
 {
    if (rbtree_count(processes)>1)
        L ("PID=%d|", p->PID);
 };
 
+// FIXME: may be slow!
 void dump_TID_if_need(struct process *p, struct thread *t)
 {
    if (rbtree_count(p->threads)>1)

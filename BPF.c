@@ -854,9 +854,9 @@ static void check_emulator_results_if_need (struct process *p, struct thread *t,
     if (CONTEXT_compare (&cur_fds, ctx, t->last_emulated_ctx)==false)
     {
         L ("%s() (CPU emulator testing): CONTEXTs are different\n", __func__);
-        L ("real context:\n");
+        L ("real context (ctx1):\n");
         dump_CONTEXT (&cur_fds, ctx, false, false, false);
-        L ("emulated context:\n");
+        L ("emulated context (ctx2):\n");
         dump_CONTEXT (&cur_fds, t->last_emulated_ctx, false, false, false);
         fail=true;
     };
