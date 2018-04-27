@@ -13,6 +13,8 @@
  *
  */
 
+#include <winternl.h>
+
 #include "oassert.h"
 
 #include "process.h"
@@ -22,13 +24,16 @@
 #include "logging.h"
 #include "porg_utils.h"
 #include "fmt_utils.h"
+#include "bolt_stuff.h"
 
 bool process_c_debug=false;
 
 struct process* process_init (DWORD PID, HANDLE PHDL, HANDLE file_handle, LPVOID base_of_image)
 {
     struct process *p=DCALLOC (struct process, 1, "process");
-    
+
+    p->PEB=get_PEB(PHDL);
+
     p->PID=PID;
     p->PHDL=PHDL;
     p->file_handle=file_handle;

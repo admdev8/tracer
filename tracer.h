@@ -22,7 +22,7 @@ rbtree *processes; // PID, process
 strbuf ORACLE_HOME;
 int oracle_version; // -1 mean 'unknown'
 
-#define INT3_DURING_FUNC_SKIP
+//#define INT3_DURING_FUNC_SKIP
 
 struct trace_skip_element
 {

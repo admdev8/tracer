@@ -916,7 +916,7 @@ static bool emulate_if_need(struct process *p, struct thread *t, struct Da* da, 
         new_mc=MC_MemoryCache_copy_ctor(mc);
     };
 
-    if (verbose>0)
+    if (verbose>1)
     {
         L ("instruction to be emulated="); Da_DumpString(&cur_fds, da); L ("\n");
     };
@@ -953,7 +953,7 @@ static bool emulate_if_need(struct process *p, struct thread *t, struct Da* da, 
         return false;
     };
 
-    if (verbose>0)
+    if (verbose>1)
     {
         L ("instruction emulated successfully="); Da_DumpString(&cur_fds, da); L ("\n");
     };
@@ -975,7 +975,7 @@ static enum ht_result handle_tracing(int bp_no, struct process *p, struct thread
     address PC=CONTEXT_get_PC(ctx);
     struct BP_thread_specific_dynamic_info *di=&t->BP_dynamic_info[bp_no];
 
-    if (verbose>0)
+    if (verbose>1)
     {
         strbuf sb=STRBUF_INIT;
         process_get_sym(p, PC, true, true, &sb);
@@ -995,7 +995,7 @@ static enum ht_result handle_tracing(int bp_no, struct process *p, struct thread
         emulated=false;
         PC=CONTEXT_get_PC(ctx);
         address SP=CONTEXT_get_SP(ctx);
-        if (verbose>0)
+        if (verbose>1)
             L ("%s() emu cycle begin. PC=0x" PRI_ADR_HEX " SP=0x" PRI_ADR_HEX "\n", __func__, PC, SP);
         // (to be implemented in future): check other BPF/BPX breakpoints. handle them if need.
 

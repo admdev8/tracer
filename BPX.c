@@ -170,7 +170,7 @@ static void handle_BPX_option (struct process *p, struct thread *t, CONTEXT *ctx
                 L ("Setting %s register to %f\n", X86_register_ToString(o->reg), o->float_value);
             else
                 L ("Setting %s register to 0x" PRI_REG_HEX "\n", X86_register_ToString(o->reg), o->size_or_value);
-            X86_register_set_value(o->reg, ctx, &val);
+            X86_register_set_value(o->reg, ctx, &val, false);
             break;
 
         case BPX_option_COPY:

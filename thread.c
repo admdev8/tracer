@@ -68,7 +68,7 @@ void add_thread (struct process *p, DWORD TID, HANDLE THDL, address start, addre
     t->start=start;
     oassert (rbtree_lookup(p->threads, (void*)TID)==NULL && "this TID is already in table");
     rbtree_insert (p->threads, (void*)TID, t);
-    
+
     if (thread_c_debug)
         L ("%s() end\n", __func__);
 };

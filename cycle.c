@@ -63,13 +63,15 @@ static bool handle_OEP_breakpoint (struct process *p, struct thread *t, struct M
     CONTEXT_decrement_PC(&ctx);
     address PC=CONTEXT_get_PC(&ctx);
 
-    B=SetThreadContext (t->THDL, &ctx); oassert (B!=FALSE);
-
     bool b=MC_WriteByte (mc, PC, p->executable_module->saved_OEP_byte);
     oassert (b && "cannot restore original byte at OEP");
 
     if (load_filename)
         p->we_are_loading_and_OEP_was_executed=true;
+
+    handle_BPF(p, t, 0, &ctx, mc); // !
+
+    B=SetThreadContext (t->THDL, &ctx); oassert (B!=FALSE);
 
     set_or_update_all_DRx_breakpoints(p); // for all threads! only DRx breakpoints set/updated!
 
@@ -245,7 +247,7 @@ void save_OEP_byte_and_set_INT3_breakpoint (struct MemoryCache *mc, struct modul
     bool b;
 
     if (verbose>0)
-        L ("Setting INT3 at OEP\n");
+        L ("%s() Setting INT3 at OEP\n", __FUNCTION__);
 
     b=MC_ReadByte (mc, m->OEP, &m->saved_OEP_byte);
     oassert(b && "can't read byte at breakpoint start");

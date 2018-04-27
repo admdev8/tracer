@@ -277,6 +277,28 @@ static void print_DRx_values_for_all_processes_and_threads()
     };
 };
 
+void F2()
+{
+	for (struct rbtree_node_t *_p=rbtree_minimum(processes); _p; _p=rbtree_succ(_p))
+	{
+		struct process *p=(struct process*)(_p->value);
+		if (rbtree_count(processes)>1)
+			L ("PID=%d\n", p->PID);
+
+		BYTE a;
+		SIZE_T tmp;
+		if (ReadProcessMemory(p->PHDL, p->PEB+2, &a, 1, &tmp)==FALSE)
+			die ("ReadProcessMemory() failed\n");
+		oassert (tmp==1);
+
+		L ("p->BeingDebugged=%d\n", a);
+
+		a=0;
+		if (WriteProcessMemory(p->PHDL, p->PEB+2, &a, 1, &tmp)==FALSE)
+			die ("WriteProcessMemory() failed\n");
+	};
+};
+
 static void WINAPI thread_B (DWORD param) 
 {
     HANDLE hConsoleInput=GetStdHandle (STD_INPUT_HANDLE);
@@ -305,6 +327,10 @@ static void WINAPI thread_B (DWORD param)
 
                             case VK_F1:
                                 print_DRx_values_for_all_processes_and_threads();
+                                break;
+
+                            case VK_F2:
+                                F2();
                                 break;
                         };
                     };

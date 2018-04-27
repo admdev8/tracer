@@ -28,6 +28,8 @@ struct process
     address base_of_image;
     HANDLE file_handle;
 
+    address PEB;
+
     struct module *executable_module;
 
     rbtree *threads; // -> TID, thread
